@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="WeighBridge.Service/WeighBridge.Service.csproj" />
+  <Project Path="WeighBridge/WeighBridge.App.csproj" />
+</Solution>
