@@ -1,0 +1,47 @@
+namespace DeltaToSqlitePoc.Configuration;
+
+/// <summary>
+/// Bound from the "Sync" section of appsettings.json (and overrides).
+/// Designed so additional entity mappings can be added later without changing core services.
+/// </summary>
+public sealed class SyncSettings
+{
+    public const string SectionName = "Sync";
+
+    /// <summary>Azure Storage account name (e.g. mystorageaccount).</summary>
+    public string StorageAccountName { get; set; } = string.Empty;
+
+    /// <summary>ADLS Gen2 / Blob container name.</summary>
+    public string ContainerName { get; set; } = string.Empty;
+
+    /// <summary>Delta table root path inside the container (e.g. d365/tables/mserp_vendvendoraientity).</summary>
+    public string DeltaTablePath { get; set; } = "d365/tables/mserp_vendvendoraientity";
+
+    /// <summary>Logical entity / SQLite table name.</summary>
+    public string TableName { get; set; } = "Vendor";
+
+    /// <summary>Relative or absolute path to the SQLite database file.</summary>
+    public string SqlitePath { get; set; } = "app_data.db";
+
+    /// <summary>Optional blob endpoint override (defaults to https://{account}.blob.core.windows.net).</summary>
+    public string? BlobServiceUri { get; set; }
+
+    /// <summary>
+    /// Optional storage connection string (preferred for local PoC when Azure CLI / MI is unavailable).
+    /// Store via user-secrets — do not commit real keys. When set, AAD credentials are skipped.
+    /// </summary>
+    public string? ConnectionString { get; set; }
+
+    /// <summary>
+    /// When true, attempt DeltaLake.Net (delta-rs) for metadata/version discovery.
+    /// Data rows are still read via Parquet.Net for predictable mapping.
+    /// Keep false locally unless Azure env vars for delta-rs are configured.
+    /// </summary>
+    public bool UseDeltaLakeNet { get; set; } = false;
+
+    /// <summary>Batch size for SQLite inserts/upserts.</summary>
+    public int BatchSize { get; set; } = 500;
+
+    /// <summary>Polly retry count for transient Azure failures.</summary>
+    public int AzureRetryCount { get; set; } = 5;
+}

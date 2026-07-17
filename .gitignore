@@ -46,5 +46,11 @@ Desktop.ini
 
 ## Secrets / local config
 appsettings.Local.json
+appsettings.Development.json
 *.pfx
 secrets.json
+
+## DeltaToSqlitePoc local artifacts
+**/app_data.db
+**/app_data.db-*
+**/demo-data/

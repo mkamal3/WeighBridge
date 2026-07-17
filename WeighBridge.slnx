@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="WeighBridge.D365/WeighBridge.D365.csproj" />
   <Project Path="WeighBridge.Service/WeighBridge.Service.csproj" />
+  <Project Path="DeltaToSqlitePoc/DeltaToSqlitePoc.csproj" />
   <Project Path="WeighBridge.App/WeighBridge.App.csproj" />
 </Solution>

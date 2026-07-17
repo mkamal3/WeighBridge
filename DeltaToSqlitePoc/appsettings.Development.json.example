@@ -1,0 +1,17 @@
+{
+  "Sync": {
+    "StorageAccountName": "YOUR_STORAGE_ACCOUNT",
+    "ContainerName": "YOUR_CONTAINER",
+    "DeltaTablePath": "deltalake/mserp_vendvendoraientity_partitioned",
+    "TableName": "Vendor",
+    "SqlitePath": "app_data.db",
+    "BlobServiceUri": null,
+    "ConnectionString": null,
+    "UseDeltaLakeNet": false,
+    "BatchSize": 500,
+    "AzureRetryCount": 5
+  },
+  "Serilog": {
+    "MinimumLevel": "Information"
+  }
+}
