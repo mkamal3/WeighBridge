@@ -1,0 +1,55 @@
+<Window x:Class="WeightBridgeApp.LoginWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Login - BridgeOne"
+        Width="520"
+        SizeToContent="Height"
+        MinHeight="430"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        Loaded="Window_Loaded">
+    <Grid Background="#5F6F9F" MinHeight="430">
+        <Border Background="White"
+                CornerRadius="10"
+                Padding="28"
+                Margin="36"
+                VerticalAlignment="Center">
+            <StackPanel>
+                <TextBlock Text="BridgeOne"
+                           FontSize="24"
+                           FontWeight="SemiBold"
+                           Margin="0,0,0,4" />
+                <TextBlock Text="Please login to continue"
+                           Foreground="Gray"
+                           Margin="0,0,0,22" />
+
+                <Label Content="Username" Padding="0,0,0,6" />
+                <TextBox x:Name="UsernameTextBox"
+                         Text="admin"
+                         Height="34"
+                         Padding="8"
+                         Margin="0,0,0,14" />
+
+                <Label Content="Password" Padding="0,0,0,6" />
+                <PasswordBox x:Name="PasswordBox"
+                             Height="34"
+                             Padding="8"
+                             Margin="0,0,0,20"
+                             Password="admin123"
+                             KeyDown="PasswordBox_KeyDown" />
+
+                <Button Content="Login"
+                        Height="40"
+                        MinWidth="120"
+                        HorizontalAlignment="Stretch"
+                        FontWeight="SemiBold"
+                        Click="LoginButton_Click" />
+
+                <TextBlock x:Name="StatusTextBlock"
+                           Foreground="DarkRed"
+                           TextWrapping="Wrap"
+                           Margin="0,14,0,0" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>
