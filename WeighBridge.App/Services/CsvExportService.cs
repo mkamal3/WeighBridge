@@ -14,7 +14,7 @@ public static class CsvExportService
 
         var filePath = Path.Combine(folder, $"BridgeOneReport-{DateTime.Now:yyyyMMdd-HHmmss}.csv");
         var sb = new StringBuilder();
-        sb.AppendLine("TicketNo,CompanyName,VehicleNo,DriverName,PartyName,PartyType,ItemName,FirstWeight,FirstWeightTime,SecondWeight,SecondWeightTime,NetWeight,Status,Remarks");
+        sb.AppendLine("TicketNo,CompanyName,VehicleNo,DriverName,PartyAccount,PartyName,PartyType,ItemNumber,ItemName,FirstWeight,FirstWeightTime,FirstWeightBy,SecondWeight,SecondWeightTime,SecondWeightBy,NetWeight,Status,Remarks");
 
         foreach (var row in rows)
         {
@@ -23,13 +23,17 @@ public static class CsvExportService
                 Escape(row.CompanyName),
                 Escape(row.VehicleNo),
                 Escape(row.DriverName),
+                Escape(row.PartyAccount),
                 Escape(row.PartyName),
                 Escape(row.PartyType),
-                Escape(row.MaterialName),
+                Escape(row.ItemNumber),
+                Escape(string.IsNullOrWhiteSpace(row.ItemName) ? row.MaterialName : row.ItemName),
                 row.FirstWeight.ToString(CultureInfo.InvariantCulture),
                 Escape(row.FirstWeightTime.ToString("yyyy-MM-dd HH:mm:ss")),
+                Escape(row.FirstWeightBy),
                 row.SecondWeight?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
                 Escape(row.SecondWeightTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? string.Empty),
+                Escape(row.SecondWeightBy),
                 row.NetWeight?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
                 Escape(row.Status),
                 Escape(row.Remarks)

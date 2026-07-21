@@ -17,11 +17,14 @@ public class MainViewModel : BaseViewModel
     private bool _isStable;
     private string _liveRaw = string.Empty;
     private string _connectionStatus = "Disconnected";
+    private bool _isConnected;
     private string _statusMessage = "Ready.";
     private string _ticketNo = string.Empty;
     private string _vehicleNo = string.Empty;
     private string _driverName = string.Empty;
+    private string _partyAccount = string.Empty;
     private string _partyName = string.Empty;
+    private string _itemNumber = string.Empty;
     private string _itemName = string.Empty;
     private string _remarks = string.Empty;
     private Party? _selectedParty;
@@ -75,13 +78,21 @@ public class MainViewModel : BaseViewModel
     private string _warehouseNameFilter = string.Empty;
     private string _warehouseSiteFilter = string.Empty;
     private string _warehouseTypeFilter = string.Empty;
+    private string _vehicleIdFilter = string.Empty;
     private string _vehicleNoFilter = string.Empty;
+    private string _vehicleEmirateFilter = string.Empty;
+    private string _vehicleCategoryFilter = string.Empty;
+    private string _vehicleTypeFilter = string.Empty;
     private string _vehicleOwnerFilter = string.Empty;
     private string _vehicleContactFilter = string.Empty;
+    private string _driverIdFilter = string.Empty;
     private string _driverNameFilter = string.Empty;
     private string _driverCnicFilter = string.Empty;
     private string _driverMobileFilter = string.Empty;
+    private string _driverTypeFilter = string.Empty;
+    private string _driverEmployerFilter = string.Empty;
     private string _driverLicenseFilter = string.Empty;
+    private string _driverStatusFilter = string.Empty;
     private Customer? _selectedCustomer;
     private Customer _customerForm = new();
     private Vendor? _selectedVendor;
@@ -115,8 +126,8 @@ public class MainViewModel : BaseViewModel
         StopBitsOptions = new ObservableCollection<string> { "One", "Two", "OnePointFive" };
         PartyTypes = new ObservableCollection<string> { "Customer", "Vendor" };
 
-        ConnectCommand = new RelayCommand(ConnectAsync);
-        DisconnectCommand = new RelayCommand(DisconnectAsync);
+        ConnectCommand = new RelayCommand(ConnectAsync, () => !IsConnected);
+        DisconnectCommand = new RelayCommand(DisconnectAsync, () => IsConnected);
         SaveSettingsCommand = new RelayCommand(SaveSettingsAsync);
         SaveFirstWeightCommand = new RelayCommand(SaveFirstWeightAsync);
         SaveSecondWeightCommand = new RelayCommand(SaveSecondWeightAsync);
@@ -212,6 +223,8 @@ public class MainViewModel : BaseViewModel
     public RelayCommand RefreshUsersCommand { get; }
 
     public string CurrentUserDisplay => $"{_currentUser.FullName} ({_currentUser.Username})";
+    public string CurrentUserId => _currentUser.UserId.ToString();
+    public string CurrentUsername => _currentUser.Username;
     public string CurrentUserCompany => _currentUser.CompanyName;
     public bool CanAccessWeighment => _currentUser.CanAccessWeighment;
     public bool CanAccessSettings => _currentUser.CanAccessSettings;
@@ -267,6 +280,16 @@ public class MainViewModel : BaseViewModel
         set => SetProperty(ref _connectionStatus, value);
     }
 
+    public bool IsConnected
+    {
+        get => _isConnected;
+        set
+        {
+            if (SetProperty(ref _isConnected, value))
+                System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+        }
+    }
+
     public string StatusMessage
     {
         get => _statusMessage;
@@ -291,10 +314,22 @@ public class MainViewModel : BaseViewModel
         set => SetProperty(ref _driverName, value);
     }
 
+    public string PartyAccount
+    {
+        get => _partyAccount;
+        set => SetProperty(ref _partyAccount, value);
+    }
+
     public string PartyName
     {
         get => _partyName;
         set => SetProperty(ref _partyName, value);
+    }
+
+    public string ItemNumber
+    {
+        get => _itemNumber;
+        set => SetProperty(ref _itemNumber, value);
     }
 
     public string ItemName
@@ -717,12 +752,52 @@ public class MainViewModel : BaseViewModel
         }
     }
 
+    public string VehicleIdFilter
+    {
+        get => _vehicleIdFilter;
+        set
+        {
+            if (SetProperty(ref _vehicleIdFilter, value))
+                ApplyVehicleFilter();
+        }
+    }
+
     public string VehicleNoFilter
     {
         get => _vehicleNoFilter;
         set
         {
             if (SetProperty(ref _vehicleNoFilter, value))
+                ApplyVehicleFilter();
+        }
+    }
+
+    public string VehicleEmirateFilter
+    {
+        get => _vehicleEmirateFilter;
+        set
+        {
+            if (SetProperty(ref _vehicleEmirateFilter, value))
+                ApplyVehicleFilter();
+        }
+    }
+
+    public string VehicleCategoryFilter
+    {
+        get => _vehicleCategoryFilter;
+        set
+        {
+            if (SetProperty(ref _vehicleCategoryFilter, value))
+                ApplyVehicleFilter();
+        }
+    }
+
+    public string VehicleTypeFilter
+    {
+        get => _vehicleTypeFilter;
+        set
+        {
+            if (SetProperty(ref _vehicleTypeFilter, value))
                 ApplyVehicleFilter();
         }
     }
@@ -747,12 +822,52 @@ public class MainViewModel : BaseViewModel
         }
     }
 
+    public string DriverIdFilter
+    {
+        get => _driverIdFilter;
+        set
+        {
+            if (SetProperty(ref _driverIdFilter, value))
+                ApplyDriverFilter();
+        }
+    }
+
     public string DriverNameFilter
     {
         get => _driverNameFilter;
         set
         {
             if (SetProperty(ref _driverNameFilter, value))
+                ApplyDriverFilter();
+        }
+    }
+
+    public string DriverTypeFilter
+    {
+        get => _driverTypeFilter;
+        set
+        {
+            if (SetProperty(ref _driverTypeFilter, value))
+                ApplyDriverFilter();
+        }
+    }
+
+    public string DriverEmployerFilter
+    {
+        get => _driverEmployerFilter;
+        set
+        {
+            if (SetProperty(ref _driverEmployerFilter, value))
+                ApplyDriverFilter();
+        }
+    }
+
+    public string DriverStatusFilter
+    {
+        get => _driverStatusFilter;
+        set
+        {
+            if (SetProperty(ref _driverStatusFilter, value))
                 ApplyDriverFilter();
         }
     }
@@ -803,7 +918,10 @@ public class MainViewModel : BaseViewModel
         set
         {
             if (SetProperty(ref _selectedWeighmentParty, value) && value != null)
+            {
+                PartyAccount = value.PartyAccount;
                 PartyName = value.PartyName;
+            }
         }
     }
 
@@ -813,7 +931,10 @@ public class MainViewModel : BaseViewModel
         set
         {
             if (SetProperty(ref _selectedWeighmentItem, value) && value != null)
-                ItemName = string.IsNullOrWhiteSpace(value.ProductName) ? value.ItemNumber : $"{value.ItemNumber} - {value.ProductName}";
+            {
+                ItemNumber = value.ItemNumber;
+                ItemName = value.ProductName;
+            }
         }
     }
 
@@ -1033,12 +1154,15 @@ public class MainViewModel : BaseViewModel
             _weightReader.WeightReceived += WeightReader_WeightReceived;
             await _weightReader.ConnectAsync(Settings);
 
+            IsConnected = true;
             ConnectionStatus = $"Connected ({Settings.ConnectionType})";
             StatusMessage = "Connected successfully.";
         }
         catch (Exception ex)
         {
+            IsConnected = false;
             ConnectionStatus = "Disconnected";
+            ClearLiveWeight();
             StatusMessage = "Connection error: " + ex.Message;
         }
     }
@@ -1054,12 +1178,22 @@ public class MainViewModel : BaseViewModel
                 _weightReader = null;
             }
 
+            IsConnected = false;
             ConnectionStatus = "Disconnected";
+            ClearLiveWeight();
         }
         catch (Exception ex)
         {
+            ClearLiveWeight();
             StatusMessage = "Disconnect error: " + ex.Message;
         }
+    }
+
+    private void ClearLiveWeight()
+    {
+        LiveWeight = 0m;
+        IsStable = false;
+        LiveRaw = string.Empty;
     }
 
     private void WeightReader_WeightReceived(object? sender, WeightReadingEventArgs e)
@@ -1114,12 +1248,16 @@ public class MainViewModel : BaseViewModel
                 VehicleNo = VehicleNo.Trim().ToUpperInvariant(),
                 DriverName = DriverName.Trim(),
                 PartyId = SelectedWeighmentParty?.PartyId,
+                PartyAccount = PartyAccount.Trim(),
                 PartyName = PartyName.Trim(),
                 PartyType = SelectedPartyType,
                 MaterialId = SelectedWeighmentItem?.ItemMasterId,
+                ItemNumber = ItemNumber.Trim(),
+                ItemName = ItemName.Trim(),
                 MaterialName = ItemName.Trim(),
                 FirstWeight = LiveWeight,
                 FirstWeightTime = DateTime.Now,
+                FirstWeightBy = CurrentUsername,
                 Status = "Open",
                 Remarks = Remarks.Trim(),
                 CreatedAt = DateTime.Now
@@ -1167,7 +1305,7 @@ public class MainViewModel : BaseViewModel
             }
 
             SecondWeight = LiveWeight;
-            await _databaseService.CompleteSecondWeightAsync(_loadedOpenWeighmentId.Value, LiveWeight, DateTime.Now);
+            await _databaseService.CompleteSecondWeightAsync(_loadedOpenWeighmentId.Value, LiveWeight, DateTime.Now, CurrentUsername);
 
             await RefreshAllAsync();
             StatusMessage = $"Second weight saved. Ticket completed: {TicketNo}";
@@ -1191,8 +1329,10 @@ public class MainViewModel : BaseViewModel
         TicketNo = SelectedOpenWeighment.TicketNo;
         VehicleNo = SelectedOpenWeighment.VehicleNo;
         DriverName = SelectedOpenWeighment.DriverName;
+        PartyAccount = SelectedOpenWeighment.PartyAccount;
         PartyName = SelectedOpenWeighment.PartyName;
-        ItemName = SelectedOpenWeighment.MaterialName;
+        ItemNumber = SelectedOpenWeighment.ItemNumber;
+        ItemName = string.IsNullOrWhiteSpace(SelectedOpenWeighment.ItemName) ? SelectedOpenWeighment.MaterialName : SelectedOpenWeighment.ItemName;
         Remarks = SelectedOpenWeighment.Remarks;
         FirstWeight = SelectedOpenWeighment.FirstWeight;
         SecondWeight = null;
@@ -1201,8 +1341,10 @@ public class MainViewModel : BaseViewModel
         RefreshPartyLookup();
         SelectedWeighmentParty = FilteredParties.FirstOrDefault(x => x.PartyId == SelectedOpenWeighment.PartyId);
         SelectedWeighmentItem = ItemMasters.FirstOrDefault(x => x.ItemMasterId == SelectedOpenWeighment.MaterialId);
+        PartyAccount = SelectedOpenWeighment.PartyAccount;
         PartyName = SelectedOpenWeighment.PartyName;
-        ItemName = SelectedOpenWeighment.MaterialName;
+        ItemNumber = SelectedOpenWeighment.ItemNumber;
+        ItemName = string.IsNullOrWhiteSpace(SelectedOpenWeighment.ItemName) ? SelectedOpenWeighment.MaterialName : SelectedOpenWeighment.ItemName;
 
         StatusMessage = $"Open ticket loaded: {TicketNo}";
     }
@@ -1930,7 +2072,9 @@ public class MainViewModel : BaseViewModel
         TicketNo = string.Empty;
         VehicleNo = string.Empty;
         DriverName = string.Empty;
+        PartyAccount = string.Empty;
         PartyName = string.Empty;
+        ItemNumber = string.Empty;
         ItemName = string.Empty;
         Remarks = string.Empty;
         FirstWeight = null;
@@ -1988,8 +2132,8 @@ public class MainViewModel : BaseViewModel
         FilteredParties.Clear();
 
         IEnumerable<Party> lookup = SelectedPartyType == "Vendor"
-            ? Vendors.Select(v => new Party { PartyId = v.VendorId, PartyName = string.IsNullOrWhiteSpace(v.Name) ? v.VendorAccount : $"{v.VendorAccount} - {v.Name}", PartyType = "Vendor" })
-            : Customers.Select(c => new Party { PartyId = c.CustomerId, PartyName = string.IsNullOrWhiteSpace(c.Name) ? c.CustomerAccount : $"{c.CustomerAccount} - {c.Name}", PartyType = "Customer" });
+            ? Vendors.Select(v => new Party { PartyId = v.VendorId, PartyAccount = v.VendorAccount, PartyName = v.Name, PartyType = "Vendor" })
+            : Customers.Select(c => new Party { PartyId = c.CustomerId, PartyAccount = c.CustomerAccount, PartyName = c.Name, PartyType = "Customer" });
 
         foreach (var item in lookup)
             FilteredParties.Add(item);
@@ -2020,7 +2164,7 @@ public class MainViewModel : BaseViewModel
     private void ClearVehicleMasterForm()
     {
         SelectedVehicleMaster = null;
-        VehicleMasterForm = new Vehicle { IsActive = true };
+        VehicleMasterForm = new Vehicle { IsActive = true, Status = "Active" };
     }
 
     private void LoadSelectedVehicleMasterToForm()
@@ -2031,10 +2175,18 @@ public class MainViewModel : BaseViewModel
         VehicleMasterForm = new Vehicle
         {
             VehicleId = SelectedVehicleMaster.VehicleId,
-            VehicleNo = SelectedVehicleMaster.VehicleNo,
+            PlateNumber = SelectedVehicleMaster.PlateNumber,
+            PlateEmirate = SelectedVehicleMaster.PlateEmirate,
+            PlateCategory = SelectedVehicleMaster.PlateCategory,
             VehicleType = SelectedVehicleMaster.VehicleType,
-            OwnerName = SelectedVehicleMaster.OwnerName,
-            ContactNo = SelectedVehicleMaster.ContactNo,
+            OwnershipType = SelectedVehicleMaster.OwnershipType,
+            OwnerPartyAccount = SelectedVehicleMaster.OwnerPartyAccount,
+            Transporter = SelectedVehicleMaster.Transporter,
+            Capacity = SelectedVehicleMaster.Capacity,
+            DefaultDriver = SelectedVehicleMaster.DefaultDriver,
+            RegistrationExpiryDate = SelectedVehicleMaster.RegistrationExpiryDate,
+            LegalEntity = SelectedVehicleMaster.LegalEntity,
+            Status = SelectedVehicleMaster.Status,
             IsActive = SelectedVehicleMaster.IsActive
         };
     }
@@ -2062,7 +2214,7 @@ public class MainViewModel : BaseViewModel
     private void ClearDriverMasterForm()
     {
         SelectedDriverMaster = null;
-        DriverMasterForm = new Driver { IsActive = true };
+        DriverMasterForm = new Driver { IsActive = true, Status = "Active", EffectiveFrom = DateTime.Today };
     }
 
     private void LoadSelectedDriverMasterToForm()
@@ -2074,10 +2226,36 @@ public class MainViewModel : BaseViewModel
         {
             DriverId = SelectedDriverMaster.DriverId,
             DriverName = SelectedDriverMaster.DriverName,
-            CNIC = SelectedDriverMaster.CNIC,
-            MobileNo = SelectedDriverMaster.MobileNo,
-            LicenseNo = SelectedDriverMaster.LicenseNo,
-            IsActive = SelectedDriverMaster.IsActive
+            MobileNumber = SelectedDriverMaster.MobileNumber,
+            SecondaryMobile = SelectedDriverMaster.SecondaryMobile,
+            Email = SelectedDriverMaster.Email,
+            Nationality = SelectedDriverMaster.Nationality,
+            DriverType = SelectedDriverMaster.DriverType,
+            EmployerPartyType = SelectedDriverMaster.EmployerPartyType,
+            EmployerAccount = SelectedDriverMaster.EmployerAccount,
+            IdentificationType = SelectedDriverMaster.IdentificationType,
+            IdentificationNumber = SelectedDriverMaster.IdentificationNumber,
+            IdentificationExpiryDate = SelectedDriverMaster.IdentificationExpiryDate,
+            EmiratesIdExpiryDate = SelectedDriverMaster.EmiratesIdExpiryDate,
+            PassportNumber = SelectedDriverMaster.PassportNumber,
+            PassportExpiryDate = SelectedDriverMaster.PassportExpiryDate,
+            DrivingLicenceNumber = SelectedDriverMaster.DrivingLicenceNumber,
+            DrivingLicenceIssuedBy = SelectedDriverMaster.DrivingLicenceIssuedBy,
+            DrivingLicenceExpiryDate = SelectedDriverMaster.DrivingLicenceExpiryDate,
+            LicenceCategories = SelectedDriverMaster.LicenceCategories,
+            DefaultVehicle = SelectedDriverMaster.DefaultVehicle,
+            Address = SelectedDriverMaster.Address,
+            DriverPhoto = SelectedDriverMaster.DriverPhoto,
+            EmiratesIdAttachment = SelectedDriverMaster.EmiratesIdAttachment,
+            PassportAttachment = SelectedDriverMaster.PassportAttachment,
+            DrivingLicenceAttachment = SelectedDriverMaster.DrivingLicenceAttachment,
+            LegalEntity = SelectedDriverMaster.LegalEntity,
+            Status = SelectedDriverMaster.Status,
+            Blacklisted = SelectedDriverMaster.Blacklisted,
+            BlacklistReason = SelectedDriverMaster.BlacklistReason,
+            EffectiveFrom = SelectedDriverMaster.EffectiveFrom,
+            IsActive = SelectedDriverMaster.IsActive,
+            Remarks = SelectedDriverMaster.Remarks
         };
     }
 
@@ -2101,9 +2279,9 @@ public class MainViewModel : BaseViewModel
             MatchesFilter(x.CompanyName, ReportCompanyFilter) &&
             MatchesFilter(x.VehicleNo, ReportVehicleFilter) &&
             MatchesFilter(x.DriverName, ReportDriverFilter) &&
-            MatchesFilter(x.PartyName, ReportPartyFilter) &&
+            (MatchesFilter(x.PartyAccount, ReportPartyFilter) || MatchesFilter(x.PartyName, ReportPartyFilter)) &&
             MatchesFilter(x.PartyType, ReportPartyTypeFilter) &&
-            MatchesFilter(x.MaterialName, ReportItemFilter) &&
+            (MatchesFilter(x.ItemNumber, ReportItemFilter) || MatchesFilter(x.ItemName, ReportItemFilter) || MatchesFilter(x.MaterialName, ReportItemFilter)) &&
             MatchesFilter(x.Status, ReportStatusFilter)));
     }
 
@@ -2156,18 +2334,26 @@ public class MainViewModel : BaseViewModel
     private void ApplyVehicleFilter()
     {
         ReplaceCollection(FilteredVehicles, Vehicles.Where(x =>
-            MatchesFilter(x.VehicleNo, VehicleNoFilter) &&
-            MatchesFilter(x.OwnerName, VehicleOwnerFilter) &&
-            MatchesFilter(x.ContactNo, VehicleContactFilter)));
+            MatchesFilter(x.VehicleId.ToString(), VehicleIdFilter) &&
+            MatchesFilter(x.PlateNumber, VehicleNoFilter) &&
+            MatchesFilter(x.PlateEmirate, VehicleEmirateFilter) &&
+            MatchesFilter(x.PlateCategory, VehicleCategoryFilter) &&
+            MatchesFilter(x.VehicleType, VehicleTypeFilter) &&
+            MatchesFilter(x.OwnerPartyAccount, VehicleOwnerFilter) &&
+            MatchesFilter(x.DefaultDriver, VehicleContactFilter)));
     }
 
     private void ApplyDriverFilter()
     {
         ReplaceCollection(FilteredDrivers, Drivers.Where(x =>
+            MatchesFilter(x.DriverId.ToString(), DriverIdFilter) &&
             MatchesFilter(x.DriverName, DriverNameFilter) &&
-            MatchesFilter(x.CNIC, DriverCnicFilter) &&
-            MatchesFilter(x.MobileNo, DriverMobileFilter) &&
-            MatchesFilter(x.LicenseNo, DriverLicenseFilter)));
+            MatchesFilter(x.MobileNumber, DriverMobileFilter) &&
+            MatchesFilter(x.DriverType, DriverTypeFilter) &&
+            MatchesFilter(x.EmployerAccount, DriverEmployerFilter) &&
+            MatchesFilter(x.IdentificationNumber, DriverCnicFilter) &&
+            MatchesFilter(x.DrivingLicenceNumber, DriverLicenseFilter) &&
+            MatchesFilter(x.Status, DriverStatusFilter)));
     }
 
     private static bool IsFilterEmpty(string value) => string.IsNullOrWhiteSpace(value);

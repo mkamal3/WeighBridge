@@ -51,12 +51,14 @@ public static class SlipService
         sb.AppendLine($"Vehicle No    : {w.VehicleNo}");
         sb.AppendLine($"Driver Name   : {w.DriverName}");
         sb.AppendLine($"Party         : {FormatParty(w)}");
-        sb.AppendLine($"Item          : {w.MaterialName}");
+        sb.AppendLine($"Item          : {FormatItem(w)}");
         sb.AppendLine("----------------------------------------");
         sb.AppendLine($"First Weight  : {FormatWeight(w.FirstWeight)}");
         sb.AppendLine($"First Time    : {FormatDate(w.FirstWeightTime)}");
+        sb.AppendLine($"First Weight By : {FormatUserDisplay(w.FirstWeightByDisplay, w.FirstWeightBy)}");
         sb.AppendLine($"Second Weight : {(w.SecondWeight.HasValue ? FormatWeight(w.SecondWeight.Value) : string.Empty)}");
         sb.AppendLine($"Second Time   : {(w.SecondWeightTime.HasValue ? FormatDate(w.SecondWeightTime.Value) : string.Empty)}");
+        sb.AppendLine($"Second Weight By: {FormatUserDisplay(w.SecondWeightByDisplay, w.SecondWeightBy)}");
         sb.AppendLine($"Net Weight    : {(w.NetWeight.HasValue ? FormatWeight(w.NetWeight.Value) : string.Empty)}");
         sb.AppendLine("----------------------------------------");
         sb.AppendLine($"Remarks       : {w.Remarks}");
@@ -152,11 +154,13 @@ public static class SlipService
         ("Vehicle No", w.VehicleNo),
         ("Driver Name", w.DriverName),
         ("Party", FormatParty(w)),
-        ("Item", w.MaterialName),
+        ("Item", FormatItem(w)),
         ("First Weight", FormatWeight(w.FirstWeight)),
         ("First Time", FormatDate(w.FirstWeightTime)),
+        ("First Weight By", FormatUserDisplay(w.FirstWeightByDisplay, w.FirstWeightBy)),
         ("Second Weight", w.SecondWeight.HasValue ? FormatWeight(w.SecondWeight.Value) : string.Empty),
         ("Second Time", w.SecondWeightTime.HasValue ? FormatDate(w.SecondWeightTime.Value) : string.Empty),
+        ("Second Weight By", FormatUserDisplay(w.SecondWeightByDisplay, w.SecondWeightBy)),
         ("Net Weight", w.NetWeight.HasValue ? FormatWeight(w.NetWeight.Value) : string.Empty),
         ("Status", w.Status),
         ("Remarks", w.Remarks),
@@ -195,13 +199,25 @@ public static class SlipService
 
     private static string FormatParty(Weighment w)
     {
-        if (string.IsNullOrWhiteSpace(w.PartyType))
-            return w.PartyName ?? string.Empty;
+        var party = string.IsNullOrWhiteSpace(w.PartyAccount)
+            ? w.PartyName ?? string.Empty
+            : string.IsNullOrWhiteSpace(w.PartyName) ? w.PartyAccount : $"{w.PartyAccount} - {w.PartyName}";
 
-        return string.IsNullOrWhiteSpace(w.PartyName)
-            ? w.PartyType
-            : $"{w.PartyName} ({w.PartyType})";
+        return string.IsNullOrWhiteSpace(w.PartyType)
+            ? party
+            : $"{party} ({w.PartyType})";
     }
+
+    private static string FormatItem(Weighment w)
+    {
+        var itemName = string.IsNullOrWhiteSpace(w.ItemName) ? w.MaterialName : w.ItemName;
+        return string.IsNullOrWhiteSpace(w.ItemNumber)
+            ? itemName ?? string.Empty
+            : string.IsNullOrWhiteSpace(itemName) ? w.ItemNumber : $"{w.ItemNumber} - {itemName}";
+    }
+
+    private static string FormatUserDisplay(string displayValue, string storedValue)
+        => string.IsNullOrWhiteSpace(displayValue) ? storedValue ?? string.Empty : displayValue;
 
     private static string FormatWeight(decimal value) => value.ToString("N2", CultureInfo.CurrentCulture) + " kg";
 

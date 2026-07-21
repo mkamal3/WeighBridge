@@ -9,6 +9,14 @@ public class DatabaseService
     private readonly string _dbPath;
     private readonly string _connectionString;
 
+    private const string WeighmentSelectSql = @"
+SELECT w.*,
+       CASE WHEN u1.UserId IS NULL THEN w.FirstWeightBy ELSE u1.FullName || ' (' || u1.Username || ')' END AS FirstWeightByDisplay,
+       CASE WHEN u2.UserId IS NULL THEN w.SecondWeightBy ELSE u2.FullName || ' (' || u2.Username || ')' END AS SecondWeightByDisplay
+FROM Weighments w
+LEFT JOIN Users u1 ON lower(w.FirstWeightBy) = lower(u1.Username) OR w.FirstWeightBy = CAST(u1.UserId AS TEXT)
+LEFT JOIN Users u2 ON lower(w.SecondWeightBy) = lower(u2.Username) OR w.SecondWeightBy = CAST(u2.UserId AS TEXT)";
+
     public DatabaseService()
     {
         _dbPath = Path.Combine(AppContext.BaseDirectory, "bridgeone.db");
@@ -49,19 +57,57 @@ CREATE TABLE IF NOT EXISTS Materials (
 CREATE TABLE IF NOT EXISTS Vehicles (
     VehicleId INTEGER PRIMARY KEY AUTOINCREMENT,
     VehicleNo TEXT NOT NULL UNIQUE,
+    PlateNumber TEXT NOT NULL DEFAULT '',
+    PlateEmirate TEXT NOT NULL DEFAULT '',
+    PlateCategory TEXT NOT NULL DEFAULT '',
     VehicleType TEXT NOT NULL DEFAULT '',
-    OwnerName TEXT NOT NULL DEFAULT '',
-    ContactNo TEXT NOT NULL DEFAULT '',
+    OwnershipType TEXT NOT NULL DEFAULT '',
+    OwnerPartyAccount TEXT NOT NULL DEFAULT '',
+    Transporter TEXT NOT NULL DEFAULT '',
+    Capacity REAL NOT NULL DEFAULT 0,
+    DefaultDriver TEXT NOT NULL DEFAULT '',
+    RegistrationExpiryDate TEXT,
+    LegalEntity TEXT NOT NULL DEFAULT '',
+    Status TEXT NOT NULL DEFAULT 'Active',
     IsActive INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS Drivers (
     DriverId INTEGER PRIMARY KEY AUTOINCREMENT,
     DriverName TEXT NOT NULL UNIQUE,
+    MobileNumber TEXT NOT NULL DEFAULT '',
+    SecondaryMobile TEXT NOT NULL DEFAULT '',
+    Email TEXT NOT NULL DEFAULT '',
+    Nationality TEXT NOT NULL DEFAULT '',
+    DriverType TEXT NOT NULL DEFAULT '',
+    EmployerPartyType TEXT NOT NULL DEFAULT '',
+    EmployerAccount TEXT NOT NULL DEFAULT '',
+    IdentificationType TEXT NOT NULL DEFAULT '',
+    IdentificationNumber TEXT NOT NULL DEFAULT '',
+    IdentificationExpiryDate TEXT,
+    EmiratesIdExpiryDate TEXT,
+    PassportNumber TEXT NOT NULL DEFAULT '',
+    PassportExpiryDate TEXT,
+    DrivingLicenceNumber TEXT NOT NULL DEFAULT '',
+    DrivingLicenceIssuedBy TEXT NOT NULL DEFAULT '',
+    DrivingLicenceExpiryDate TEXT,
+    LicenceCategories TEXT NOT NULL DEFAULT '',
+    DefaultVehicle TEXT NOT NULL DEFAULT '',
+    Address TEXT NOT NULL DEFAULT '',
+    DriverPhoto TEXT NOT NULL DEFAULT '',
+    EmiratesIdAttachment TEXT NOT NULL DEFAULT '',
+    PassportAttachment TEXT NOT NULL DEFAULT '',
+    DrivingLicenceAttachment TEXT NOT NULL DEFAULT '',
+    LegalEntity TEXT NOT NULL DEFAULT '',
+    Status TEXT NOT NULL DEFAULT 'Active',
+    Blacklisted INTEGER NOT NULL DEFAULT 0,
+    BlacklistReason TEXT NOT NULL DEFAULT '',
+    EffectiveFrom TEXT,
+    IsActive INTEGER NOT NULL DEFAULT 1,
+    Remarks TEXT NOT NULL DEFAULT '',
     CNIC TEXT NOT NULL DEFAULT '',
     MobileNo TEXT NOT NULL DEFAULT '',
-    LicenseNo TEXT NOT NULL DEFAULT '',
-    IsActive INTEGER NOT NULL DEFAULT 1
+    LicenseNo TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS Weighments (
@@ -71,14 +117,19 @@ CREATE TABLE IF NOT EXISTS Weighments (
     VehicleNo TEXT NOT NULL,
     DriverName TEXT,
     PartyId INTEGER,
+    PartyAccount TEXT NOT NULL DEFAULT '',
     PartyName TEXT,
     PartyType TEXT,
     MaterialId INTEGER,
+    ItemNumber TEXT NOT NULL DEFAULT '',
+    ItemName TEXT NOT NULL DEFAULT '',
     MaterialName TEXT,
     FirstWeight REAL NOT NULL,
     FirstWeightTime TEXT NOT NULL,
+    FirstWeightBy TEXT NOT NULL DEFAULT '',
     SecondWeight REAL,
     SecondWeightTime TEXT,
+    SecondWeightBy TEXT NOT NULL DEFAULT '',
     NetWeight REAL,
     Status TEXT NOT NULL,
     Remarks TEXT,
@@ -159,38 +210,38 @@ CREATE TABLE IF NOT EXISTS ItemMasters (
     ItemModelGroup TEXT NOT NULL DEFAULT '',
     ReservationHierarchy TEXT NOT NULL DEFAULT '',
     PurchaseUnit TEXT NOT NULL DEFAULT '',
-    PurchaseOverDelivery TEXT NOT NULL DEFAULT '',
-    PurchaseUnderDelivery TEXT NOT NULL DEFAULT '',
+    PurchaseOverDelivery REAL,
+    PurchaseUnderDelivery REAL,
     BuyerGroup TEXT NOT NULL DEFAULT '',
     ItemPriceToleranceGroup TEXT NOT NULL DEFAULT '',
     Vendor TEXT NOT NULL DEFAULT '',
     PurchaseItemSalesTaxGroup TEXT NOT NULL DEFAULT '',
     SellUnit TEXT NOT NULL DEFAULT '',
-    SellOverDelivery TEXT NOT NULL DEFAULT '',
-    SellUnderDelivery TEXT NOT NULL DEFAULT '',
+    SellOverDelivery REAL,
+    SellUnderDelivery REAL,
     SellItemSalesTaxGroup TEXT NOT NULL DEFAULT '',
     BatchNumberGroup TEXT NOT NULL DEFAULT '',
     SerialNumberGroup TEXT NOT NULL DEFAULT '',
-    InventoryOverDelivery TEXT NOT NULL DEFAULT '',
-    InventoryUnderDelivery TEXT NOT NULL DEFAULT '',
-    CatchWeightItem TEXT NOT NULL DEFAULT '',
+    InventoryOverDelivery REAL,
+    InventoryUnderDelivery REAL,
+    CatchWeightItem INTEGER NOT NULL DEFAULT 0,
     CWUnit TEXT NOT NULL DEFAULT '',
-    NominalQuantity TEXT NOT NULL DEFAULT '',
-    MinimumQuantity TEXT NOT NULL DEFAULT '',
-    MaximumQuantity TEXT NOT NULL DEFAULT '',
+    NominalQuantity REAL,
+    MinimumQuantity REAL,
+    MaximumQuantity REAL,
     BOMUnit TEXT NOT NULL DEFAULT '',
-    ConstantScrap TEXT NOT NULL DEFAULT '',
-    VariableScrap TEXT NOT NULL DEFAULT '',
-    CostingLevel TEXT NOT NULL DEFAULT '',
-    PlanningLevel TEXT NOT NULL DEFAULT '',
-    CostCalculationLevel TEXT NOT NULL DEFAULT '',
-    Phantom TEXT NOT NULL DEFAULT '',
+    ConstantScrap REAL,
+    VariableScrap REAL,
+    CostingLevel INTEGER,
+    PlanningLevel INTEGER,
+    CostCalculationLevel INTEGER,
+    Phantom INTEGER NOT NULL DEFAULT 0,
     CalculationGroup TEXT NOT NULL DEFAULT '',
     ProductionType TEXT NOT NULL DEFAULT '',
     ItemGroup TEXT NOT NULL DEFAULT '',
     CostUnit TEXT NOT NULL DEFAULT '',
-    LastCostPrice TEXT NOT NULL DEFAULT '',
-    DateOfPrice TEXT NOT NULL DEFAULT '',
+    LastCostPrice REAL,
+    DateOfPrice TEXT,
     UnitSequenceGroupId TEXT NOT NULL DEFAULT '',
     CreatedAt TEXT NOT NULL DEFAULT ''
 );
@@ -330,18 +381,30 @@ TcpPort = excluded.TcpPort;";
         using var connection = CreateConnection();
         connection.Open();
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT VehicleId, VehicleNo, VehicleType, OwnerName, ContactNo, IsActive FROM Vehicles ORDER BY VehicleNo";
+        command.CommandText = "SELECT * FROM Vehicles ORDER BY PlateNumber, VehicleNo";
         using var reader = command.ExecuteReader();
         while (reader.Read())
         {
+            var plateNumber = ReadText(reader, "PlateNumber");
+            if (string.IsNullOrWhiteSpace(plateNumber))
+                plateNumber = ReadText(reader, "VehicleNo");
+
             result.Add(new Vehicle
             {
                 VehicleId = Convert.ToInt32(reader["VehicleId"]),
-                VehicleNo = Convert.ToString(reader["VehicleNo"]) ?? string.Empty,
-                VehicleType = Convert.ToString(reader["VehicleType"]) ?? string.Empty,
-                OwnerName = Convert.ToString(reader["OwnerName"]) ?? string.Empty,
-                ContactNo = Convert.ToString(reader["ContactNo"]) ?? string.Empty,
-                IsActive = Convert.ToInt32(reader["IsActive"]) == 1
+                PlateNumber = plateNumber,
+                PlateEmirate = ReadText(reader, "PlateEmirate"),
+                PlateCategory = ReadText(reader, "PlateCategory"),
+                VehicleType = ReadText(reader, "VehicleType"),
+                OwnershipType = ReadText(reader, "OwnershipType"),
+                OwnerPartyAccount = ReadText(reader, "OwnerPartyAccount"),
+                Transporter = ReadText(reader, "Transporter"),
+                Capacity = ReadDecimal(reader, "Capacity") ?? 0m,
+                DefaultDriver = ReadText(reader, "DefaultDriver"),
+                RegistrationExpiryDate = ReadDate(reader, "RegistrationExpiryDate"),
+                LegalEntity = ReadText(reader, "LegalEntity"),
+                Status = string.IsNullOrWhiteSpace(ReadText(reader, "Status")) ? "Active" : ReadText(reader, "Status"),
+                IsActive = ReadBool(reader, "IsActive")
             });
         }
         return result;
@@ -353,18 +416,44 @@ TcpPort = excluded.TcpPort;";
         using var connection = CreateConnection();
         connection.Open();
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT DriverId, DriverName, CNIC, MobileNo, LicenseNo, IsActive FROM Drivers ORDER BY DriverName";
+        command.CommandText = "SELECT * FROM Drivers ORDER BY DriverName";
         using var reader = command.ExecuteReader();
         while (reader.Read())
         {
             result.Add(new Driver
             {
                 DriverId = Convert.ToInt32(reader["DriverId"]),
-                DriverName = Convert.ToString(reader["DriverName"]) ?? string.Empty,
-                CNIC = Convert.ToString(reader["CNIC"]) ?? string.Empty,
-                MobileNo = Convert.ToString(reader["MobileNo"]) ?? string.Empty,
-                LicenseNo = Convert.ToString(reader["LicenseNo"]) ?? string.Empty,
-                IsActive = Convert.ToInt32(reader["IsActive"]) == 1
+                DriverName = ReadText(reader, "DriverName"),
+                MobileNumber = string.IsNullOrWhiteSpace(ReadText(reader, "MobileNumber")) ? ReadText(reader, "MobileNo") : ReadText(reader, "MobileNumber"),
+                SecondaryMobile = ReadText(reader, "SecondaryMobile"),
+                Email = ReadText(reader, "Email"),
+                Nationality = ReadText(reader, "Nationality"),
+                DriverType = ReadText(reader, "DriverType"),
+                EmployerPartyType = ReadText(reader, "EmployerPartyType"),
+                EmployerAccount = ReadText(reader, "EmployerAccount"),
+                IdentificationType = ReadText(reader, "IdentificationType"),
+                IdentificationNumber = string.IsNullOrWhiteSpace(ReadText(reader, "IdentificationNumber")) ? ReadText(reader, "CNIC") : ReadText(reader, "IdentificationNumber"),
+                IdentificationExpiryDate = ReadDate(reader, "IdentificationExpiryDate"),
+                EmiratesIdExpiryDate = ReadDate(reader, "EmiratesIdExpiryDate"),
+                PassportNumber = ReadText(reader, "PassportNumber"),
+                PassportExpiryDate = ReadDate(reader, "PassportExpiryDate"),
+                DrivingLicenceNumber = string.IsNullOrWhiteSpace(ReadText(reader, "DrivingLicenceNumber")) ? ReadText(reader, "LicenseNo") : ReadText(reader, "DrivingLicenceNumber"),
+                DrivingLicenceIssuedBy = ReadText(reader, "DrivingLicenceIssuedBy"),
+                DrivingLicenceExpiryDate = ReadDate(reader, "DrivingLicenceExpiryDate"),
+                LicenceCategories = ReadText(reader, "LicenceCategories"),
+                DefaultVehicle = ReadText(reader, "DefaultVehicle"),
+                Address = ReadText(reader, "Address"),
+                DriverPhoto = ReadText(reader, "DriverPhoto"),
+                EmiratesIdAttachment = ReadText(reader, "EmiratesIdAttachment"),
+                PassportAttachment = ReadText(reader, "PassportAttachment"),
+                DrivingLicenceAttachment = ReadText(reader, "DrivingLicenceAttachment"),
+                LegalEntity = ReadText(reader, "LegalEntity"),
+                Status = string.IsNullOrWhiteSpace(ReadText(reader, "Status")) ? "Active" : ReadText(reader, "Status"),
+                Blacklisted = ReadBool(reader, "Blacklisted"),
+                BlacklistReason = ReadText(reader, "BlacklistReason"),
+                EffectiveFrom = ReadDate(reader, "EffectiveFrom"),
+                IsActive = ReadBool(reader, "IsActive"),
+                Remarks = ReadText(reader, "Remarks")
             });
         }
         return result;
@@ -399,15 +488,21 @@ TcpPort = excluded.TcpPort;";
         using var connection = CreateConnection();
         connection.Open();
         using var command = connection.CreateCommand();
-        command.CommandText = "INSERT OR IGNORE INTO Vehicles (VehicleNo) VALUES ($VehicleNo)";
-        command.Parameters.AddWithValue("$VehicleNo", vehicleNo.Trim().ToUpperInvariant());
+        command.CommandText = "INSERT OR IGNORE INTO Vehicles (VehicleNo, PlateNumber, Status, IsActive) VALUES ($VehicleNo, $PlateNumber, 'Active', 1)";
+        var plateNumber = vehicleNo.Trim().ToUpperInvariant();
+        command.Parameters.AddWithValue("$VehicleNo", plateNumber);
+        command.Parameters.AddWithValue("$PlateNumber", plateNumber);
         command.ExecuteNonQuery();
     });
 
     public Task SaveVehicleAsync(Vehicle vehicle) => Task.Run(() =>
     {
-        if (string.IsNullOrWhiteSpace(vehicle.VehicleNo))
-            throw new InvalidOperationException("Vehicle number is mandatory.");
+        if (string.IsNullOrWhiteSpace(vehicle.PlateNumber))
+            throw new InvalidOperationException("Plate Number is mandatory.");
+        if (string.IsNullOrWhiteSpace(vehicle.PlateEmirate))
+            throw new InvalidOperationException("Plate Emirate is mandatory.");
+        if (string.IsNullOrWhiteSpace(vehicle.VehicleType))
+            throw new InvalidOperationException("Vehicle Type is mandatory.");
 
         using var connection = CreateConnection();
         connection.Open();
@@ -418,9 +513,18 @@ TcpPort = excluded.TcpPort;";
             command.CommandText = @"
 UPDATE Vehicles SET
 VehicleNo = $VehicleNo,
+PlateNumber = $PlateNumber,
+PlateEmirate = $PlateEmirate,
+PlateCategory = $PlateCategory,
 VehicleType = $VehicleType,
-OwnerName = $OwnerName,
-ContactNo = $ContactNo,
+OwnershipType = $OwnershipType,
+OwnerPartyAccount = $OwnerPartyAccount,
+Transporter = $Transporter,
+Capacity = $Capacity,
+DefaultDriver = $DefaultDriver,
+RegistrationExpiryDate = $RegistrationExpiryDate,
+LegalEntity = $LegalEntity,
+Status = $Status,
 IsActive = $IsActive
 WHERE VehicleId = $VehicleId;";
             command.Parameters.AddWithValue("$VehicleId", vehicle.VehicleId);
@@ -428,15 +532,13 @@ WHERE VehicleId = $VehicleId;";
         else
         {
             command.CommandText = @"
-INSERT INTO Vehicles (VehicleNo, VehicleType, OwnerName, ContactNo, IsActive)
-VALUES ($VehicleNo, $VehicleType, $OwnerName, $ContactNo, $IsActive);";
+INSERT INTO Vehicles
+(VehicleNo, PlateNumber, PlateEmirate, PlateCategory, VehicleType, OwnershipType, OwnerPartyAccount, Transporter, Capacity, DefaultDriver, RegistrationExpiryDate, LegalEntity, Status, IsActive)
+VALUES
+($VehicleNo, $PlateNumber, $PlateEmirate, $PlateCategory, $VehicleType, $OwnershipType, $OwnerPartyAccount, $Transporter, $Capacity, $DefaultDriver, $RegistrationExpiryDate, $LegalEntity, $Status, $IsActive);";
         }
 
-        command.Parameters.AddWithValue("$VehicleNo", vehicle.VehicleNo.Trim().ToUpperInvariant());
-        command.Parameters.AddWithValue("$VehicleType", vehicle.VehicleType ?? string.Empty);
-        command.Parameters.AddWithValue("$OwnerName", vehicle.OwnerName ?? string.Empty);
-        command.Parameters.AddWithValue("$ContactNo", vehicle.ContactNo ?? string.Empty);
-        command.Parameters.AddWithValue("$IsActive", vehicle.IsActive ? 1 : 0);
+        AddVehicleParameters(command, vehicle);
         command.ExecuteNonQuery();
     });
 
@@ -448,15 +550,38 @@ VALUES ($VehicleNo, $VehicleType, $OwnerName, $ContactNo, $IsActive);";
         using var connection = CreateConnection();
         connection.Open();
         using var command = connection.CreateCommand();
-        command.CommandText = "INSERT OR IGNORE INTO Drivers (DriverName) VALUES ($DriverName)";
+        command.CommandText = "INSERT OR IGNORE INTO Drivers (DriverName, Status, EffectiveFrom, IsActive) VALUES ($DriverName, 'Active', $EffectiveFrom, 1)";
         command.Parameters.AddWithValue("$DriverName", driverName.Trim());
+        command.Parameters.AddWithValue("$EffectiveFrom", DateTime.Today.ToString("yyyy-MM-dd"));
         command.ExecuteNonQuery();
     });
 
     public Task SaveDriverAsync(Driver driver) => Task.Run(() =>
     {
         if (string.IsNullOrWhiteSpace(driver.DriverName))
-            throw new InvalidOperationException("Driver name is mandatory.");
+            throw new InvalidOperationException("Driver Name is mandatory.");
+        if (string.IsNullOrWhiteSpace(driver.MobileNumber))
+            throw new InvalidOperationException("Mobile Number is mandatory.");
+        if (string.IsNullOrWhiteSpace(driver.DriverType))
+            throw new InvalidOperationException("Driver Type is mandatory.");
+        if (string.IsNullOrWhiteSpace(driver.EmployerPartyType))
+            throw new InvalidOperationException("Employer Party Type is mandatory.");
+        if (string.IsNullOrWhiteSpace(driver.IdentificationType))
+            throw new InvalidOperationException("Identification Type is mandatory.");
+        if (string.IsNullOrWhiteSpace(driver.IdentificationNumber))
+            throw new InvalidOperationException("Identification Number is mandatory.");
+        if (string.IsNullOrWhiteSpace(driver.DrivingLicenceNumber))
+            throw new InvalidOperationException("Driving Licence Number is mandatory.");
+        if (string.IsNullOrWhiteSpace(driver.DrivingLicenceIssuedBy))
+            throw new InvalidOperationException("Driving Licence Issued By is mandatory.");
+        if (!driver.DrivingLicenceExpiryDate.HasValue)
+            throw new InvalidOperationException("Driving Licence Expiry Date is mandatory.");
+        if (string.IsNullOrWhiteSpace(driver.LegalEntity))
+            throw new InvalidOperationException("Legal Entity is mandatory.");
+        if (!driver.EffectiveFrom.HasValue)
+            throw new InvalidOperationException("Effective From is mandatory.");
+        if (driver.Blacklisted && string.IsNullOrWhiteSpace(driver.BlacklistReason))
+            throw new InvalidOperationException("Blacklist Reason is required if driver is blacklisted.");
 
         using var connection = CreateConnection();
         connection.Open();
@@ -467,25 +592,52 @@ VALUES ($VehicleNo, $VehicleType, $OwnerName, $ContactNo, $IsActive);";
             command.CommandText = @"
 UPDATE Drivers SET
 DriverName = $DriverName,
-CNIC = $CNIC,
-MobileNo = $MobileNo,
-LicenseNo = $LicenseNo,
-IsActive = $IsActive
+MobileNumber = $MobileNumber,
+MobileNo = $MobileNumber,
+SecondaryMobile = $SecondaryMobile,
+Email = $Email,
+Nationality = $Nationality,
+DriverType = $DriverType,
+EmployerPartyType = $EmployerPartyType,
+EmployerAccount = $EmployerAccount,
+IdentificationType = $IdentificationType,
+IdentificationNumber = $IdentificationNumber,
+CNIC = $IdentificationNumber,
+IdentificationExpiryDate = $IdentificationExpiryDate,
+EmiratesIdExpiryDate = $EmiratesIdExpiryDate,
+PassportNumber = $PassportNumber,
+PassportExpiryDate = $PassportExpiryDate,
+DrivingLicenceNumber = $DrivingLicenceNumber,
+LicenseNo = $DrivingLicenceNumber,
+DrivingLicenceIssuedBy = $DrivingLicenceIssuedBy,
+DrivingLicenceExpiryDate = $DrivingLicenceExpiryDate,
+LicenceCategories = $LicenceCategories,
+DefaultVehicle = $DefaultVehicle,
+Address = $Address,
+DriverPhoto = $DriverPhoto,
+EmiratesIdAttachment = $EmiratesIdAttachment,
+PassportAttachment = $PassportAttachment,
+DrivingLicenceAttachment = $DrivingLicenceAttachment,
+LegalEntity = $LegalEntity,
+Status = $Status,
+Blacklisted = $Blacklisted,
+BlacklistReason = $BlacklistReason,
+EffectiveFrom = $EffectiveFrom,
+IsActive = $IsActive,
+Remarks = $Remarks
 WHERE DriverId = $DriverId;";
             command.Parameters.AddWithValue("$DriverId", driver.DriverId);
         }
         else
         {
             command.CommandText = @"
-INSERT INTO Drivers (DriverName, CNIC, MobileNo, LicenseNo, IsActive)
-VALUES ($DriverName, $CNIC, $MobileNo, $LicenseNo, $IsActive);";
+INSERT INTO Drivers
+(DriverName, MobileNumber, MobileNo, SecondaryMobile, Email, Nationality, DriverType, EmployerPartyType, EmployerAccount, IdentificationType, IdentificationNumber, CNIC, IdentificationExpiryDate, EmiratesIdExpiryDate, PassportNumber, PassportExpiryDate, DrivingLicenceNumber, LicenseNo, DrivingLicenceIssuedBy, DrivingLicenceExpiryDate, LicenceCategories, DefaultVehicle, Address, DriverPhoto, EmiratesIdAttachment, PassportAttachment, DrivingLicenceAttachment, LegalEntity, Status, Blacklisted, BlacklistReason, EffectiveFrom, IsActive, Remarks)
+VALUES
+($DriverName, $MobileNumber, $MobileNumber, $SecondaryMobile, $Email, $Nationality, $DriverType, $EmployerPartyType, $EmployerAccount, $IdentificationType, $IdentificationNumber, $IdentificationNumber, $IdentificationExpiryDate, $EmiratesIdExpiryDate, $PassportNumber, $PassportExpiryDate, $DrivingLicenceNumber, $DrivingLicenceNumber, $DrivingLicenceIssuedBy, $DrivingLicenceExpiryDate, $LicenceCategories, $DefaultVehicle, $Address, $DriverPhoto, $EmiratesIdAttachment, $PassportAttachment, $DrivingLicenceAttachment, $LegalEntity, $Status, $Blacklisted, $BlacklistReason, $EffectiveFrom, $IsActive, $Remarks);";
         }
 
-        command.Parameters.AddWithValue("$DriverName", driver.DriverName.Trim());
-        command.Parameters.AddWithValue("$CNIC", driver.CNIC ?? string.Empty);
-        command.Parameters.AddWithValue("$MobileNo", driver.MobileNo ?? string.Empty);
-        command.Parameters.AddWithValue("$LicenseNo", driver.LicenseNo ?? string.Empty);
-        command.Parameters.AddWithValue("$IsActive", driver.IsActive ? 1 : 0);
+        AddDriverParameters(command, driver);
         command.ExecuteNonQuery();
     });
 
@@ -773,28 +925,32 @@ VALUES
         using var command = connection.CreateCommand();
         command.CommandText = @"
 INSERT INTO Weighments
-(TicketNo, CompanyName, VehicleNo, DriverName, PartyId, PartyName, PartyType, MaterialId, MaterialName, FirstWeight, FirstWeightTime, Status, Remarks, CreatedAt)
+(TicketNo, CompanyName, VehicleNo, DriverName, PartyId, PartyAccount, PartyName, PartyType, MaterialId, ItemNumber, ItemName, MaterialName, FirstWeight, FirstWeightTime, FirstWeightBy, Status, Remarks, CreatedAt)
 VALUES
-($TicketNo, $CompanyName, $VehicleNo, $DriverName, $PartyId, $PartyName, $PartyType, $MaterialId, $MaterialName, $FirstWeight, $FirstWeightTime, $Status, $Remarks, $CreatedAt);
+($TicketNo, $CompanyName, $VehicleNo, $DriverName, $PartyId, $PartyAccount, $PartyName, $PartyType, $MaterialId, $ItemNumber, $ItemName, $MaterialName, $FirstWeight, $FirstWeightTime, $FirstWeightBy, $Status, $Remarks, $CreatedAt);
 SELECT last_insert_rowid();";
         command.Parameters.AddWithValue("$TicketNo", weighment.TicketNo);
         command.Parameters.AddWithValue("$CompanyName", weighment.CompanyName.Trim());
         command.Parameters.AddWithValue("$VehicleNo", weighment.VehicleNo);
         command.Parameters.AddWithValue("$DriverName", weighment.DriverName ?? string.Empty);
         command.Parameters.AddWithValue("$PartyId", (object?)weighment.PartyId ?? DBNull.Value);
+        command.Parameters.AddWithValue("$PartyAccount", weighment.PartyAccount ?? string.Empty);
         command.Parameters.AddWithValue("$PartyName", weighment.PartyName ?? string.Empty);
         command.Parameters.AddWithValue("$PartyType", weighment.PartyType ?? string.Empty);
         command.Parameters.AddWithValue("$MaterialId", (object?)weighment.MaterialId ?? DBNull.Value);
-        command.Parameters.AddWithValue("$MaterialName", weighment.MaterialName ?? string.Empty);
+        command.Parameters.AddWithValue("$ItemNumber", weighment.ItemNumber ?? string.Empty);
+        command.Parameters.AddWithValue("$ItemName", weighment.ItemName ?? string.Empty);
+        command.Parameters.AddWithValue("$MaterialName", string.IsNullOrWhiteSpace(weighment.MaterialName) ? weighment.ItemName ?? string.Empty : weighment.MaterialName);
         command.Parameters.AddWithValue("$FirstWeight", weighment.FirstWeight);
         command.Parameters.AddWithValue("$FirstWeightTime", weighment.FirstWeightTime.ToString("O"));
+        command.Parameters.AddWithValue("$FirstWeightBy", weighment.FirstWeightBy ?? string.Empty);
         command.Parameters.AddWithValue("$Status", "Open");
         command.Parameters.AddWithValue("$Remarks", weighment.Remarks ?? string.Empty);
         command.Parameters.AddWithValue("$CreatedAt", weighment.CreatedAt.ToString("O"));
         return Convert.ToInt32(command.ExecuteScalar());
     });
 
-    public Task CompleteSecondWeightAsync(int weighmentId, decimal secondWeight, DateTime secondWeightTime) => Task.Run(() =>
+    public Task CompleteSecondWeightAsync(int weighmentId, decimal secondWeight, DateTime secondWeightTime, string secondWeightBy) => Task.Run(() =>
     {
         using var connection = CreateConnection();
         connection.Open();
@@ -817,11 +973,13 @@ SELECT last_insert_rowid();";
 UPDATE Weighments
 SET SecondWeight = $SecondWeight,
     SecondWeightTime = $SecondWeightTime,
+    SecondWeightBy = $SecondWeightBy,
     NetWeight = $NetWeight,
     Status = 'Completed'
 WHERE WeighmentId = $WeighmentId;";
         command.Parameters.AddWithValue("$SecondWeight", secondWeight);
         command.Parameters.AddWithValue("$SecondWeightTime", secondWeightTime.ToString("O"));
+        command.Parameters.AddWithValue("$SecondWeightBy", secondWeightBy ?? string.Empty);
         command.Parameters.AddWithValue("$NetWeight", netWeight);
         command.Parameters.AddWithValue("$WeighmentId", weighmentId);
         command.ExecuteNonQuery();
@@ -855,13 +1013,18 @@ UPDATE Weighments SET
     CompanyName = $CompanyName,
     VehicleNo = $VehicleNo,
     DriverName = $DriverName,
+    PartyAccount = $PartyAccount,
     PartyName = $PartyName,
     PartyType = $PartyType,
+    ItemNumber = $ItemNumber,
+    ItemName = $ItemName,
     MaterialName = $MaterialName,
     FirstWeight = $FirstWeight,
     FirstWeightTime = $FirstWeightTime,
+    FirstWeightBy = $FirstWeightBy,
     SecondWeight = $SecondWeight,
     SecondWeightTime = $SecondWeightTime,
+    SecondWeightBy = $SecondWeightBy,
     NetWeight = $NetWeight,
     Remarks = $Remarks
 WHERE WeighmentId = $WeighmentId
@@ -870,13 +1033,18 @@ WHERE WeighmentId = $WeighmentId
         command.Parameters.AddWithValue("$CompanyName", weighment.CompanyName.Trim());
         command.Parameters.AddWithValue("$VehicleNo", weighment.VehicleNo.Trim().ToUpperInvariant());
         command.Parameters.AddWithValue("$DriverName", weighment.DriverName ?? string.Empty);
+        command.Parameters.AddWithValue("$PartyAccount", weighment.PartyAccount ?? string.Empty);
         command.Parameters.AddWithValue("$PartyName", weighment.PartyName ?? string.Empty);
         command.Parameters.AddWithValue("$PartyType", weighment.PartyType ?? string.Empty);
-        command.Parameters.AddWithValue("$MaterialName", weighment.MaterialName ?? string.Empty);
+        command.Parameters.AddWithValue("$ItemNumber", weighment.ItemNumber ?? string.Empty);
+        command.Parameters.AddWithValue("$ItemName", weighment.ItemName ?? string.Empty);
+        command.Parameters.AddWithValue("$MaterialName", string.IsNullOrWhiteSpace(weighment.MaterialName) ? weighment.ItemName ?? string.Empty : weighment.MaterialName);
         command.Parameters.AddWithValue("$FirstWeight", weighment.FirstWeight);
         command.Parameters.AddWithValue("$FirstWeightTime", weighment.FirstWeightTime.ToString("O"));
+        command.Parameters.AddWithValue("$FirstWeightBy", weighment.FirstWeightBy ?? string.Empty);
         command.Parameters.AddWithValue("$SecondWeight", weighment.SecondWeight.Value);
         command.Parameters.AddWithValue("$SecondWeightTime", secondTime.ToString("O"));
+        command.Parameters.AddWithValue("$SecondWeightBy", weighment.SecondWeightBy ?? string.Empty);
         command.Parameters.AddWithValue("$NetWeight", netWeight);
         command.Parameters.AddWithValue("$Remarks", weighment.Remarks ?? string.Empty);
 
@@ -902,7 +1070,7 @@ WHERE WeighmentId = $WeighmentId
         using var connection = CreateConnection();
         connection.Open();
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT * FROM Weighments WHERE Status = 'Open' ORDER BY FirstWeightTime DESC";
+        command.CommandText = WeighmentSelectSql + " WHERE w.Status = 'Open' ORDER BY w.FirstWeightTime DESC";
         return ReadWeighments(command);
     });
 
@@ -913,12 +1081,11 @@ WHERE WeighmentId = $WeighmentId
         using var connection = CreateConnection();
         connection.Open();
         using var command = connection.CreateCommand();
-        command.CommandText = @"
-SELECT * FROM Weighments
-WHERE Status = 'Completed'
-  AND SecondWeightTime >= $FromDate
-  AND SecondWeightTime < $ToDate
-ORDER BY SecondWeightTime DESC";
+        command.CommandText = WeighmentSelectSql + @"
+WHERE w.Status = 'Completed'
+  AND w.SecondWeightTime >= $FromDate
+  AND w.SecondWeightTime < $ToDate
+ORDER BY w.SecondWeightTime DESC";
         command.Parameters.AddWithValue("$FromDate", from.ToString("O"));
         command.Parameters.AddWithValue("$ToDate", to.ToString("O"));
         return ReadWeighments(command);
@@ -930,11 +1097,10 @@ ORDER BY SecondWeightTime DESC";
         using var connection = CreateConnection();
         connection.Open();
         using var command = connection.CreateCommand();
-        command.CommandText = @"
-SELECT * FROM Weighments
-WHERE CreatedAt >= $FromDate
-  AND CreatedAt < $ToDate
-ORDER BY CreatedAt DESC";
+        command.CommandText = WeighmentSelectSql + @"
+WHERE w.CreatedAt >= $FromDate
+  AND w.CreatedAt < $ToDate
+ORDER BY w.CreatedAt DESC";
         command.Parameters.AddWithValue("$FromDate", fromDate.Date.ToString("O"));
         command.Parameters.AddWithValue("$ToDate", toExclusive.ToString("O"));
         return ReadWeighments(command);
@@ -990,6 +1156,7 @@ ORDER BY CreatedAt DESC";
 
         using var connection = CreateConnection();
         connection.Open();
+        EnsureUsernameIsUnique(connection, user.Username, null);
         using var command = connection.CreateCommand();
         command.CommandText = @"
 INSERT INTO Users
@@ -1014,8 +1181,12 @@ VALUES
         if (string.IsNullOrWhiteSpace(user.CompanyName))
             throw new InvalidOperationException("Company is required.");
 
+        if (string.IsNullOrWhiteSpace(user.Username))
+            throw new InvalidOperationException("Username is required.");
+
         using var connection = CreateConnection();
         connection.Open();
+        EnsureUsernameIsUnique(connection, user.Username, user.UserId);
         using var command = connection.CreateCommand();
 
         if (string.IsNullOrWhiteSpace(newPassword))
@@ -1066,6 +1237,22 @@ WHERE UserId = $UserId;";
         command.ExecuteNonQuery();
     });
 
+    private static void EnsureUsernameIsUnique(SqliteConnection connection, string username, int? excludeUserId)
+    {
+        var trimmedUsername = username.Trim();
+        using var command = connection.CreateCommand();
+        command.CommandText = excludeUserId.HasValue
+            ? "SELECT COUNT(1) FROM Users WHERE lower(trim(Username)) = lower(trim($Username)) AND UserId <> $UserId"
+            : "SELECT COUNT(1) FROM Users WHERE lower(trim(Username)) = lower(trim($Username))";
+        command.Parameters.AddWithValue("$Username", trimmedUsername);
+        if (excludeUserId.HasValue)
+            command.Parameters.AddWithValue("$UserId", excludeUserId.Value);
+
+        var duplicateCount = Convert.ToInt32(command.ExecuteScalar());
+        if (duplicateCount > 0)
+            throw new InvalidOperationException("Username already exists. Please enter a unique username.");
+    }
+
     private SqliteConnection CreateConnection() => new(_connectionString);
 
     private static void ExecuteNonQuery(SqliteConnection connection, string sql)
@@ -1081,20 +1268,69 @@ WHERE UserId = $UserId;";
         EnsureColumn(connection, "Users", "CanEditCompletedTransaction", "INTEGER NOT NULL DEFAULT 0");
         EnsureColumn(connection, "Users", "CanDeleteCompletedTransaction", "INTEGER NOT NULL DEFAULT 0");
         EnsureColumn(connection, "Weighments", "CompanyName", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Weighments", "PartyAccount", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Weighments", "ItemNumber", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Weighments", "ItemName", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Weighments", "FirstWeightBy", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Weighments", "SecondWeightBy", "TEXT NOT NULL DEFAULT ''");
+
+        // Vehicle master migration
+        EnsureColumn(connection, "Vehicles", "PlateNumber", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Vehicles", "PlateEmirate", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Vehicles", "PlateCategory", "TEXT NOT NULL DEFAULT ''");
         EnsureColumn(connection, "Vehicles", "VehicleType", "TEXT NOT NULL DEFAULT ''");
-        EnsureColumn(connection, "Vehicles", "OwnerName", "TEXT NOT NULL DEFAULT ''");
-        EnsureColumn(connection, "Vehicles", "ContactNo", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Vehicles", "OwnershipType", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Vehicles", "OwnerPartyAccount", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Vehicles", "Transporter", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Vehicles", "Capacity", "REAL NOT NULL DEFAULT 0");
+        EnsureColumn(connection, "Vehicles", "DefaultDriver", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Vehicles", "RegistrationExpiryDate", "TEXT");
+        EnsureColumn(connection, "Vehicles", "LegalEntity", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Vehicles", "Status", "TEXT NOT NULL DEFAULT 'Active'");
         EnsureColumn(connection, "Vehicles", "IsActive", "INTEGER NOT NULL DEFAULT 1");
-        ExecuteNonQuery(connection, @"CREATE TABLE IF NOT EXISTS Drivers (
-    DriverId INTEGER PRIMARY KEY AUTOINCREMENT,
-    DriverName TEXT NOT NULL UNIQUE,
-    CNIC TEXT NOT NULL DEFAULT '',
-    MobileNo TEXT NOT NULL DEFAULT '',
-    LicenseNo TEXT NOT NULL DEFAULT '',
-    IsActive INTEGER NOT NULL DEFAULT 1
-);");
+        ExecuteNonQuery(connection, "UPDATE Vehicles SET PlateNumber = VehicleNo WHERE trim(ifnull(PlateNumber, '')) = '' AND trim(ifnull(VehicleNo, '')) <> ''; ");
+
+        // Driver master migration
+        EnsureColumn(connection, "Drivers", "MobileNumber", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Drivers", "SecondaryMobile", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Drivers", "Email", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Drivers", "Nationality", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Drivers", "DriverType", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Drivers", "EmployerPartyType", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Drivers", "EmployerAccount", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Drivers", "IdentificationType", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Drivers", "IdentificationNumber", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Drivers", "IdentificationExpiryDate", "TEXT");
+        EnsureColumn(connection, "Drivers", "EmiratesIdExpiryDate", "TEXT");
+        EnsureColumn(connection, "Drivers", "PassportNumber", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Drivers", "PassportExpiryDate", "TEXT");
+        EnsureColumn(connection, "Drivers", "DrivingLicenceNumber", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Drivers", "DrivingLicenceIssuedBy", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Drivers", "DrivingLicenceExpiryDate", "TEXT");
+        EnsureColumn(connection, "Drivers", "LicenceCategories", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Drivers", "DefaultVehicle", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Drivers", "Address", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Drivers", "DriverPhoto", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Drivers", "EmiratesIdAttachment", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Drivers", "PassportAttachment", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Drivers", "DrivingLicenceAttachment", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Drivers", "LegalEntity", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Drivers", "Status", "TEXT NOT NULL DEFAULT 'Active'");
+        EnsureColumn(connection, "Drivers", "Blacklisted", "INTEGER NOT NULL DEFAULT 0");
+        EnsureColumn(connection, "Drivers", "BlacklistReason", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Drivers", "EffectiveFrom", "TEXT");
+        EnsureColumn(connection, "Drivers", "IsActive", "INTEGER NOT NULL DEFAULT 1");
+        EnsureColumn(connection, "Drivers", "Remarks", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Drivers", "CNIC", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Drivers", "MobileNo", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Drivers", "LicenseNo", "TEXT NOT NULL DEFAULT ''");
+        ExecuteNonQuery(connection, "UPDATE Drivers SET MobileNumber = MobileNo WHERE trim(ifnull(MobileNumber, '')) = '' AND trim(ifnull(MobileNo, '')) <> ''; ");
+        ExecuteNonQuery(connection, "UPDATE Drivers SET IdentificationNumber = CNIC WHERE trim(ifnull(IdentificationNumber, '')) = '' AND trim(ifnull(CNIC, '')) <> ''; ");
+        ExecuteNonQuery(connection, "UPDATE Drivers SET DrivingLicenceNumber = LicenseNo WHERE trim(ifnull(DrivingLicenceNumber, '')) = '' AND trim(ifnull(LicenseNo, '')) <> ''; ");
 
         ExecuteNonQuery(connection, "UPDATE Users SET CompanyName = 'Default Company' WHERE trim(ifnull(CompanyName, '')) = ''; ");
+        ExecuteNonQuery(connection, "UPDATE Weighments SET FirstWeightBy = (SELECT Username FROM Users WHERE CAST(Users.UserId AS TEXT) = Weighments.FirstWeightBy LIMIT 1) WHERE trim(ifnull(FirstWeightBy, '')) <> '' AND EXISTS (SELECT 1 FROM Users WHERE CAST(Users.UserId AS TEXT) = Weighments.FirstWeightBy);");
+        ExecuteNonQuery(connection, "UPDATE Weighments SET SecondWeightBy = (SELECT Username FROM Users WHERE CAST(Users.UserId AS TEXT) = Weighments.SecondWeightBy LIMIT 1) WHERE trim(ifnull(SecondWeightBy, '')) <> '' AND EXISTS (SELECT 1 FROM Users WHERE CAST(Users.UserId AS TEXT) = Weighments.SecondWeightBy);");
         ExecuteNonQuery(connection, "UPDATE Users SET CanEditCompletedTransaction = 1, CanDeleteCompletedTransaction = 1 WHERE lower(Username) = 'admin';");
         ExecuteNonQuery(connection, "UPDATE Weighments SET CompanyName = 'Default Company' WHERE trim(ifnull(CompanyName, '')) = ''; ");
     }
@@ -1170,8 +1406,8 @@ INSERT OR IGNORE INTO Materials (MaterialName) VALUES ('General Material');
 INSERT OR IGNORE INTO Customers (CustomerAccount, Name, CreatedAt) VALUES ('CUST-0001', 'Default Customer', datetime('now'));
 INSERT OR IGNORE INTO Vendors (VendorAccount, Name, CreatedAt) VALUES ('VEND-0001', 'Default Vendor', datetime('now'));
 INSERT OR IGNORE INTO ItemMasters (ItemNumber, ProductName, CreatedAt) VALUES ('ITEM-0001', 'General Item', datetime('now'));
-INSERT OR IGNORE INTO Vehicles (VehicleNo) VALUES ('TEST-0001');
-INSERT OR IGNORE INTO Drivers (DriverName) VALUES ('Default Driver');
+INSERT OR IGNORE INTO Vehicles (VehicleNo, PlateNumber, PlateEmirate, PlateCategory, VehicleType, Status, IsActive) VALUES ('TEST-0001', 'TEST-0001', 'Dubai', 'Commercial', 'Truck', 'Active', 1);
+INSERT OR IGNORE INTO Drivers (DriverName, MobileNumber, MobileNo, DriverType, EmployerPartyType, IdentificationType, IdentificationNumber, CNIC, DrivingLicenceNumber, LicenseNo, DrivingLicenceIssuedBy, DrivingLicenceExpiryDate, LegalEntity, Status, EffectiveFrom, IsActive) VALUES ('Default Driver', '0000000000', '0000000000', 'Company Driver', 'Legal Entity', 'Emirates ID', 'ID-0001', 'ID-0001', 'LIC-0001', 'LIC-0001', 'Dubai', date('now', '+1 year'), 'Default Company', 'Active', date('now'), 1);
 ");
     }
 
@@ -1190,6 +1426,96 @@ INSERT OR IGNORE INTO Drivers (DriverName) VALUES ('Default Driver');
 
     private static string ReadText(SqliteDataReader reader, string columnName) =>
         Convert.ToString(reader[columnName]) ?? string.Empty;
+
+    private static decimal? ReadDecimal(SqliteDataReader reader, string columnName)
+    {
+        var value = reader[columnName];
+        if (value == DBNull.Value || value == null)
+            return null;
+        return decimal.TryParse(Convert.ToString(value), out var result) ? result : null;
+    }
+
+    private static int? ReadInt(SqliteDataReader reader, string columnName)
+    {
+        var value = reader[columnName];
+        if (value == DBNull.Value || value == null)
+            return null;
+        return int.TryParse(Convert.ToString(value), out var result) ? result : null;
+    }
+
+    private static bool ReadBool(SqliteDataReader reader, string columnName)
+    {
+        var value = Convert.ToString(reader[columnName]) ?? string.Empty;
+        return value == "1" || value.Equals("true", StringComparison.OrdinalIgnoreCase) || value.Equals("yes", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static DateTime? ReadDate(SqliteDataReader reader, string columnName)
+    {
+        var value = Convert.ToString(reader[columnName]);
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+        return DateTime.TryParse(value, out var result) ? result : null;
+    }
+
+    private static object DbValue(string? value) => string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+    private static object DbValue(decimal? value) => value.HasValue ? value.Value : DBNull.Value;
+    private static object DbValue(int? value) => value.HasValue ? value.Value : DBNull.Value;
+    private static object DbValue(DateTime? value) => value.HasValue ? value.Value.ToString("yyyy-MM-dd") : DBNull.Value;
+    private static object DbValue(bool value) => value ? 1 : 0;
+
+    private static void AddVehicleParameters(SqliteCommand command, Vehicle vehicle)
+    {
+        var plate = vehicle.PlateNumber.Trim().ToUpperInvariant();
+        command.Parameters.AddWithValue("$VehicleNo", plate);
+        command.Parameters.AddWithValue("$PlateNumber", plate);
+        command.Parameters.AddWithValue("$PlateEmirate", DbValue(vehicle.PlateEmirate));
+        command.Parameters.AddWithValue("$PlateCategory", DbValue(vehicle.PlateCategory));
+        command.Parameters.AddWithValue("$VehicleType", DbValue(vehicle.VehicleType));
+        command.Parameters.AddWithValue("$OwnershipType", DbValue(vehicle.OwnershipType));
+        command.Parameters.AddWithValue("$OwnerPartyAccount", DbValue(vehicle.OwnerPartyAccount));
+        command.Parameters.AddWithValue("$Transporter", DbValue(vehicle.Transporter));
+        command.Parameters.AddWithValue("$Capacity", vehicle.Capacity);
+        command.Parameters.AddWithValue("$DefaultDriver", DbValue(vehicle.DefaultDriver));
+        command.Parameters.AddWithValue("$RegistrationExpiryDate", DbValue(vehicle.RegistrationExpiryDate));
+        command.Parameters.AddWithValue("$LegalEntity", DbValue(vehicle.LegalEntity));
+        command.Parameters.AddWithValue("$Status", string.IsNullOrWhiteSpace(vehicle.Status) ? "Active" : vehicle.Status.Trim());
+        command.Parameters.AddWithValue("$IsActive", DbValue(vehicle.IsActive));
+    }
+
+    private static void AddDriverParameters(SqliteCommand command, Driver driver)
+    {
+        command.Parameters.AddWithValue("$DriverName", DbValue(driver.DriverName));
+        command.Parameters.AddWithValue("$MobileNumber", DbValue(driver.MobileNumber));
+        command.Parameters.AddWithValue("$SecondaryMobile", DbValue(driver.SecondaryMobile));
+        command.Parameters.AddWithValue("$Email", DbValue(driver.Email));
+        command.Parameters.AddWithValue("$Nationality", DbValue(driver.Nationality));
+        command.Parameters.AddWithValue("$DriverType", DbValue(driver.DriverType));
+        command.Parameters.AddWithValue("$EmployerPartyType", DbValue(driver.EmployerPartyType));
+        command.Parameters.AddWithValue("$EmployerAccount", DbValue(driver.EmployerAccount));
+        command.Parameters.AddWithValue("$IdentificationType", DbValue(driver.IdentificationType));
+        command.Parameters.AddWithValue("$IdentificationNumber", DbValue(driver.IdentificationNumber));
+        command.Parameters.AddWithValue("$IdentificationExpiryDate", DbValue(driver.IdentificationExpiryDate));
+        command.Parameters.AddWithValue("$EmiratesIdExpiryDate", DbValue(driver.EmiratesIdExpiryDate));
+        command.Parameters.AddWithValue("$PassportNumber", DbValue(driver.PassportNumber));
+        command.Parameters.AddWithValue("$PassportExpiryDate", DbValue(driver.PassportExpiryDate));
+        command.Parameters.AddWithValue("$DrivingLicenceNumber", DbValue(driver.DrivingLicenceNumber));
+        command.Parameters.AddWithValue("$DrivingLicenceIssuedBy", DbValue(driver.DrivingLicenceIssuedBy));
+        command.Parameters.AddWithValue("$DrivingLicenceExpiryDate", DbValue(driver.DrivingLicenceExpiryDate));
+        command.Parameters.AddWithValue("$LicenceCategories", DbValue(driver.LicenceCategories));
+        command.Parameters.AddWithValue("$DefaultVehicle", DbValue(driver.DefaultVehicle));
+        command.Parameters.AddWithValue("$Address", DbValue(driver.Address));
+        command.Parameters.AddWithValue("$DriverPhoto", DbValue(driver.DriverPhoto));
+        command.Parameters.AddWithValue("$EmiratesIdAttachment", DbValue(driver.EmiratesIdAttachment));
+        command.Parameters.AddWithValue("$PassportAttachment", DbValue(driver.PassportAttachment));
+        command.Parameters.AddWithValue("$DrivingLicenceAttachment", DbValue(driver.DrivingLicenceAttachment));
+        command.Parameters.AddWithValue("$LegalEntity", DbValue(driver.LegalEntity));
+        command.Parameters.AddWithValue("$Status", string.IsNullOrWhiteSpace(driver.Status) ? "Active" : driver.Status.Trim());
+        command.Parameters.AddWithValue("$Blacklisted", DbValue(driver.Blacklisted));
+        command.Parameters.AddWithValue("$BlacklistReason", DbValue(driver.BlacklistReason));
+        command.Parameters.AddWithValue("$EffectiveFrom", DbValue(driver.EffectiveFrom));
+        command.Parameters.AddWithValue("$IsActive", DbValue(driver.IsActive));
+        command.Parameters.AddWithValue("$Remarks", DbValue(driver.Remarks));
+    }
 
     private static void AddCustomerParameters(SqliteCommand command, Customer customer)
     {
@@ -1249,51 +1575,51 @@ INSERT OR IGNORE INTO Drivers (DriverName) VALUES ('Default Driver');
 
     private static void AddItemMasterParameters(SqliteCommand command, ItemMaster item)
     {
-        command.Parameters.AddWithValue("$ItemNumber", item.ItemNumber.Trim());
-        command.Parameters.AddWithValue("$ProductName", item.ProductName.Trim());
-        command.Parameters.AddWithValue("$SearchName", item.SearchName.Trim());
-        command.Parameters.AddWithValue("$ProductType", item.ProductType.Trim());
-        command.Parameters.AddWithValue("$ProductSubtype", item.ProductSubtype.Trim());
-        command.Parameters.AddWithValue("$ProductNumber", item.ProductNumber.Trim());
-        command.Parameters.AddWithValue("$Description", item.Description.Trim());
-        command.Parameters.AddWithValue("$StorageDimensionGroup", item.StorageDimensionGroup.Trim());
-        command.Parameters.AddWithValue("$TrackingDimensionGroup", item.TrackingDimensionGroup.Trim());
-        command.Parameters.AddWithValue("$ItemModelGroup", item.ItemModelGroup.Trim());
-        command.Parameters.AddWithValue("$ReservationHierarchy", item.ReservationHierarchy.Trim());
-        command.Parameters.AddWithValue("$PurchaseUnit", item.PurchaseUnit.Trim());
-        command.Parameters.AddWithValue("$PurchaseOverDelivery", item.PurchaseOverDelivery.Trim());
-        command.Parameters.AddWithValue("$PurchaseUnderDelivery", item.PurchaseUnderDelivery.Trim());
-        command.Parameters.AddWithValue("$BuyerGroup", item.BuyerGroup.Trim());
-        command.Parameters.AddWithValue("$ItemPriceToleranceGroup", item.ItemPriceToleranceGroup.Trim());
-        command.Parameters.AddWithValue("$Vendor", item.Vendor.Trim());
-        command.Parameters.AddWithValue("$PurchaseItemSalesTaxGroup", item.PurchaseItemSalesTaxGroup.Trim());
-        command.Parameters.AddWithValue("$SellUnit", item.SellUnit.Trim());
-        command.Parameters.AddWithValue("$SellOverDelivery", item.SellOverDelivery.Trim());
-        command.Parameters.AddWithValue("$SellUnderDelivery", item.SellUnderDelivery.Trim());
-        command.Parameters.AddWithValue("$SellItemSalesTaxGroup", item.SellItemSalesTaxGroup.Trim());
-        command.Parameters.AddWithValue("$BatchNumberGroup", item.BatchNumberGroup.Trim());
-        command.Parameters.AddWithValue("$SerialNumberGroup", item.SerialNumberGroup.Trim());
-        command.Parameters.AddWithValue("$InventoryOverDelivery", item.InventoryOverDelivery.Trim());
-        command.Parameters.AddWithValue("$InventoryUnderDelivery", item.InventoryUnderDelivery.Trim());
-        command.Parameters.AddWithValue("$CatchWeightItem", item.CatchWeightItem.Trim());
-        command.Parameters.AddWithValue("$CWUnit", item.CWUnit.Trim());
-        command.Parameters.AddWithValue("$NominalQuantity", item.NominalQuantity.Trim());
-        command.Parameters.AddWithValue("$MinimumQuantity", item.MinimumQuantity.Trim());
-        command.Parameters.AddWithValue("$MaximumQuantity", item.MaximumQuantity.Trim());
-        command.Parameters.AddWithValue("$BOMUnit", item.BOMUnit.Trim());
-        command.Parameters.AddWithValue("$ConstantScrap", item.ConstantScrap.Trim());
-        command.Parameters.AddWithValue("$VariableScrap", item.VariableScrap.Trim());
-        command.Parameters.AddWithValue("$CostingLevel", item.CostingLevel.Trim());
-        command.Parameters.AddWithValue("$PlanningLevel", item.PlanningLevel.Trim());
-        command.Parameters.AddWithValue("$CostCalculationLevel", item.CostCalculationLevel.Trim());
-        command.Parameters.AddWithValue("$Phantom", item.Phantom.Trim());
-        command.Parameters.AddWithValue("$CalculationGroup", item.CalculationGroup.Trim());
-        command.Parameters.AddWithValue("$ProductionType", item.ProductionType.Trim());
-        command.Parameters.AddWithValue("$ItemGroup", item.ItemGroup.Trim());
-        command.Parameters.AddWithValue("$CostUnit", item.CostUnit.Trim());
-        command.Parameters.AddWithValue("$LastCostPrice", item.LastCostPrice.Trim());
-        command.Parameters.AddWithValue("$DateOfPrice", item.DateOfPrice.Trim());
-        command.Parameters.AddWithValue("$UnitSequenceGroupId", item.UnitSequenceGroupId.Trim());
+        command.Parameters.AddWithValue("$ItemNumber", DbValue(item.ItemNumber));
+        command.Parameters.AddWithValue("$ProductName", DbValue(item.ProductName));
+        command.Parameters.AddWithValue("$SearchName", DbValue(item.SearchName));
+        command.Parameters.AddWithValue("$ProductType", DbValue(item.ProductType));
+        command.Parameters.AddWithValue("$ProductSubtype", DbValue(item.ProductSubtype));
+        command.Parameters.AddWithValue("$ProductNumber", DbValue(item.ProductNumber));
+        command.Parameters.AddWithValue("$Description", DbValue(item.Description));
+        command.Parameters.AddWithValue("$StorageDimensionGroup", DbValue(item.StorageDimensionGroup));
+        command.Parameters.AddWithValue("$TrackingDimensionGroup", DbValue(item.TrackingDimensionGroup));
+        command.Parameters.AddWithValue("$ItemModelGroup", DbValue(item.ItemModelGroup));
+        command.Parameters.AddWithValue("$ReservationHierarchy", DbValue(item.ReservationHierarchy));
+        command.Parameters.AddWithValue("$PurchaseUnit", DbValue(item.PurchaseUnit));
+        command.Parameters.AddWithValue("$PurchaseOverDelivery", DbValue(item.PurchaseOverDelivery));
+        command.Parameters.AddWithValue("$PurchaseUnderDelivery", DbValue(item.PurchaseUnderDelivery));
+        command.Parameters.AddWithValue("$BuyerGroup", DbValue(item.BuyerGroup));
+        command.Parameters.AddWithValue("$ItemPriceToleranceGroup", DbValue(item.ItemPriceToleranceGroup));
+        command.Parameters.AddWithValue("$Vendor", DbValue(item.Vendor));
+        command.Parameters.AddWithValue("$PurchaseItemSalesTaxGroup", DbValue(item.PurchaseItemSalesTaxGroup));
+        command.Parameters.AddWithValue("$SellUnit", DbValue(item.SellUnit));
+        command.Parameters.AddWithValue("$SellOverDelivery", DbValue(item.SellOverDelivery));
+        command.Parameters.AddWithValue("$SellUnderDelivery", DbValue(item.SellUnderDelivery));
+        command.Parameters.AddWithValue("$SellItemSalesTaxGroup", DbValue(item.SellItemSalesTaxGroup));
+        command.Parameters.AddWithValue("$BatchNumberGroup", DbValue(item.BatchNumberGroup));
+        command.Parameters.AddWithValue("$SerialNumberGroup", DbValue(item.SerialNumberGroup));
+        command.Parameters.AddWithValue("$InventoryOverDelivery", DbValue(item.InventoryOverDelivery));
+        command.Parameters.AddWithValue("$InventoryUnderDelivery", DbValue(item.InventoryUnderDelivery));
+        command.Parameters.AddWithValue("$CatchWeightItem", DbValue(item.CatchWeightItem));
+        command.Parameters.AddWithValue("$CWUnit", DbValue(item.CWUnit));
+        command.Parameters.AddWithValue("$NominalQuantity", DbValue(item.NominalQuantity));
+        command.Parameters.AddWithValue("$MinimumQuantity", DbValue(item.MinimumQuantity));
+        command.Parameters.AddWithValue("$MaximumQuantity", DbValue(item.MaximumQuantity));
+        command.Parameters.AddWithValue("$BOMUnit", DbValue(item.BOMUnit));
+        command.Parameters.AddWithValue("$ConstantScrap", DbValue(item.ConstantScrap));
+        command.Parameters.AddWithValue("$VariableScrap", DbValue(item.VariableScrap));
+        command.Parameters.AddWithValue("$CostingLevel", DbValue(item.CostingLevel));
+        command.Parameters.AddWithValue("$PlanningLevel", DbValue(item.PlanningLevel));
+        command.Parameters.AddWithValue("$CostCalculationLevel", DbValue(item.CostCalculationLevel));
+        command.Parameters.AddWithValue("$Phantom", DbValue(item.Phantom));
+        command.Parameters.AddWithValue("$CalculationGroup", DbValue(item.CalculationGroup));
+        command.Parameters.AddWithValue("$ProductionType", DbValue(item.ProductionType));
+        command.Parameters.AddWithValue("$ItemGroup", DbValue(item.ItemGroup));
+        command.Parameters.AddWithValue("$CostUnit", DbValue(item.CostUnit));
+        command.Parameters.AddWithValue("$LastCostPrice", DbValue(item.LastCostPrice));
+        command.Parameters.AddWithValue("$DateOfPrice", DbValue(item.DateOfPrice));
+        command.Parameters.AddWithValue("$UnitSequenceGroupId", DbValue(item.UnitSequenceGroupId));
     }
 
     private static void AddWarehouseMasterParameters(SqliteCommand command, WarehouseMaster warehouse)
@@ -1388,38 +1714,38 @@ INSERT OR IGNORE INTO Drivers (DriverName) VALUES ('Default Driver');
         ItemModelGroup = ReadText(reader, "ItemModelGroup"),
         ReservationHierarchy = ReadText(reader, "ReservationHierarchy"),
         PurchaseUnit = ReadText(reader, "PurchaseUnit"),
-        PurchaseOverDelivery = ReadText(reader, "PurchaseOverDelivery"),
-        PurchaseUnderDelivery = ReadText(reader, "PurchaseUnderDelivery"),
+        PurchaseOverDelivery = ReadDecimal(reader, "PurchaseOverDelivery"),
+        PurchaseUnderDelivery = ReadDecimal(reader, "PurchaseUnderDelivery"),
         BuyerGroup = ReadText(reader, "BuyerGroup"),
         ItemPriceToleranceGroup = ReadText(reader, "ItemPriceToleranceGroup"),
         Vendor = ReadText(reader, "Vendor"),
         PurchaseItemSalesTaxGroup = ReadText(reader, "PurchaseItemSalesTaxGroup"),
         SellUnit = ReadText(reader, "SellUnit"),
-        SellOverDelivery = ReadText(reader, "SellOverDelivery"),
-        SellUnderDelivery = ReadText(reader, "SellUnderDelivery"),
+        SellOverDelivery = ReadDecimal(reader, "SellOverDelivery"),
+        SellUnderDelivery = ReadDecimal(reader, "SellUnderDelivery"),
         SellItemSalesTaxGroup = ReadText(reader, "SellItemSalesTaxGroup"),
         BatchNumberGroup = ReadText(reader, "BatchNumberGroup"),
         SerialNumberGroup = ReadText(reader, "SerialNumberGroup"),
-        InventoryOverDelivery = ReadText(reader, "InventoryOverDelivery"),
-        InventoryUnderDelivery = ReadText(reader, "InventoryUnderDelivery"),
-        CatchWeightItem = ReadText(reader, "CatchWeightItem"),
+        InventoryOverDelivery = ReadDecimal(reader, "InventoryOverDelivery"),
+        InventoryUnderDelivery = ReadDecimal(reader, "InventoryUnderDelivery"),
+        CatchWeightItem = ReadBool(reader, "CatchWeightItem"),
         CWUnit = ReadText(reader, "CWUnit"),
-        NominalQuantity = ReadText(reader, "NominalQuantity"),
-        MinimumQuantity = ReadText(reader, "MinimumQuantity"),
-        MaximumQuantity = ReadText(reader, "MaximumQuantity"),
+        NominalQuantity = ReadDecimal(reader, "NominalQuantity"),
+        MinimumQuantity = ReadDecimal(reader, "MinimumQuantity"),
+        MaximumQuantity = ReadDecimal(reader, "MaximumQuantity"),
         BOMUnit = ReadText(reader, "BOMUnit"),
-        ConstantScrap = ReadText(reader, "ConstantScrap"),
-        VariableScrap = ReadText(reader, "VariableScrap"),
-        CostingLevel = ReadText(reader, "CostingLevel"),
-        PlanningLevel = ReadText(reader, "PlanningLevel"),
-        CostCalculationLevel = ReadText(reader, "CostCalculationLevel"),
-        Phantom = ReadText(reader, "Phantom"),
+        ConstantScrap = ReadDecimal(reader, "ConstantScrap"),
+        VariableScrap = ReadDecimal(reader, "VariableScrap"),
+        CostingLevel = ReadInt(reader, "CostingLevel"),
+        PlanningLevel = ReadInt(reader, "PlanningLevel"),
+        CostCalculationLevel = ReadInt(reader, "CostCalculationLevel"),
+        Phantom = ReadBool(reader, "Phantom"),
         CalculationGroup = ReadText(reader, "CalculationGroup"),
         ProductionType = ReadText(reader, "ProductionType"),
         ItemGroup = ReadText(reader, "ItemGroup"),
         CostUnit = ReadText(reader, "CostUnit"),
-        LastCostPrice = ReadText(reader, "LastCostPrice"),
-        DateOfPrice = ReadText(reader, "DateOfPrice"),
+        LastCostPrice = ReadDecimal(reader, "LastCostPrice"),
+        DateOfPrice = ReadDate(reader, "DateOfPrice"),
         UnitSequenceGroupId = ReadText(reader, "UnitSequenceGroupId")
     };
 
@@ -1482,6 +1808,17 @@ INSERT OR IGNORE INTO Drivers (DriverName) VALUES ('Default Driver');
         return result;
     }
 
+    private static string ReadWeighmentText(SqliteDataReader reader, string columnName)
+    {
+        for (var i = 0; i < reader.FieldCount; i++)
+        {
+            if (string.Equals(reader.GetName(i), columnName, StringComparison.OrdinalIgnoreCase))
+                return reader.IsDBNull(i) ? string.Empty : Convert.ToString(reader.GetValue(i)) ?? string.Empty;
+        }
+
+        return string.Empty;
+    }
+
     private static Weighment MapWeighment(SqliteDataReader reader)
     {
         return new Weighment
@@ -1492,14 +1829,21 @@ INSERT OR IGNORE INTO Drivers (DriverName) VALUES ('Default Driver');
             VehicleNo = Convert.ToString(reader["VehicleNo"]) ?? string.Empty,
             DriverName = Convert.ToString(reader["DriverName"]) ?? string.Empty,
             PartyId = reader["PartyId"] == DBNull.Value ? null : Convert.ToInt32(reader["PartyId"]),
+            PartyAccount = ReadWeighmentText(reader, "PartyAccount"),
             PartyName = Convert.ToString(reader["PartyName"]) ?? string.Empty,
             PartyType = Convert.ToString(reader["PartyType"]) ?? string.Empty,
             MaterialId = reader["MaterialId"] == DBNull.Value ? null : Convert.ToInt32(reader["MaterialId"]),
+            ItemNumber = ReadWeighmentText(reader, "ItemNumber"),
+            ItemName = string.IsNullOrWhiteSpace(ReadWeighmentText(reader, "ItemName")) ? Convert.ToString(reader["MaterialName"]) ?? string.Empty : ReadWeighmentText(reader, "ItemName"),
             MaterialName = Convert.ToString(reader["MaterialName"]) ?? string.Empty,
             FirstWeight = Convert.ToDecimal(reader["FirstWeight"]),
             FirstWeightTime = DateTime.Parse(Convert.ToString(reader["FirstWeightTime"]) ?? DateTime.MinValue.ToString("O")),
+            FirstWeightBy = ReadWeighmentText(reader, "FirstWeightBy"),
+            FirstWeightByDisplay = ReadWeighmentText(reader, "FirstWeightByDisplay"),
             SecondWeight = reader["SecondWeight"] == DBNull.Value ? null : Convert.ToDecimal(reader["SecondWeight"]),
             SecondWeightTime = reader["SecondWeightTime"] == DBNull.Value ? null : DateTime.Parse(Convert.ToString(reader["SecondWeightTime"])!),
+            SecondWeightBy = ReadWeighmentText(reader, "SecondWeightBy"),
+            SecondWeightByDisplay = ReadWeighmentText(reader, "SecondWeightByDisplay"),
             NetWeight = reader["NetWeight"] == DBNull.Value ? null : Convert.ToDecimal(reader["NetWeight"]),
             Status = Convert.ToString(reader["Status"]) ?? string.Empty,
             Remarks = Convert.ToString(reader["Remarks"]) ?? string.Empty,

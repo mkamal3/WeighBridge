@@ -110,8 +110,8 @@
                                     <ComboBox Grid.Row="6" Grid.Column="1"
                                               ItemsSource="{Binding FilteredParties}"
                                               SelectedItem="{Binding SelectedWeighmentParty}"
-                                              DisplayMemberPath="PartyName"
-                                              TextSearch.TextPath="PartyName"
+                                              DisplayMemberPath="PartyDisplay"
+                                              TextSearch.TextPath="PartyDisplay"
                                               Text="{Binding PartyName, UpdateSourceTrigger=PropertyChanged}"
                                               IsEditable="True" />
 
@@ -172,10 +172,14 @@
                                         <DataGridTextColumn Header="Ticket" Binding="{Binding TicketNo}" Width="120" />
                                         <DataGridTextColumn Header="Company" Binding="{Binding CompanyName}" Width="130" />
                                         <DataGridTextColumn Header="Vehicle" Binding="{Binding VehicleNo}" Width="100" />
-                                        <DataGridTextColumn Header="Party" Binding="{Binding PartyName}" Width="140" />
-                                        <DataGridTextColumn Header="Item" Binding="{Binding MaterialName}" Width="130" />
+                                        <DataGridTextColumn Header="Party Account" Binding="{Binding PartyAccount}" Width="120" />
+                                        <DataGridTextColumn Header="Party Name" Binding="{Binding PartyName}" Width="150" />
+                                        <DataGridTextColumn Header="Party Type" Binding="{Binding PartyType}" Width="90" />
+                                        <DataGridTextColumn Header="Item Number" Binding="{Binding ItemNumber}" Width="120" />
+                                        <DataGridTextColumn Header="Item Name" Binding="{Binding ItemName}" Width="150" />
                                         <DataGridTextColumn Header="First Weight" Binding="{Binding FirstWeight}" Width="100" />
                                         <DataGridTextColumn Header="First Time" Binding="{Binding FirstWeightTime}" Width="150" />
+                                        <DataGridTextColumn Header="First Weight By" Binding="{Binding FirstWeightBy}" Width="130" />
                                     </DataGrid.Columns>
                                 </DataGrid>
                             </DockPanel>
@@ -194,10 +198,15 @@
                                         <DataGridTextColumn Header="Company" Binding="{Binding CompanyName}" Width="130" />
                                         <DataGridTextColumn Header="Vehicle" Binding="{Binding VehicleNo}" Width="100" />
                                         <DataGridTextColumn Header="Driver" Binding="{Binding DriverName}" Width="100" />
-                                        <DataGridTextColumn Header="Party" Binding="{Binding PartyName}" Width="140" />
-                                        <DataGridTextColumn Header="Item" Binding="{Binding MaterialName}" Width="130" />
-                                        <DataGridTextColumn Header="First" Binding="{Binding FirstWeight}" Width="75" />
-                                        <DataGridTextColumn Header="Second" Binding="{Binding SecondWeight}" Width="75" />
+                                        <DataGridTextColumn Header="Party Account" Binding="{Binding PartyAccount}" Width="120" />
+                                        <DataGridTextColumn Header="Party Name" Binding="{Binding PartyName}" Width="150" />
+                                        <DataGridTextColumn Header="Party Type" Binding="{Binding PartyType}" Width="90" />
+                                        <DataGridTextColumn Header="Item Number" Binding="{Binding ItemNumber}" Width="120" />
+                                        <DataGridTextColumn Header="Item Name" Binding="{Binding ItemName}" Width="150" />
+                                        <DataGridTextColumn Header="First Weight" Binding="{Binding FirstWeight}" Width="100" />
+                                        <DataGridTextColumn Header="First Weight By" Binding="{Binding FirstWeightBy}" Width="130" IsReadOnly="True" />
+                                        <DataGridTextColumn Header="Second Weight" Binding="{Binding SecondWeight}" Width="105" />
+                                        <DataGridTextColumn Header="Second Weight By" Binding="{Binding SecondWeightBy}" Width="140" IsReadOnly="True" />
                                         <DataGridTextColumn Header="Net" Binding="{Binding NetWeight}" Width="75" IsReadOnly="True" />
                                         <DataGridTextColumn Header="Remarks" Binding="{Binding Remarks}" Width="160" />
                                     </DataGrid.Columns>
@@ -785,7 +794,7 @@
                                             </DockPanel>
                                             <DockPanel Margin="0,2">
                                                 <Label Content="Catch weight item" Width="190" />
-                                                <TextBox Text="{Binding ItemMasterForm.CatchWeightItem, UpdateSourceTrigger=PropertyChanged}" />
+                                                <CheckBox IsChecked="{Binding ItemMasterForm.CatchWeightItem}" VerticalAlignment="Center" />
                                             </DockPanel>
                                             <DockPanel Margin="0,2">
                                                 <Label Content="CW Unit" Width="190" />
@@ -833,7 +842,7 @@
                                             </DockPanel>
                                             <DockPanel Margin="0,2">
                                                 <Label Content="Phantom" Width="190" />
-                                                <TextBox Text="{Binding ItemMasterForm.Phantom, UpdateSourceTrigger=PropertyChanged}" />
+                                                <CheckBox IsChecked="{Binding ItemMasterForm.Phantom}" VerticalAlignment="Center" />
                                             </DockPanel>
                                             <DockPanel Margin="0,2">
                                                 <Label Content="Calculation Group" Width="190" />
@@ -861,7 +870,7 @@
                                             </DockPanel>
                                             <DockPanel Margin="0,2">
                                                 <Label Content="Date of Price" Width="190" />
-                                                <TextBox Text="{Binding ItemMasterForm.DateOfPrice, UpdateSourceTrigger=PropertyChanged}" />
+                                                <DatePicker SelectedDate="{Binding ItemMasterForm.DateOfPrice, UpdateSourceTrigger=PropertyChanged}" />
                                             </DockPanel>
                                         </StackPanel>
                                     </GroupBox>
@@ -1020,26 +1029,34 @@
                                     <DockPanel LastChildFill="True">
                                         <TextBlock DockPanel.Dock="Top" Text="View of &quot;Vehicle Master&quot;" FontSize="18" FontWeight="SemiBold" Margin="4" />
                                         <WrapPanel DockPanel.Dock="Top" Margin="4,2,4,8">
-                                            <StackPanel Width="170" Margin="0,0,8,6">
-                                                <TextBlock Text="Vehicle No" />
+                                            <StackPanel Width="120" Margin="0,0,8,6">
+                                                <TextBlock Text="Vehicle ID" />
+                                                <TextBox Text="{Binding VehicleIdFilter, UpdateSourceTrigger=PropertyChanged}" />
+                                            </StackPanel>
+                                            <StackPanel Width="160" Margin="0,0,8,6">
+                                                <TextBlock Text="Plate Number" />
                                                 <TextBox Text="{Binding VehicleNoFilter, UpdateSourceTrigger=PropertyChanged}" />
                                             </StackPanel>
-                                            <StackPanel Width="220" Margin="0,0,8,6">
-                                                <TextBlock Text="Owner Name" />
-                                                <TextBox Text="{Binding VehicleOwnerFilter, UpdateSourceTrigger=PropertyChanged}" />
+                                            <StackPanel Width="150" Margin="0,0,8,6">
+                                                <TextBlock Text="Plate Emirate" />
+                                                <TextBox Text="{Binding VehicleEmirateFilter, UpdateSourceTrigger=PropertyChanged}" />
                                             </StackPanel>
-                                            <StackPanel Width="170" Margin="0,0,8,6">
-                                                <TextBlock Text="Contact No" />
-                                                <TextBox Text="{Binding VehicleContactFilter, UpdateSourceTrigger=PropertyChanged}" />
+                                            <StackPanel Width="150" Margin="0,0,8,6">
+                                                <TextBlock Text="Plate Category" />
+                                                <TextBox Text="{Binding VehicleCategoryFilter, UpdateSourceTrigger=PropertyChanged}" />
+                                            </StackPanel>
+                                            <StackPanel Width="150" Margin="0,0,8,6">
+                                                <TextBlock Text="Vehicle Type" />
+                                                <TextBox Text="{Binding VehicleTypeFilter, UpdateSourceTrigger=PropertyChanged}" />
                                             </StackPanel>
                                         </WrapPanel>
-                                        <DataGrid ItemsSource="{Binding FilteredVehicles}" SelectedItem="{Binding SelectedVehicleMaster}" VerticalAlignment="Stretch">
+                                        <DataGrid ItemsSource="{Binding FilteredVehicles}" SelectedItem="{Binding SelectedVehicleMaster}" VerticalAlignment="Stretch" AutoGenerateColumns="False">
                                             <DataGrid.Columns>
-                                                <DataGridTextColumn Header="Vehicle No" Binding="{Binding VehicleNo}" Width="130" />
-                                                <DataGridTextColumn Header="Vehicle Type" Binding="{Binding VehicleType}" Width="130" />
-                                                <DataGridTextColumn Header="Owner Name" Binding="{Binding OwnerName}" Width="180" />
-                                                <DataGridTextColumn Header="Contact No" Binding="{Binding ContactNo}" Width="130" />
-                                                <DataGridCheckBoxColumn Header="Active" Binding="{Binding IsActive}" Width="80" />
+                                                <DataGridTextColumn Header="Vehicle ID" Binding="{Binding VehicleId}" Width="120" />
+                                                <DataGridTextColumn Header="Plate Number" Binding="{Binding PlateNumber}" Width="150" />
+                                                <DataGridTextColumn Header="Plate Emirate" Binding="{Binding PlateEmirate}" Width="150" />
+                                                <DataGridTextColumn Header="Plate Category" Binding="{Binding PlateCategory}" Width="150" />
+                                                <DataGridTextColumn Header="Vehicle Type" Binding="{Binding VehicleType}" Width="160" />
                                             </DataGrid.Columns>
                                         </DataGrid>
                                     </DockPanel>
@@ -1051,29 +1068,105 @@
                                             <Button Content="Save" Command="{Binding SaveVehicleMasterCommand}" />
                                             <Button Content="New / Clear" Command="{Binding ClearVehicleMasterFormCommand}" />
                                         </StackPanel>
-                                        <StackPanel>
-                                            <GroupBox Header="General" Margin="4" Padding="8">
-                                                <StackPanel>
-                                                    <DockPanel Margin="0,2">
-                                                        <Label Content="Vehicle No *" Width="160" />
-                                                        <TextBox Text="{Binding VehicleMasterForm.VehicleNo, UpdateSourceTrigger=PropertyChanged}" />
-                                                    </DockPanel>
-                                                    <DockPanel Margin="0,2">
-                                                        <Label Content="Vehicle Type" Width="160" />
-                                                        <TextBox Text="{Binding VehicleMasterForm.VehicleType, UpdateSourceTrigger=PropertyChanged}" />
-                                                    </DockPanel>
-                                                    <DockPanel Margin="0,2">
-                                                        <Label Content="Owner Name" Width="160" />
-                                                        <TextBox Text="{Binding VehicleMasterForm.OwnerName, UpdateSourceTrigger=PropertyChanged}" />
-                                                    </DockPanel>
-                                                    <DockPanel Margin="0,2">
-                                                        <Label Content="Contact No" Width="160" />
-                                                        <TextBox Text="{Binding VehicleMasterForm.ContactNo, UpdateSourceTrigger=PropertyChanged}" />
-                                                    </DockPanel>
-                                                    <CheckBox Content="Active" IsChecked="{Binding VehicleMasterForm.IsActive}" Margin="160,6,0,0" />
-                                                </StackPanel>
-                                            </GroupBox>
-                                        </StackPanel>
+                                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                            <StackPanel>
+                                                <GroupBox Header="General" Margin="4" Padding="8">
+                                                    <StackPanel>
+                                                        <DockPanel Margin="0,2">
+                                                            <Label Content="Vehicle ID" Width="180" />
+                                                            <TextBox Text="{Binding VehicleMasterForm.VehicleId, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" />
+                                                        </DockPanel>
+                                                        <DockPanel Margin="0,2">
+                                                            <Label Content="Plate Number *" Width="180" />
+                                                            <TextBox Text="{Binding VehicleMasterForm.PlateNumber, UpdateSourceTrigger=PropertyChanged}" />
+                                                        </DockPanel>
+                                                        <DockPanel Margin="0,2">
+                                                            <Label Content="Plate Emirate *" Width="180" />
+                                                            <ComboBox IsEditable="True" Text="{Binding VehicleMasterForm.PlateEmirate, UpdateSourceTrigger=PropertyChanged}">
+                                                                <ComboBoxItem Content="Abu Dhabi" />
+                                                                <ComboBoxItem Content="Dubai" />
+                                                                <ComboBoxItem Content="Sharjah" />
+                                                                <ComboBoxItem Content="Ajman" />
+                                                                <ComboBoxItem Content="Umm Al Quwain" />
+                                                                <ComboBoxItem Content="Ras Al Khaimah" />
+                                                                <ComboBoxItem Content="Fujairah" />
+                                                                <ComboBoxItem Content="Other" />
+                                                            </ComboBox>
+                                                        </DockPanel>
+                                                        <DockPanel Margin="0,2">
+                                                            <Label Content="Plate Category" Width="180" />
+                                                            <ComboBox IsEditable="True" Text="{Binding VehicleMasterForm.PlateCategory, UpdateSourceTrigger=PropertyChanged}">
+                                                                <ComboBoxItem Content="Private" />
+                                                                <ComboBoxItem Content="Commercial" />
+                                                                <ComboBoxItem Content="Government" />
+                                                                <ComboBoxItem Content="Export" />
+                                                                <ComboBoxItem Content="Temporary" />
+                                                                <ComboBoxItem Content="Other" />
+                                                            </ComboBox>
+                                                        </DockPanel>
+                                                        <DockPanel Margin="0,2">
+                                                            <Label Content="Vehicle Type *" Width="180" />
+                                                            <ComboBox IsEditable="True" Text="{Binding VehicleMasterForm.VehicleType, UpdateSourceTrigger=PropertyChanged}">
+                                                                <ComboBoxItem Content="Truck" />
+                                                                <ComboBoxItem Content="Trailer" />
+                                                                <ComboBoxItem Content="Tanker" />
+                                                                <ComboBoxItem Content="Pickup" />
+                                                                <ComboBoxItem Content="Van" />
+                                                                <ComboBoxItem Content="Car" />
+                                                                <ComboBoxItem Content="Compactor" />
+                                                                <ComboBoxItem Content="Skip Loader" />
+                                                                <ComboBoxItem Content="Other" />
+                                                            </ComboBox>
+                                                        </DockPanel>
+                                                        <DockPanel Margin="0,2">
+                                                            <Label Content="Ownership Type" Width="180" />
+                                                            <ComboBox IsEditable="True" Text="{Binding VehicleMasterForm.OwnershipType, UpdateSourceTrigger=PropertyChanged}">
+                                                                <ComboBoxItem Content="Company" />
+                                                                <ComboBoxItem Content="Vendor" />
+                                                                <ComboBoxItem Content="Customer" />
+                                                                <ComboBoxItem Content="Transporter" />
+                                                                <ComboBoxItem Content="Rented" />
+                                                                <ComboBoxItem Content="Walk-in" />
+                                                            </ComboBox>
+                                                        </DockPanel>
+                                                        <DockPanel Margin="0,2">
+                                                            <Label Content="Owner / Party Account" Width="180" />
+                                                            <TextBox Text="{Binding VehicleMasterForm.OwnerPartyAccount, UpdateSourceTrigger=PropertyChanged}" />
+                                                        </DockPanel>
+                                                        <DockPanel Margin="0,2">
+                                                            <Label Content="Transporter" Width="180" />
+                                                            <TextBox Text="{Binding VehicleMasterForm.Transporter, UpdateSourceTrigger=PropertyChanged}" />
+                                                        </DockPanel>
+                                                        <DockPanel Margin="0,2">
+                                                            <Label Content="Capacity" Width="180" />
+                                                            <TextBox Text="{Binding VehicleMasterForm.Capacity, UpdateSourceTrigger=PropertyChanged, StringFormat=0.###}" />
+                                                        </DockPanel>
+                                                        <DockPanel Margin="0,2">
+                                                            <Label Content="Default Driver" Width="180" />
+                                                            <TextBox Text="{Binding VehicleMasterForm.DefaultDriver, UpdateSourceTrigger=PropertyChanged}" />
+                                                        </DockPanel>
+                                                        <DockPanel Margin="0,2">
+                                                            <Label Content="Registration Expiry Date" Width="180" />
+                                                            <DatePicker SelectedDate="{Binding VehicleMasterForm.RegistrationExpiryDate, UpdateSourceTrigger=PropertyChanged}" />
+                                                        </DockPanel>
+                                                        <DockPanel Margin="0,2">
+                                                            <Label Content="Legal Entity" Width="180" />
+                                                            <TextBox Text="{Binding VehicleMasterForm.LegalEntity, UpdateSourceTrigger=PropertyChanged}" />
+                                                        </DockPanel>
+                                                        <DockPanel Margin="0,2">
+                                                            <Label Content="Status" Width="180" />
+                                                            <ComboBox IsEditable="True" Text="{Binding VehicleMasterForm.Status, UpdateSourceTrigger=PropertyChanged}">
+                                                                <ComboBoxItem Content="Active" />
+                                                                <ComboBoxItem Content="Inactive" />
+                                                                <ComboBoxItem Content="Blocked" />
+                                                                <ComboBoxItem Content="Under Maintenance" />
+                                                            </ComboBox>
+                                                        </DockPanel>
+                                                        <CheckBox Content="Active" IsChecked="{Binding VehicleMasterForm.IsActive}" Margin="180,6,0,0" />
+                                                    </StackPanel>
+                                                </GroupBox>
+                                            </StackPanel>
+                                        </ScrollViewer>
                                     </DockPanel>
                                 </Border>
                             </Grid>
@@ -1088,29 +1181,53 @@
                                     <DockPanel LastChildFill="True">
                                         <TextBlock DockPanel.Dock="Top" Text="View of &quot;Driver Master&quot;" FontSize="18" FontWeight="SemiBold" Margin="4" />
                                         <WrapPanel DockPanel.Dock="Top" Margin="4,2,4,8">
-                                            <StackPanel Width="190" Margin="0,0,8,6">
+                                            <StackPanel Width="105" Margin="0,0,8,6">
+                                                <TextBlock Text="Driver ID" />
+                                                <TextBox Text="{Binding DriverIdFilter, UpdateSourceTrigger=PropertyChanged}" />
+                                            </StackPanel>
+                                            <StackPanel Width="160" Margin="0,0,8,6">
                                                 <TextBlock Text="Driver Name" />
                                                 <TextBox Text="{Binding DriverNameFilter, UpdateSourceTrigger=PropertyChanged}" />
                                             </StackPanel>
+                                            <StackPanel Width="130" Margin="0,0,8,6">
+                                                <TextBlock Text="Mobile" />
+                                                <TextBox Text="{Binding DriverMobileFilter, UpdateSourceTrigger=PropertyChanged}" />
+                                            </StackPanel>
+                                            <StackPanel Width="140" Margin="0,0,8,6">
+                                                <TextBlock Text="Driver Type" />
+                                                <TextBox Text="{Binding DriverTypeFilter, UpdateSourceTrigger=PropertyChanged}" />
+                                            </StackPanel>
+                                            <StackPanel Width="170" Margin="0,0,8,6">
+                                                <TextBlock Text="Employer / Party" />
+                                                <TextBox Text="{Binding DriverEmployerFilter, UpdateSourceTrigger=PropertyChanged}" />
+                                            </StackPanel>
                                             <StackPanel Width="160" Margin="0,0,8,6">
-                                                <TextBlock Text="CNIC" />
+                                                <TextBlock Text="Identification No" />
                                                 <TextBox Text="{Binding DriverCnicFilter, UpdateSourceTrigger=PropertyChanged}" />
                                             </StackPanel>
                                             <StackPanel Width="160" Margin="0,0,8,6">
-                                                <TextBlock Text="Mobile No" />
-                                                <TextBox Text="{Binding DriverMobileFilter, UpdateSourceTrigger=PropertyChanged}" />
-                                            </StackPanel>
-                                            <StackPanel Width="160" Margin="0,0,8,6">
-                                                <TextBlock Text="License No" />
+                                                <TextBlock Text="Licence No" />
                                                 <TextBox Text="{Binding DriverLicenseFilter, UpdateSourceTrigger=PropertyChanged}" />
                                             </StackPanel>
+                                            <StackPanel Width="130" Margin="0,0,8,6">
+                                                <TextBlock Text="Status" />
+                                                <TextBox Text="{Binding DriverStatusFilter, UpdateSourceTrigger=PropertyChanged}" />
+                                            </StackPanel>
                                         </WrapPanel>
-                                        <DataGrid ItemsSource="{Binding FilteredDrivers}" SelectedItem="{Binding SelectedDriverMaster}" VerticalAlignment="Stretch">
+                                        <DataGrid ItemsSource="{Binding FilteredDrivers}" SelectedItem="{Binding SelectedDriverMaster}" VerticalAlignment="Stretch" AutoGenerateColumns="False">
                                             <DataGrid.Columns>
-                                                <DataGridTextColumn Header="Driver Name" Binding="{Binding DriverName}" Width="180" />
-                                                <DataGridTextColumn Header="CNIC" Binding="{Binding CNIC}" Width="140" />
-                                                <DataGridTextColumn Header="Mobile No" Binding="{Binding MobileNo}" Width="130" />
-                                                <DataGridTextColumn Header="License No" Binding="{Binding LicenseNo}" Width="130" />
+                                                <DataGridTextColumn Header="Driver ID" Binding="{Binding DriverId}" Width="90" />
+                                                <DataGridTextColumn Header="Driver Name" Binding="{Binding DriverName}" Width="170" />
+                                                <DataGridTextColumn Header="Mobile Number" Binding="{Binding MobileNumber}" Width="130" />
+                                                <DataGridTextColumn Header="Driver Type" Binding="{Binding DriverType}" Width="150" />
+                                                <DataGridTextColumn Header="Employer / Party Account" Binding="{Binding EmployerAccount}" Width="180" />
+                                                <DataGridTextColumn Header="Identification Number" Binding="{Binding IdentificationNumber}" Width="160" />
+                                                <DataGridTextColumn Header="Driving Licence Number" Binding="{Binding DrivingLicenceNumber}" Width="170" />
+                                                <DataGridTextColumn Header="Driving Licence Expiry Date" Binding="{Binding DrivingLicenceExpiryDate, StringFormat=d}" Width="180" />
+                                                <DataGridTextColumn Header="Default Vehicle" Binding="{Binding DefaultVehicle}" Width="140" />
+                                                <DataGridTextColumn Header="Legal Entity" Binding="{Binding LegalEntity}" Width="140" />
+                                                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="120" />
+                                                <DataGridCheckBoxColumn Header="Blacklisted" Binding="{Binding Blacklisted}" Width="110" />
                                                 <DataGridCheckBoxColumn Header="Active" Binding="{Binding IsActive}" Width="80" />
                                             </DataGrid.Columns>
                                         </DataGrid>
@@ -1123,29 +1240,66 @@
                                             <Button Content="Save" Command="{Binding SaveDriverMasterCommand}" />
                                             <Button Content="New / Clear" Command="{Binding ClearDriverMasterFormCommand}" />
                                         </StackPanel>
-                                        <StackPanel>
-                                            <GroupBox Header="General" Margin="4" Padding="8">
-                                                <StackPanel>
-                                                    <DockPanel Margin="0,2">
-                                                        <Label Content="Driver Name *" Width="160" />
-                                                        <TextBox Text="{Binding DriverMasterForm.DriverName, UpdateSourceTrigger=PropertyChanged}" />
-                                                    </DockPanel>
-                                                    <DockPanel Margin="0,2">
-                                                        <Label Content="CNIC" Width="160" />
-                                                        <TextBox Text="{Binding DriverMasterForm.CNIC, UpdateSourceTrigger=PropertyChanged}" />
-                                                    </DockPanel>
-                                                    <DockPanel Margin="0,2">
-                                                        <Label Content="Mobile No" Width="160" />
-                                                        <TextBox Text="{Binding DriverMasterForm.MobileNo, UpdateSourceTrigger=PropertyChanged}" />
-                                                    </DockPanel>
-                                                    <DockPanel Margin="0,2">
-                                                        <Label Content="License No" Width="160" />
-                                                        <TextBox Text="{Binding DriverMasterForm.LicenseNo, UpdateSourceTrigger=PropertyChanged}" />
-                                                    </DockPanel>
-                                                    <CheckBox Content="Active" IsChecked="{Binding DriverMasterForm.IsActive}" Margin="160,6,0,0" />
-                                                </StackPanel>
-                                            </GroupBox>
-                                        </StackPanel>
+                                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                            <StackPanel>
+                                                <GroupBox Header="General" Margin="4" Padding="8">
+                                                    <StackPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Driver ID" Width="200" /><TextBox Text="{Binding DriverMasterForm.DriverId, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Driver Name *" Width="200" /><TextBox Text="{Binding DriverMasterForm.DriverName, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Mobile Number *" Width="200" /><TextBox Text="{Binding DriverMasterForm.MobileNumber, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Secondary Mobile" Width="200" /><TextBox Text="{Binding DriverMasterForm.SecondaryMobile, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Email" Width="200" /><TextBox Text="{Binding DriverMasterForm.Email, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Nationality" Width="200" /><TextBox Text="{Binding DriverMasterForm.Nationality, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Driver Type *" Width="200" /><ComboBox IsEditable="True" Text="{Binding DriverMasterForm.DriverType, UpdateSourceTrigger=PropertyChanged}"><ComboBoxItem Content="Company Driver" /><ComboBoxItem Content="Vendor Driver" /><ComboBoxItem Content="Customer Driver" /><ComboBoxItem Content="Transporter Driver" /><ComboBoxItem Content="Walk-in Driver" /></ComboBox></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Employer Party Type *" Width="200" /><ComboBox IsEditable="True" Text="{Binding DriverMasterForm.EmployerPartyType, UpdateSourceTrigger=PropertyChanged}"><ComboBoxItem Content="Legal Entity" /><ComboBoxItem Content="Vendor" /><ComboBoxItem Content="Customer" /><ComboBoxItem Content="Transporter" /><ComboBoxItem Content="Walk-in Party" /></ComboBox></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Employer Account" Width="200" /><TextBox Text="{Binding DriverMasterForm.EmployerAccount, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                    </StackPanel>
+                                                </GroupBox>
+
+                                                <GroupBox Header="Identification" Margin="4" Padding="8">
+                                                    <StackPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Identification Type *" Width="200" /><ComboBox IsEditable="True" Text="{Binding DriverMasterForm.IdentificationType, UpdateSourceTrigger=PropertyChanged}"><ComboBoxItem Content="Emirates ID" /><ComboBoxItem Content="Passport" /><ComboBoxItem Content="Driving Licence" /><ComboBoxItem Content="Labour Card" /><ComboBoxItem Content="Other" /></ComboBox></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Identification Number *" Width="200" /><TextBox Text="{Binding DriverMasterForm.IdentificationNumber, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Identification Expiry Date" Width="200" /><DatePicker SelectedDate="{Binding DriverMasterForm.IdentificationExpiryDate, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Emirates ID Expiry Date" Width="200" /><DatePicker SelectedDate="{Binding DriverMasterForm.EmiratesIdExpiryDate, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Passport Number" Width="200" /><TextBox Text="{Binding DriverMasterForm.PassportNumber, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Passport Expiry Date" Width="200" /><DatePicker SelectedDate="{Binding DriverMasterForm.PassportExpiryDate, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                    </StackPanel>
+                                                </GroupBox>
+
+                                                <GroupBox Header="Driving Licence" Margin="4" Padding="8">
+                                                    <StackPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Driving Licence Number *" Width="200" /><TextBox Text="{Binding DriverMasterForm.DrivingLicenceNumber, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Driving Licence Issued By *" Width="200" /><TextBox Text="{Binding DriverMasterForm.DrivingLicenceIssuedBy, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Driving Licence Expiry Date *" Width="200" /><DatePicker SelectedDate="{Binding DriverMasterForm.DrivingLicenceExpiryDate, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Licence Categories" Width="200" /><TextBox Text="{Binding DriverMasterForm.LicenceCategories, UpdateSourceTrigger=PropertyChanged}" ToolTip="Heavy Truck, Light Vehicle, Trailer, Tanker, Bus, Forklift, Other" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Default Vehicle" Width="200" /><TextBox Text="{Binding DriverMasterForm.DefaultVehicle, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                    </StackPanel>
+                                                </GroupBox>
+
+                                                <GroupBox Header="Address / Attachments" Margin="4" Padding="8">
+                                                    <StackPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Address" Width="200" /><TextBox Text="{Binding DriverMasterForm.Address, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="60" TextWrapping="Wrap" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Driver Photo" Width="200" /><TextBox Text="{Binding DriverMasterForm.DriverPhoto, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Emirates ID Attachment" Width="200" /><TextBox Text="{Binding DriverMasterForm.EmiratesIdAttachment, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Passport Attachment" Width="200" /><TextBox Text="{Binding DriverMasterForm.PassportAttachment, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Driving Licence Attachment" Width="200" /><TextBox Text="{Binding DriverMasterForm.DrivingLicenceAttachment, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                    </StackPanel>
+                                                </GroupBox>
+
+                                                <GroupBox Header="Status" Margin="4" Padding="8">
+                                                    <StackPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Legal Entity *" Width="200" /><TextBox Text="{Binding DriverMasterForm.LegalEntity, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Status *" Width="200" /><ComboBox IsEditable="True" Text="{Binding DriverMasterForm.Status, UpdateSourceTrigger=PropertyChanged}"><ComboBoxItem Content="Active" /><ComboBoxItem Content="Inactive" /><ComboBoxItem Content="Blocked" /><ComboBoxItem Content="Suspended" /></ComboBox></DockPanel>
+                                                        <CheckBox Content="Blacklisted" IsChecked="{Binding DriverMasterForm.Blacklisted}" Margin="200,6,0,0" />
+                                                        <DockPanel Margin="0,2"><Label Content="Blacklist Reason" Width="200" /><TextBox Text="{Binding DriverMasterForm.BlacklistReason, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="60" TextWrapping="Wrap" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Effective From *" Width="200" /><DatePicker SelectedDate="{Binding DriverMasterForm.EffectiveFrom, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <CheckBox Content="Active" IsChecked="{Binding DriverMasterForm.IsActive}" Margin="200,6,0,0" />
+                                                        <DockPanel Margin="0,2"><Label Content="Remarks" Width="200" /><TextBox Text="{Binding DriverMasterForm.Remarks, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="60" TextWrapping="Wrap" /></DockPanel>
+                                                    </StackPanel>
+                                                </GroupBox>
+                                            </StackPanel>
+                                        </ScrollViewer>
                                     </DockPanel>
                                 </Border>
                             </Grid>
@@ -1171,12 +1325,12 @@
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
                                     <StackPanel Margin="0,0,10,0">
                                         <TextBlock Text="From Date" FontWeight="SemiBold" Margin="0,0,0,4" />
-                                        <DatePicker SelectedDate="{Binding ReportFrom}" SelectedDateFormat="Short" Language="en-GB" Width="206" Height="30" FontSize="13" />
+                                        <DatePicker SelectedDate="{Binding ReportFrom}" SelectedDateFormat="Short" Language="en-GB" Width="165" Height="30" FontSize="13" />
                                     </StackPanel>
 
                                     <StackPanel Margin="0,0,10,0">
                                         <TextBlock Text="To Date" FontWeight="SemiBold" Margin="0,0,0,4" />
-                                        <DatePicker SelectedDate="{Binding ReportTo}" SelectedDateFormat="Short" Language="en-GB" Width="205" Height="30" FontSize="13" />
+                                        <DatePicker SelectedDate="{Binding ReportTo}" SelectedDateFormat="Short" Language="en-GB" Width="165" Height="30" FontSize="13" />
                                     </StackPanel>
 
                                     <StackPanel Margin="0,0,10,0">
@@ -1235,13 +1389,17 @@
                                 <DataGridTextColumn Header="Company" Binding="{Binding CompanyName}" Width="130" />
                                 <DataGridTextColumn Header="Vehicle" Binding="{Binding VehicleNo}" Width="110" />
                                 <DataGridTextColumn Header="Driver" Binding="{Binding DriverName}" Width="120" />
-                                <DataGridTextColumn Header="Party" Binding="{Binding PartyName}" Width="160" />
+                                <DataGridTextColumn Header="Party Account" Binding="{Binding PartyAccount}" Width="120" />
+                                <DataGridTextColumn Header="Party Name" Binding="{Binding PartyName}" Width="160" />
                                 <DataGridTextColumn Header="Party Type" Binding="{Binding PartyType}" Width="90" />
-                                <DataGridTextColumn Header="Item" Binding="{Binding MaterialName}" Width="150" />
-                                <DataGridTextColumn Header="First" Binding="{Binding FirstWeight}" Width="80" />
+                                <DataGridTextColumn Header="Item Number" Binding="{Binding ItemNumber}" Width="120" />
+                                <DataGridTextColumn Header="Item Name" Binding="{Binding ItemName}" Width="160" />
+                                <DataGridTextColumn Header="First Weight" Binding="{Binding FirstWeight}" Width="100" />
                                 <DataGridTextColumn Header="First Time" Binding="{Binding FirstWeightTime}" Width="150" />
-                                <DataGridTextColumn Header="Second" Binding="{Binding SecondWeight}" Width="80" />
+                                <DataGridTextColumn Header="First Weight By" Binding="{Binding FirstWeightBy}" Width="130" />
+                                <DataGridTextColumn Header="Second Weight" Binding="{Binding SecondWeight}" Width="105" />
                                 <DataGridTextColumn Header="Second Time" Binding="{Binding SecondWeightTime}" Width="150" />
+                                <DataGridTextColumn Header="Second Weight By" Binding="{Binding SecondWeightBy}" Width="140" />
                                 <DataGridTextColumn Header="Net" Binding="{Binding NetWeight}" Width="80" IsReadOnly="True" />
                                 <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="90" IsReadOnly="True" />
                                 <DataGridTextColumn Header="Remarks" Binding="{Binding Remarks}" Width="180" />
