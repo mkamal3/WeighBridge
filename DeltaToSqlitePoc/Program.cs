@@ -2,6 +2,7 @@
 using DeltaToSqlitePoc.Cli;
 using DeltaToSqlitePoc.Configuration;
 using DeltaToSqlitePoc.Demo;
+using DeltaToSqlitePoc.Models;
 using DeltaToSqlitePoc.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -74,6 +75,7 @@ public static class Program
                     services.AddSingleton(settings);
                     services.AddSingleton(cli);
                     services.AddSingleton<ParquetVendorMapper>();
+                    services.AddSingleton<ParquetItemMapper>();
                     services.AddSingleton<DeltaLakeNetMetadataClient>();
 
                     services.AddSingleton(sp =>
@@ -81,6 +83,12 @@ public static class Program
                         var s = sp.GetRequiredService<SyncSettings>();
                         var logger = sp.GetRequiredService<ILogger<SqliteVendorRepository>>();
                         return new SqliteVendorRepository(s.SqlitePath, logger);
+                    });
+                    services.AddSingleton(sp =>
+                    {
+                        var s = sp.GetRequiredService<SyncSettings>();
+                        var logger = sp.GetRequiredService<ILogger<SqliteItemRepository>>();
+                        return new SqliteItemRepository(s.SqlitePath, logger);
                     });
 
                     if (cli.Demo)
@@ -109,13 +117,27 @@ public static class Program
                             sp.GetRequiredService<ILogger<VendorSyncService>>(),
                             cli.Demo);
                     });
+
+                    services.AddSingleton(sp =>
+                    {
+                        var s = sp.GetRequiredService<SyncSettings>();
+                        return new ItemSyncService(
+                            s,
+                            cli.Demo ? null : sp.GetRequiredService<AdlsDeltaTableReader>(),
+                            cli.Demo ? sp.GetRequiredService<LocalDemoDeltaSource>() : null,
+                            sp.GetRequiredService<ParquetItemMapper>(),
+                            sp.GetRequiredService<SqliteItemRepository>(),
+                            sp.GetRequiredService<DeltaLakeNetMetadataClient>(),
+                            sp.GetRequiredService<ILogger<ItemSyncService>>(),
+                            cli.Demo);
+                    });
                 })
                 .Build();
 
             var settings = host.Services.GetRequiredService<SyncSettings>();
             ValidateSettings(settings, cli.Demo);
 
-            Console.WriteLine("=== Delta Lake → SQLite PoC (Vendor) ===");
+            Console.WriteLine("=== Delta Lake → SQLite PoC ===");
             Console.WriteLine($"Environment: {host.Services.GetRequiredService<IHostEnvironment>().EnvironmentName}");
             Console.WriteLine($"Mode      : {cli.Mode}");
             Console.WriteLine($"Table     : {settings.TableName}");
@@ -133,11 +155,23 @@ public static class Program
                 settings.DeltaTablePath = demo.TableRoot;
             }
 
-            var sqlite = host.Services.GetRequiredService<SqliteVendorRepository>();
-            await sqlite.OpenAsync(CancellationToken.None).ConfigureAwait(false);
+            SyncResult result;
+            if (string.Equals(settings.TableName, ItemSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase))
+            {
+                var sqliteItem = host.Services.GetRequiredService<SqliteItemRepository>();
+                await sqliteItem.OpenAsync(CancellationToken.None).ConfigureAwait(false);
 
-            var sync = host.Services.GetRequiredService<VendorSyncService>();
-            var result = await sync.RunAsync(cli, CancellationToken.None).ConfigureAwait(false);
+                var syncItem = host.Services.GetRequiredService<ItemSyncService>();
+                result = await syncItem.RunAsync(cli, CancellationToken.None).ConfigureAwait(false);
+            }
+            else
+            {
+                var sqliteVendor = host.Services.GetRequiredService<SqliteVendorRepository>();
+                await sqliteVendor.OpenAsync(CancellationToken.None).ConfigureAwait(false);
+
+                var syncVendor = host.Services.GetRequiredService<VendorSyncService>();
+                result = await syncVendor.RunAsync(cli, CancellationToken.None).ConfigureAwait(false);
+            }
 
             Console.WriteLine();
             Console.WriteLine("--- Result ---");
