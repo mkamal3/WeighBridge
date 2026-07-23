@@ -15,10 +15,18 @@ public sealed class SyncSettings
     public string ContainerName { get; set; } = string.Empty;
 
     /// <summary>Delta table root path inside the container (e.g. d365/tables/mserp_vendvendoraientity).</summary>
-    public string DeltaTablePath { get; set; } = "d365/tables/mserp_vendvendoraientity";
+    //public string DeltaTablePath { get; set; } = "d365/tables/mserp_vendvendoraientity";
+    //public string DeltaTablePath { get; set; } = "d365/tables/mserp_mk_wb_ecoresreleasedproductv2entity_partitioned";
+    public string DeltaTablePath { get; set; } = "d365/tables/mserp_mk_wbcustomermaster";
+    //public string deltatablepath { get; set; } = "d365/tables/mserp_mk_wbvendormaster";
+    //public string deltatablepath { get; set; } = "d365/tables/mserp_mk_wbwarehousemaster";
 
     /// <summary>Logical entity / SQLite table name.</summary>
-    public string TableName { get; set; } = "Vendor";
+    //public string TableName { get; set; } = "Vendor";
+    //public string TableName { get; set; } = "ReleasedProducts";
+    //public string TableName { get; set; } = "CustomerMaster";
+    public string TableName { get; set; } = "VendorMaster";
+    //public string TableName { get; set; } = "WarehouseMaster";
 
     /// <summary>Relative or absolute path to the SQLite database file.</summary>
     public string SqlitePath { get; set; } = "app_data.db";
