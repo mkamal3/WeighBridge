@@ -6,7 +6,7 @@ namespace DeltaToSqlitePoc.Models;
 /// </summary>
 public static class ItemSchema
 {
-    public const string DefaultDeltaPath = "d365/tables/mserp_mk_wb_ecoresreleasedproductv2entity_partitioned";
+    public const string DefaultDeltaPath = "deltalake/mserp_mk_wb_ecoresreleasedproductv2entity_partitioned";
     public const string DefaultTableName = "ReleasedProducts";
     public const string PartitionColumn = "PartitionId";
 

@@ -135,6 +135,30 @@ public static class Program
                 .Build();
 
             var settings = host.Services.GetRequiredService<SyncSettings>();
+
+            // If the configured TableName matches a known schema, prefer that schema's default
+            // Delta path so the app reads the correct Parquet files when not overridden.
+            if (string.Equals(settings.TableName, ItemSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase))
+            {
+                settings.DeltaTablePath = ItemSchema.DefaultDeltaPath;
+                settings.TableName = ItemSchema.DefaultTableName;
+            }
+            else if (string.Equals(settings.TableName, VendorSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase))
+            {
+                settings.DeltaTablePath = VendorSchema.DefaultDeltaPath;
+                settings.TableName = VendorSchema.DefaultTableName;
+            }
+            else if (string.Equals(settings.TableName, CustomerSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase))
+            {
+                settings.DeltaTablePath = CustomerSchema.DefaultDeltaPath;
+                settings.TableName = CustomerSchema.DefaultTableName;
+            }
+            else if (string.Equals(settings.TableName, WarehouseSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase))
+            {
+                settings.DeltaTablePath = WarehouseSchema.DefaultDeltaPath;
+                settings.TableName = WarehouseSchema.DefaultTableName;
+            }
+
             ValidateSettings(settings, cli.Demo);
 
             Console.WriteLine("=== Delta Lake → SQLite PoC ===");
