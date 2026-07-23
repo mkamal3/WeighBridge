@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Windows;
 using WeightBridgeApp.Models;
 using WeightBridgeApp.Services;
@@ -56,6 +57,12 @@ public class MainViewModel : BaseViewModel
     private Vehicle _vehicleMasterForm = new();
     private Driver? _selectedDriverMaster;
     private Driver _driverMasterForm = new();
+    private WeighbridgeMaster? _selectedWeighbridgeMaster;
+    private WeighbridgeMaster? _selectedSettingsWeighbridge;
+    private WeighbridgeMaster _weighbridgeMasterForm = new();
+    private string _databaseFolderPath = string.Empty;
+    private OperatorMaster? _selectedOperatorMaster;
+    private OperatorMaster _operatorMasterForm = new();
     private string _customerFilter = string.Empty;
     private string _vendorFilter = string.Empty;
     private string _itemMasterFilter = string.Empty;
@@ -93,6 +100,18 @@ public class MainViewModel : BaseViewModel
     private string _driverEmployerFilter = string.Empty;
     private string _driverLicenseFilter = string.Empty;
     private string _driverStatusFilter = string.Empty;
+    private string _weighbridgeCodeFilter = string.Empty;
+    private string _weighbridgeNameFilter = string.Empty;
+    private string _weighbridgeSiteFilter = string.Empty;
+    private string _weighbridgeWarehouseFilter = string.Empty;
+    private string _weighbridgeStatusFilter = string.Empty;
+    private string _operatorIdFilter = string.Empty;
+    private string _operatorNameFilter = string.Empty;
+    private string _operatorUsernameFilter = string.Empty;
+    private string _operatorDesignationFilter = string.Empty;
+    private string _operatorDepartmentFilter = string.Empty;
+    private string _operatorWeighbridgeFilter = string.Empty;
+    private string _operatorStatusFilter = string.Empty;
     private Customer? _selectedCustomer;
     private Customer _customerForm = new();
     private Vendor? _selectedVendor;
@@ -121,7 +140,7 @@ public class MainViewModel : BaseViewModel
         _databaseService = databaseService;
         _currentUser = currentUser;
 
-        ConnectionTypes = new ObservableCollection<string> { "Mock", "Serial", "TCP" };
+        ConnectionTypes = new ObservableCollection<string> { "Mock", "TCP/IP", "Serial", "USB", "OPC", "API" };
         ParityOptions = new ObservableCollection<string> { "None", "Odd", "Even", "Mark", "Space" };
         StopBitsOptions = new ObservableCollection<string> { "One", "Two", "OnePointFive" };
         PartyTypes = new ObservableCollection<string> { "Customer", "Vendor" };
@@ -159,6 +178,10 @@ public class MainViewModel : BaseViewModel
         ClearVehicleMasterFormCommand = new RelayCommand(ClearVehicleMasterForm);
         SaveDriverMasterCommand = new RelayCommand(SaveDriverMasterAsync);
         ClearDriverMasterFormCommand = new RelayCommand(ClearDriverMasterForm);
+        SaveWeighbridgeMasterCommand = new RelayCommand(SaveWeighbridgeMasterAsync);
+        ClearWeighbridgeMasterFormCommand = new RelayCommand(ClearWeighbridgeMasterForm);
+        SaveOperatorMasterCommand = new RelayCommand(SaveOperatorMasterAsync);
+        ClearOperatorMasterFormCommand = new RelayCommand(ClearOperatorMasterForm);
         RefreshUsersCommand = new RelayCommand(LoadUsersAsync);
     }
 
@@ -181,6 +204,10 @@ public class MainViewModel : BaseViewModel
     public ObservableCollection<WarehouseMaster> FilteredWarehouseMasters { get; } = new();
     public ObservableCollection<Vehicle> FilteredVehicles { get; } = new();
     public ObservableCollection<Driver> FilteredDrivers { get; } = new();
+    public ObservableCollection<WeighbridgeMaster> WeighbridgeMasters { get; } = new();
+    public ObservableCollection<WeighbridgeMaster> FilteredWeighbridgeMasters { get; } = new();
+    public ObservableCollection<OperatorMaster> OperatorMasters { get; } = new();
+    public ObservableCollection<OperatorMaster> FilteredOperatorMasters { get; } = new();
     public ObservableCollection<Weighment> OpenWeighments { get; } = new();
     public ObservableCollection<Weighment> CompletedToday { get; } = new();
     public ObservableCollection<Weighment> ReportRows { get; } = new();
@@ -220,6 +247,10 @@ public class MainViewModel : BaseViewModel
     public RelayCommand ClearVehicleMasterFormCommand { get; }
     public RelayCommand SaveDriverMasterCommand { get; }
     public RelayCommand ClearDriverMasterFormCommand { get; }
+    public RelayCommand SaveWeighbridgeMasterCommand { get; }
+    public RelayCommand ClearWeighbridgeMasterFormCommand { get; }
+    public RelayCommand SaveOperatorMasterCommand { get; }
+    public RelayCommand ClearOperatorMasterFormCommand { get; }
     public RelayCommand RefreshUsersCommand { get; }
 
     public string CurrentUserDisplay => $"{_currentUser.FullName} ({_currentUser.Username})";
@@ -242,6 +273,22 @@ public class MainViewModel : BaseViewModel
     {
         get => _settings;
         set => SetProperty(ref _settings, value);
+    }
+
+    public string DatabaseFolderPath
+    {
+        get => _databaseFolderPath;
+        set => SetProperty(ref _databaseFolderPath, value);
+    }
+
+    public WeighbridgeMaster? SelectedSettingsWeighbridge
+    {
+        get => _selectedSettingsWeighbridge;
+        set
+        {
+            if (SetProperty(ref _selectedSettingsWeighbridge, value))
+                ApplySelectedWeighbridgeToSettings();
+        }
     }
 
     public decimal LiveWeight
@@ -902,6 +949,79 @@ public class MainViewModel : BaseViewModel
         }
     }
 
+
+    public string WeighbridgeCodeFilter
+    {
+        get => _weighbridgeCodeFilter;
+        set { if (SetProperty(ref _weighbridgeCodeFilter, value)) ApplyWeighbridgeFilter(); }
+    }
+
+    public string WeighbridgeNameFilter
+    {
+        get => _weighbridgeNameFilter;
+        set { if (SetProperty(ref _weighbridgeNameFilter, value)) ApplyWeighbridgeFilter(); }
+    }
+
+    public string WeighbridgeSiteFilter
+    {
+        get => _weighbridgeSiteFilter;
+        set { if (SetProperty(ref _weighbridgeSiteFilter, value)) ApplyWeighbridgeFilter(); }
+    }
+
+    public string WeighbridgeWarehouseFilter
+    {
+        get => _weighbridgeWarehouseFilter;
+        set { if (SetProperty(ref _weighbridgeWarehouseFilter, value)) ApplyWeighbridgeFilter(); }
+    }
+
+    public string WeighbridgeStatusFilter
+    {
+        get => _weighbridgeStatusFilter;
+        set { if (SetProperty(ref _weighbridgeStatusFilter, value)) ApplyWeighbridgeFilter(); }
+    }
+
+    public string OperatorIdFilter
+    {
+        get => _operatorIdFilter;
+        set { if (SetProperty(ref _operatorIdFilter, value)) ApplyOperatorFilter(); }
+    }
+
+    public string OperatorNameFilter
+    {
+        get => _operatorNameFilter;
+        set { if (SetProperty(ref _operatorNameFilter, value)) ApplyOperatorFilter(); }
+    }
+
+    public string OperatorUsernameFilter
+    {
+        get => _operatorUsernameFilter;
+        set { if (SetProperty(ref _operatorUsernameFilter, value)) ApplyOperatorFilter(); }
+    }
+
+    public string OperatorDesignationFilter
+    {
+        get => _operatorDesignationFilter;
+        set { if (SetProperty(ref _operatorDesignationFilter, value)) ApplyOperatorFilter(); }
+    }
+
+    public string OperatorDepartmentFilter
+    {
+        get => _operatorDepartmentFilter;
+        set { if (SetProperty(ref _operatorDepartmentFilter, value)) ApplyOperatorFilter(); }
+    }
+
+    public string OperatorWeighbridgeFilter
+    {
+        get => _operatorWeighbridgeFilter;
+        set { if (SetProperty(ref _operatorWeighbridgeFilter, value)) ApplyOperatorFilter(); }
+    }
+
+    public string OperatorStatusFilter
+    {
+        get => _operatorStatusFilter;
+        set { if (SetProperty(ref _operatorStatusFilter, value)) ApplyOperatorFilter(); }
+    }
+
     public string SelectedPartyType
     {
         get => _selectedPartyType;
@@ -1034,6 +1154,39 @@ public class MainViewModel : BaseViewModel
         }
     }
 
+
+    public WeighbridgeMaster WeighbridgeMasterForm
+    {
+        get => _weighbridgeMasterForm;
+        set => SetProperty(ref _weighbridgeMasterForm, value);
+    }
+
+    public WeighbridgeMaster? SelectedWeighbridgeMaster
+    {
+        get => _selectedWeighbridgeMaster;
+        set
+        {
+            if (SetProperty(ref _selectedWeighbridgeMaster, value))
+                LoadSelectedWeighbridgeMasterToForm();
+        }
+    }
+
+    public OperatorMaster OperatorMasterForm
+    {
+        get => _operatorMasterForm;
+        set => SetProperty(ref _operatorMasterForm, value);
+    }
+
+    public OperatorMaster? SelectedOperatorMaster
+    {
+        get => _selectedOperatorMaster;
+        set
+        {
+            if (SetProperty(ref _selectedOperatorMaster, value))
+                LoadSelectedOperatorMasterToForm();
+        }
+    }
+
     public AppUser? SelectedUser
     {
         get => _selectedUser;
@@ -1122,15 +1275,25 @@ public class MainViewModel : BaseViewModel
     {
         try
         {
+            DatabaseFolderPath = BridgeOneConfigService.GetDatabaseFolderPath();
             await _databaseService.InitializeAsync();
             Settings = await _databaseService.GetSettingsAsync();
             await LoadMastersAsync();
+            SelectSettingsWeighbridgeFromSavedSettings();
             await RefreshWeighmentsAsync();
             if (CanAccessReports)
                 await LoadReportAsync();
             if (CanAccessUserManagement)
                 await LoadUsersAsync();
-            StatusMessage = "Application loaded. Use Mock mode first, then test Serial/TCP with your indicator.";
+            if (!BridgeOneConfigService.IsDatabaseFolderConfigured())
+            {
+                System.Windows.MessageBox.Show("Database folder path is not defined. Please define it in Settings.", "BridgeOne", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                StatusMessage = "Database folder path is not defined. Please define it in Settings.";
+            }
+            else
+            {
+                StatusMessage = "Application loaded. Use Mock mode first, then test Serial/TCP with your indicator.";
+            }
         }
         catch (Exception ex)
         {
@@ -1144,9 +1307,19 @@ public class MainViewModel : BaseViewModel
         {
             await DisconnectAsync();
 
+            if (SelectedSettingsWeighbridge == null)
+            {
+                System.Windows.MessageBox.Show("Please select a weighbridge in Settings before connecting.", "BridgeOne", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                StatusMessage = "Please select a weighbridge in Settings before connecting.";
+                return;
+            }
+
+            ApplySelectedWeighbridgeToSettings();
+
             _weightReader = Settings.ConnectionType switch
             {
                 "Serial" => new SerialWeightReader(),
+                "TCP/IP" => new TcpWeightReader(),
                 "TCP" => new TcpWeightReader(),
                 _ => new MockWeightReader()
             };
@@ -1198,7 +1371,7 @@ public class MainViewModel : BaseViewModel
 
     private void WeightReader_WeightReceived(object? sender, WeightReadingEventArgs e)
     {
-        Application.Current.Dispatcher.Invoke(() =>
+        System.Windows.Application.Current.Dispatcher.Invoke(() =>
         {
             LiveWeight = e.Weight;
             IsStable = e.IsStable;
@@ -1216,8 +1389,26 @@ public class MainViewModel : BaseViewModel
                 return;
             }
 
+            var previousDatabaseFolderPath = BridgeOneConfigService.GetDatabaseFolderPath();
+            var newDatabaseFilePath = BridgeOneConfigService.GetDatabaseFilePathForFolder(DatabaseFolderPath);
+
+            ApplySelectedWeighbridgeToSettings();
             await _databaseService.SaveSettingsAsync(Settings);
-            StatusMessage = "Settings saved.";
+
+            BridgeOneConfigService.SaveDatabaseFolderPath(DatabaseFolderPath);
+
+            if (!string.Equals(previousDatabaseFolderPath, DatabaseFolderPath, StringComparison.OrdinalIgnoreCase))
+            {
+                if (!System.IO.File.Exists(newDatabaseFilePath) && System.IO.File.Exists(_databaseService.DatabaseFilePath))
+                    System.IO.File.Copy(_databaseService.DatabaseFilePath, newDatabaseFilePath);
+
+                System.Windows.MessageBox.Show("Database folder path saved. Please restart BridgeOne to use the selected database path.", "BridgeOne", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                StatusMessage = "Database folder path saved. Restart BridgeOne to use the selected database path.";
+            }
+            else
+            {
+                StatusMessage = "Settings saved. Selected weighbridge configuration will be used for live weight.";
+            }
         }
         catch (Exception ex)
         {
@@ -1367,6 +1558,8 @@ public class MainViewModel : BaseViewModel
         var vendors = await _databaseService.GetVendorsAsync();
         var itemMasters = await _databaseService.GetItemMastersAsync();
         var warehouseMasters = await _databaseService.GetWarehouseMastersAsync();
+        var weighbridgeMasters = await _databaseService.GetWeighbridgeMastersAsync();
+        var operatorMasters = await _databaseService.GetOperatorMastersAsync();
 
         ReplaceCollection(Parties, parties);
         ReplaceCollection(Materials, materials);
@@ -1376,6 +1569,10 @@ public class MainViewModel : BaseViewModel
         ReplaceCollection(Vendors, vendors);
         ReplaceCollection(ItemMasters, itemMasters);
         ReplaceCollection(WarehouseMasters, warehouseMasters);
+        ReplaceCollection(WeighbridgeMasters, weighbridgeMasters);
+        ReplaceCollection(OperatorMasters, operatorMasters);
+        if (SelectedSettingsWeighbridge == null)
+            SelectSettingsWeighbridgeFromSavedSettings();
 
         ApplyMasterFilters();
         RefreshPartyLookup();
@@ -1615,13 +1812,13 @@ public class MainViewModel : BaseViewModel
                 return;
             }
 
-            var confirm = MessageBox.Show(
+            var confirm = System.Windows.MessageBox.Show(
                 $"Delete completed ticket {weighment.TicketNo}?",
                 "Confirm Delete",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
+                System.Windows.MessageBoxButton.YesNo,
+                System.Windows.MessageBoxImage.Warning);
 
-            if (confirm != MessageBoxResult.Yes)
+            if (confirm != System.Windows.MessageBoxResult.Yes)
                 return;
 
             await _databaseService.DeleteWeighmentAsync(weighment.WeighmentId);
@@ -2259,6 +2456,204 @@ public class MainViewModel : BaseViewModel
         };
     }
 
+
+
+    private void SelectSettingsWeighbridgeFromSavedSettings()
+    {
+        var selectedCode = Settings.SelectedWeighbridgeCode;
+        SelectedSettingsWeighbridge = WeighbridgeMasters.FirstOrDefault(x =>
+            string.Equals(x.WeighbridgeCode, selectedCode, StringComparison.OrdinalIgnoreCase));
+
+        SelectedSettingsWeighbridge ??= WeighbridgeMasters.FirstOrDefault(x => x.IsActive);
+        ApplySelectedWeighbridgeToSettings();
+    }
+
+    private void ApplySelectedWeighbridgeToSettings()
+    {
+        if (SelectedSettingsWeighbridge == null)
+            return;
+
+        Settings.SelectedWeighbridgeCode = SelectedSettingsWeighbridge.WeighbridgeCode;
+        Settings.ConnectionType = string.IsNullOrWhiteSpace(SelectedSettingsWeighbridge.CommunicationType) ? "Mock" : SelectedSettingsWeighbridge.CommunicationType;
+        Settings.ComPort = string.IsNullOrWhiteSpace(SelectedSettingsWeighbridge.ScaleComPort) ? "COM1" : SelectedSettingsWeighbridge.ScaleComPort;
+        Settings.BaudRate = SelectedSettingsWeighbridge.BaudRate <= 0 ? 9600 : SelectedSettingsWeighbridge.BaudRate;
+        Settings.Parity = string.IsNullOrWhiteSpace(SelectedSettingsWeighbridge.Parity) ? "None" : SelectedSettingsWeighbridge.Parity;
+        Settings.DataBits = SelectedSettingsWeighbridge.DataBits <= 0 ? 8 : SelectedSettingsWeighbridge.DataBits;
+        Settings.StopBits = string.IsNullOrWhiteSpace(SelectedSettingsWeighbridge.StopBits) ? "One" : SelectedSettingsWeighbridge.StopBits;
+        Settings.IpAddress = string.IsNullOrWhiteSpace(SelectedSettingsWeighbridge.ScaleIpAddress) ? "192.168.1.100" : SelectedSettingsWeighbridge.ScaleIpAddress;
+        Settings.TcpPort = SelectedSettingsWeighbridge.TcpPort <= 0 ? 4001 : SelectedSettingsWeighbridge.TcpPort;
+        Settings.MinimumWeight = SelectedSettingsWeighbridge.MinimumWeight;
+        Settings.WeightIncrement = SelectedSettingsWeighbridge.WeightIncrement;
+        Settings.WeightStabilityTime = SelectedSettingsWeighbridge.WeightStabilityTime;
+        Settings.CapacityUnit = string.IsNullOrWhiteSpace(SelectedSettingsWeighbridge.CapacityUnit) ? "kg" : SelectedSettingsWeighbridge.CapacityUnit;
+        Settings.Printer = SelectedSettingsWeighbridge.Printer;
+
+        OnPropertyChanged(nameof(Settings));
+    }
+
+    private async Task SaveWeighbridgeMasterAsync()
+    {
+        try
+        {
+            if (!CanAccessMasters)
+            {
+                StatusMessage = "You do not have access to Masters.";
+                return;
+            }
+
+            await _databaseService.SaveWeighbridgeMasterAsync(WeighbridgeMasterForm);
+            await LoadMastersAsync();
+            StatusMessage = "Weighbridge master saved.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Weighbridge master save error: " + ex.Message;
+        }
+    }
+
+    private void ClearWeighbridgeMasterForm()
+    {
+        SelectedWeighbridgeMaster = null;
+        WeighbridgeMasterForm = new WeighbridgeMaster
+        {
+            CapacityUnit = "kg",
+            CommunicationType = "Mock",
+            ScaleIpAddress = "192.168.1.100",
+            TcpPort = 4001,
+            ScaleComPort = "COM1",
+            BaudRate = 9600,
+            Parity = "None",
+            DataBits = 8,
+            StopBits = "One",
+            OperatingStatus = "Active",
+            EffectiveFrom = DateTime.Today,
+            IsActive = true
+        };
+    }
+
+    private void LoadSelectedWeighbridgeMasterToForm()
+    {
+        if (SelectedWeighbridgeMaster == null)
+            return;
+
+        WeighbridgeMasterForm = new WeighbridgeMaster
+        {
+            WeighbridgeId = SelectedWeighbridgeMaster.WeighbridgeId,
+            WeighbridgeCode = SelectedWeighbridgeMaster.WeighbridgeCode,
+            WeighbridgeName = SelectedWeighbridgeMaster.WeighbridgeName,
+            Description = SelectedWeighbridgeMaster.Description,
+            PlantSite = SelectedWeighbridgeMaster.PlantSite,
+            Warehouse = SelectedWeighbridgeMaster.Warehouse,
+            WarehouseAddress = SelectedWeighbridgeMaster.WarehouseAddress,
+            WeighbridgeType = SelectedWeighbridgeMaster.WeighbridgeType,
+            ScaleType = SelectedWeighbridgeMaster.ScaleType,
+            ScaleCapacity = SelectedWeighbridgeMaster.ScaleCapacity,
+            CapacityUnit = SelectedWeighbridgeMaster.CapacityUnit,
+            MinimumWeight = SelectedWeighbridgeMaster.MinimumWeight,
+            WeightIncrement = SelectedWeighbridgeMaster.WeightIncrement,
+            WeightStabilityTime = SelectedWeighbridgeMaster.WeightStabilityTime,
+            ScaleIpAddress = SelectedWeighbridgeMaster.ScaleIpAddress,
+            TcpPort = SelectedWeighbridgeMaster.TcpPort,
+            ScaleComPort = SelectedWeighbridgeMaster.ScaleComPort,
+            BaudRate = SelectedWeighbridgeMaster.BaudRate,
+            Parity = SelectedWeighbridgeMaster.Parity,
+            DataBits = SelectedWeighbridgeMaster.DataBits,
+            StopBits = SelectedWeighbridgeMaster.StopBits,
+            CommunicationType = SelectedWeighbridgeMaster.CommunicationType,
+            ScaleManufacturer = SelectedWeighbridgeMaster.ScaleManufacturer,
+            ScaleModel = SelectedWeighbridgeMaster.ScaleModel,
+            ScaleSerialNumber = SelectedWeighbridgeMaster.ScaleSerialNumber,
+            CalibrationCertificateNo = SelectedWeighbridgeMaster.CalibrationCertificateNo,
+            LastCalibrationDate = SelectedWeighbridgeMaster.LastCalibrationDate,
+            NextCalibrationDate = SelectedWeighbridgeMaster.NextCalibrationDate,
+            Printer = SelectedWeighbridgeMaster.Printer,
+            CameraAvailable = SelectedWeighbridgeMaster.CameraAvailable,
+            AnprAvailable = SelectedWeighbridgeMaster.AnprAvailable,
+            TrafficLightAvailable = SelectedWeighbridgeMaster.TrafficLightAvailable,
+            BoomBarrierAvailable = SelectedWeighbridgeMaster.BoomBarrierAvailable,
+            CctvAvailable = SelectedWeighbridgeMaster.CctvAvailable,
+            DefaultTicketTemplate = SelectedWeighbridgeMaster.DefaultTicketTemplate,
+            DefaultCurrency = SelectedWeighbridgeMaster.DefaultCurrency,
+            DefaultOperator = SelectedWeighbridgeMaster.DefaultOperator,
+            AllowedOperators = SelectedWeighbridgeMaster.AllowedOperators,
+            OperatingStatus = SelectedWeighbridgeMaster.OperatingStatus,
+            EffectiveFrom = SelectedWeighbridgeMaster.EffectiveFrom,
+            IsActive = SelectedWeighbridgeMaster.IsActive,
+            Remarks = SelectedWeighbridgeMaster.Remarks
+        };
+    }
+
+    private async Task SaveOperatorMasterAsync()
+    {
+        try
+        {
+            if (!CanAccessMasters)
+            {
+                StatusMessage = "You do not have access to Masters.";
+                return;
+            }
+
+            await _databaseService.SaveOperatorMasterAsync(OperatorMasterForm);
+            await LoadMastersAsync();
+            StatusMessage = "Operator master saved.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Operator master save error: " + ex.Message;
+        }
+    }
+
+    private void ClearOperatorMasterForm()
+    {
+        SelectedOperatorMaster = null;
+        OperatorMasterForm = new OperatorMaster
+        {
+            CanCaptureFirstWeight = true,
+            CanCaptureSecondWeight = true,
+            Status = "Active",
+            EffectiveFrom = DateTime.Today,
+            IsActive = true
+        };
+    }
+
+    private void LoadSelectedOperatorMasterToForm()
+    {
+        if (SelectedOperatorMaster == null)
+            return;
+
+        OperatorMasterForm = new OperatorMaster
+        {
+            OperatorId = SelectedOperatorMaster.OperatorId,
+            EmployeeId = SelectedOperatorMaster.EmployeeId,
+            OperatorName = SelectedOperatorMaster.OperatorName,
+            Username = SelectedOperatorMaster.Username,
+            Email = SelectedOperatorMaster.Email,
+            MobileNumber = SelectedOperatorMaster.MobileNumber,
+            Designation = SelectedOperatorMaster.Designation,
+            Department = SelectedOperatorMaster.Department,
+            LegalEntity = SelectedOperatorMaster.LegalEntity,
+            DefaultLegalEntity = SelectedOperatorMaster.DefaultLegalEntity,
+            DefaultWeighbridge = SelectedOperatorMaster.DefaultWeighbridge,
+            AssignedWeighbridges = SelectedOperatorMaster.AssignedWeighbridges,
+            DefaultShift = SelectedOperatorMaster.DefaultShift,
+            Role = SelectedOperatorMaster.Role,
+            PermissionProfile = SelectedOperatorMaster.PermissionProfile,
+            CanCaptureFirstWeight = SelectedOperatorMaster.CanCaptureFirstWeight,
+            CanCaptureSecondWeight = SelectedOperatorMaster.CanCaptureSecondWeight,
+            CanPerformManualWeightEntry = SelectedOperatorMaster.CanPerformManualWeightEntry,
+            CanCorrectTransactions = SelectedOperatorMaster.CanCorrectTransactions,
+            CanCancelTransactions = SelectedOperatorMaster.CanCancelTransactions,
+            CanOverrideWeight = SelectedOperatorMaster.CanOverrideWeight,
+            CanApproveQc = SelectedOperatorMaster.CanApproveQc,
+            CanRetryIntegration = SelectedOperatorMaster.CanRetryIntegration,
+            LastLogin = SelectedOperatorMaster.LastLogin,
+            Status = SelectedOperatorMaster.Status,
+            EffectiveFrom = SelectedOperatorMaster.EffectiveFrom,
+            IsActive = SelectedOperatorMaster.IsActive,
+            Remarks = SelectedOperatorMaster.Remarks
+        };
+    }
+
     private void ClearReportFilters()
     {
         ReportTicketFilter = string.Empty;
@@ -2293,6 +2688,8 @@ public class MainViewModel : BaseViewModel
         ApplyWarehouseFilter();
         ApplyVehicleFilter();
         ApplyDriverFilter();
+        ApplyWeighbridgeFilter();
+        ApplyOperatorFilter();
     }
 
     private void ApplyCustomerFilter()
@@ -2354,6 +2751,29 @@ public class MainViewModel : BaseViewModel
             MatchesFilter(x.IdentificationNumber, DriverCnicFilter) &&
             MatchesFilter(x.DrivingLicenceNumber, DriverLicenseFilter) &&
             MatchesFilter(x.Status, DriverStatusFilter)));
+    }
+
+
+    private void ApplyWeighbridgeFilter()
+    {
+        ReplaceCollection(FilteredWeighbridgeMasters, WeighbridgeMasters.Where(x =>
+            MatchesFilter(x.WeighbridgeCode, WeighbridgeCodeFilter) &&
+            MatchesFilter(x.WeighbridgeName, WeighbridgeNameFilter) &&
+            MatchesFilter(x.PlantSite, WeighbridgeSiteFilter) &&
+            MatchesFilter(x.Warehouse, WeighbridgeWarehouseFilter) &&
+            (MatchesFilter(x.OperatingStatus, WeighbridgeStatusFilter) || MatchesFilter(x.CommunicationType, WeighbridgeStatusFilter))));
+    }
+
+    private void ApplyOperatorFilter()
+    {
+        ReplaceCollection(FilteredOperatorMasters, OperatorMasters.Where(x =>
+            MatchesFilter(x.EmployeeId, OperatorIdFilter) &&
+            MatchesFilter(x.OperatorName, OperatorNameFilter) &&
+            MatchesFilter(x.Username, OperatorUsernameFilter) &&
+            MatchesFilter(x.Designation, OperatorDesignationFilter) &&
+            MatchesFilter(x.Department, OperatorDepartmentFilter) &&
+            (MatchesFilter(x.DefaultWeighbridge, OperatorWeighbridgeFilter) || MatchesFilter(x.AssignedWeighbridges, OperatorWeighbridgeFilter)) &&
+            MatchesFilter(x.Status, OperatorStatusFilter)));
     }
 
     private static bool IsFilterEmpty(string value) => string.IsNullOrWhiteSpace(value);

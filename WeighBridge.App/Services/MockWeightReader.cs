@@ -4,7 +4,7 @@ namespace WeightBridgeApp.Services;
 
 public class MockWeightReader : IWeightReader
 {
-    private Timer? _timer;
+    private System.Threading.Timer? _timer;
     private readonly Random _random = new();
     private decimal _currentWeight = 12000;
 
@@ -14,7 +14,7 @@ public class MockWeightReader : IWeightReader
     public Task ConnectAsync(DeviceSettings settings)
     {
         IsConnected = true;
-        _timer = new Timer(_ => GenerateWeight(), null, 0, 800);
+        _timer = new System.Threading.Timer(_ => GenerateWeight(), null, 0, 800);
         return Task.CompletedTask;
     }
 

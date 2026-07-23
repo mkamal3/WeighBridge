@@ -9,10 +9,10 @@ public static class CsvExportService
 {
     public static string ExportWeighments(IEnumerable<Weighment> rows)
     {
-        var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "BridgeOneExports");
-        Directory.CreateDirectory(folder);
+        var folder = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "BridgeOneExports");
+        System.IO.Directory.CreateDirectory(folder);
 
-        var filePath = Path.Combine(folder, $"BridgeOneReport-{DateTime.Now:yyyyMMdd-HHmmss}.csv");
+        var filePath = System.IO.Path.Combine(folder, $"BridgeOneReport-{DateTime.Now:yyyyMMdd-HHmmss}.csv");
         var sb = new StringBuilder();
         sb.AppendLine("TicketNo,CompanyName,VehicleNo,DriverName,PartyAccount,PartyName,PartyType,ItemNumber,ItemName,FirstWeight,FirstWeightTime,FirstWeightBy,SecondWeight,SecondWeightTime,SecondWeightBy,NetWeight,Status,Remarks");
 
@@ -40,7 +40,7 @@ public static class CsvExportService
             ));
         }
 
-        File.WriteAllText(filePath, sb.ToString(), Encoding.UTF8);
+        System.IO.File.WriteAllText(filePath, sb.ToString(), Encoding.UTF8);
         return filePath;
     }
 
