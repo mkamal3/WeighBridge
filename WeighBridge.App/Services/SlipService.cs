@@ -6,6 +6,11 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using WpfPrintDialog = System.Windows.Controls.PrintDialog;
+using WpfSize = System.Windows.Size;
+using WpfRect = System.Windows.Rect;
+using WpfBrushes = System.Windows.Media.Brushes;
+using WpfFontFamily = System.Windows.Media.FontFamily;
 using WeightBridgeApp.Models;
 
 namespace WeightBridgeApp.Services;
@@ -15,16 +20,16 @@ public static class SlipService
     public static string ExportSlip(Weighment weighment)
     {
         var folder = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "BridgeOneSlips");
-        Directory.CreateDirectory(folder);
+        System.IO.Directory.CreateDirectory(folder);
 
         var filePath = System.IO.Path.Combine(folder, $"Slip-{SafeFileName(weighment.TicketNo)}.pdf");
-        File.WriteAllBytes(filePath, BuildSlipPdf(weighment));
+        System.IO.File.WriteAllBytes(filePath, BuildSlipPdf(weighment));
         return filePath;
     }
 
     public static bool PrintSlip(Weighment weighment)
     {
-        var printDialog = new PrintDialog();
+        var printDialog = new WpfPrintDialog();
         if (printDialog.ShowDialog() != true)
             return false;
 
@@ -32,8 +37,8 @@ public static class SlipService
         var pageHeight = printDialog.PrintableAreaHeight > 0 ? printDialog.PrintableAreaHeight : 1122;
         var page = BuildSlipPage(weighment, pageWidth, pageHeight);
 
-        page.Measure(new Size(pageWidth, pageHeight));
-        page.Arrange(new Rect(new Size(pageWidth, pageHeight)));
+        page.Measure(new WpfSize(pageWidth, pageHeight));
+        page.Arrange(new WpfRect(new WpfSize(pageWidth, pageHeight)));
         page.UpdateLayout();
 
         printDialog.PrintVisual(page, $"BridgeOne Slip {weighment.TicketNo}");
@@ -74,7 +79,7 @@ public static class SlipService
         {
             Width = pageWidth,
             Height = pageHeight,
-            Background = Brushes.White
+            Background = WpfBrushes.White
         };
 
         var margin = Math.Max(35, Math.Min(55, pageWidth * 0.06));
@@ -120,7 +125,7 @@ public static class SlipService
         var block = new TextBlock
         {
             Text = text ?? string.Empty,
-            FontFamily = new FontFamily("Segoe UI"),
+            FontFamily = new WpfFontFamily("Segoe UI"),
             FontSize = fontSize,
             FontWeight = fontWeight,
             TextAlignment = alignment,
@@ -141,7 +146,7 @@ public static class SlipService
             Y1 = y1,
             X2 = x2,
             Y2 = y2,
-            Stroke = Brushes.LightGray,
+            Stroke = WpfBrushes.LightGray,
             StrokeThickness = thickness
         };
         page.Children.Add(line);

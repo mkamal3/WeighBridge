@@ -6,7 +6,7 @@ namespace WeightBridgeApp;
 
 public partial class LoginWindow : Window
 {
-    private readonly DatabaseService _databaseService = new();
+    private DatabaseService? _databaseService;
 
     public LoginWindow()
     {
@@ -15,8 +15,14 @@ public partial class LoginWindow : Window
 
     private async void Window_Loaded(object sender, RoutedEventArgs e)
     {
+        await InitializeDatabaseAsync();
+    }
+
+    private async Task InitializeDatabaseAsync()
+    {
         try
         {
+            _databaseService = new DatabaseService();
             await _databaseService.InitializeAsync();
             UsernameTextBox.Focus();
             StatusTextBlock.Text = string.Empty;
@@ -32,7 +38,7 @@ public partial class LoginWindow : Window
         await LoginAsync();
     }
 
-    private async void PasswordBox_KeyDown(object sender, KeyEventArgs e)
+    private async void PasswordBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
         if (e.Key == Key.Enter)
             await LoginAsync();
@@ -43,6 +49,12 @@ public partial class LoginWindow : Window
         try
         {
             StatusTextBlock.Text = string.Empty;
+
+            if (_databaseService == null)
+            {
+                StatusTextBlock.Text = "Database initialization is not completed.";
+                return;
+            }
 
             var username = UsernameTextBox.Text.Trim();
             var password = PasswordBox.Password;
@@ -61,7 +73,7 @@ public partial class LoginWindow : Window
             }
 
             var mainWindow = new MainWindow(user);
-            Application.Current.MainWindow = mainWindow;
+            System.Windows.Application.Current.MainWindow = mainWindow;
             mainWindow.Show();
             Close();
         }

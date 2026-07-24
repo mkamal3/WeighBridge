@@ -217,53 +217,6 @@
                 </Grid>
             </TabItem>
 
-            <TabItem Header="Settings" Visibility="{Binding CanAccessSettings, Converter={StaticResource BoolToVisibilityConverter}}">
-                <ScrollViewer>
-                    <Border Background="White" CornerRadius="8" Padding="18" Margin="12" Width="620" HorizontalAlignment="Left">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="170" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-
-                            <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Text="Device Settings" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,12" />
-                            <Label Grid.Row="1" Grid.Column="0" Content="Connection Type" />
-                            <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding ConnectionTypes}" SelectedItem="{Binding Settings.ConnectionType}" />
-                            <Label Grid.Row="2" Grid.Column="0" Content="COM Port" />
-                            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Settings.ComPort, UpdateSourceTrigger=PropertyChanged}" />
-                            <Label Grid.Row="3" Grid.Column="0" Content="Baud Rate" />
-                            <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Settings.BaudRate, UpdateSourceTrigger=PropertyChanged}" />
-                            <Label Grid.Row="4" Grid.Column="0" Content="Parity" />
-                            <ComboBox Grid.Row="4" Grid.Column="1" ItemsSource="{Binding ParityOptions}" SelectedItem="{Binding Settings.Parity}" />
-                            <Label Grid.Row="5" Grid.Column="0" Content="Data Bits" />
-                            <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding Settings.DataBits, UpdateSourceTrigger=PropertyChanged}" />
-                            <Label Grid.Row="6" Grid.Column="0" Content="Stop Bits" />
-                            <ComboBox Grid.Row="6" Grid.Column="1" ItemsSource="{Binding StopBitsOptions}" SelectedItem="{Binding Settings.StopBits}" />
-                            <Label Grid.Row="7" Grid.Column="0" Content="TCP IP / Port" />
-                            <StackPanel Grid.Row="7" Grid.Column="1" Orientation="Horizontal">
-                                <TextBox Text="{Binding Settings.IpAddress, UpdateSourceTrigger=PropertyChanged}" Width="220" />
-                                <TextBox Text="{Binding Settings.TcpPort, UpdateSourceTrigger=PropertyChanged}" Width="100" />
-                            </StackPanel>
-                            <StackPanel Grid.Row="8" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,14,0,0">
-                                <Button Content="Save Settings" Command="{Binding SaveSettingsCommand}" />
-                                <TextBlock Text="Use Mock first to test without device." VerticalAlignment="Center" Foreground="Gray" Margin="8,0" />
-                            </StackPanel>
-                        </Grid>
-                    </Border>
-                </ScrollViewer>
-            </TabItem>
-
             <TabItem Header="Masters" Visibility="{Binding CanAccessMasters, Converter={StaticResource BoolToVisibilityConverter}}">
                 <TabControl Margin="12">
                         <TabItem Header="Customer Master">
@@ -1304,6 +1257,214 @@
                                 </Border>
                             </Grid>
                         </TabItem>
+
+                        <TabItem Header="Weighbridge Master">
+                            <Grid Margin="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="5*" />
+                                    <ColumnDefinition Width="4*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0" Background="White" CornerRadius="8" Padding="10" Margin="4">
+                                    <DockPanel LastChildFill="True">
+                                        <TextBlock DockPanel.Dock="Top" Text="View of &quot;Weighbridge Master&quot;" FontSize="18" FontWeight="SemiBold" Margin="4" />
+                                        <WrapPanel DockPanel.Dock="Top" Margin="4,2,4,8">
+                                            <StackPanel Width="145" Margin="0,0,8,6"><TextBlock Text="Code" /><TextBox Text="{Binding WeighbridgeCodeFilter, UpdateSourceTrigger=PropertyChanged}" /></StackPanel>
+                                            <StackPanel Width="170" Margin="0,0,8,6"><TextBlock Text="Name" /><TextBox Text="{Binding WeighbridgeNameFilter, UpdateSourceTrigger=PropertyChanged}" /></StackPanel>
+                                            <StackPanel Width="140" Margin="0,0,8,6"><TextBlock Text="Plant / Site" /><TextBox Text="{Binding WeighbridgeSiteFilter, UpdateSourceTrigger=PropertyChanged}" /></StackPanel>
+                                            <StackPanel Width="140" Margin="0,0,8,6"><TextBlock Text="Warehouse" /><TextBox Text="{Binding WeighbridgeWarehouseFilter, UpdateSourceTrigger=PropertyChanged}" /></StackPanel>
+                                            <StackPanel Width="130" Margin="0,0,8,6"><TextBlock Text="Status" /><TextBox Text="{Binding WeighbridgeStatusFilter, UpdateSourceTrigger=PropertyChanged}" /></StackPanel>
+                                        </WrapPanel>
+                                        <DataGrid ItemsSource="{Binding FilteredWeighbridgeMasters}" SelectedItem="{Binding SelectedWeighbridgeMaster}" VerticalAlignment="Stretch" AutoGenerateColumns="False">
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Header="Weighbridge ID" Binding="{Binding WeighbridgeId}" Width="110" />
+                                                <DataGridTextColumn Header="Weighbridge Code" Binding="{Binding WeighbridgeCode}" Width="140" />
+                                                <DataGridTextColumn Header="Weighbridge Name" Binding="{Binding WeighbridgeName}" Width="170" />
+                                                <DataGridTextColumn Header="Plant / Site" Binding="{Binding PlantSite}" Width="130" />
+                                                <DataGridTextColumn Header="Warehouse" Binding="{Binding Warehouse}" Width="130" />
+                                                <DataGridTextColumn Header="Weighbridge Type" Binding="{Binding WeighbridgeType}" Width="140" />
+                                                <DataGridTextColumn Header="Scale Type" Binding="{Binding ScaleType}" Width="140" />
+                                                <DataGridTextColumn Header="Scale Capacity" Binding="{Binding ScaleCapacity}" Width="120" />
+                                                <DataGridTextColumn Header="Communication Type" Binding="{Binding CommunicationType}" Width="150" />
+                                                <DataGridTextColumn Header="Operating Status" Binding="{Binding OperatingStatus}" Width="130" />
+                                                <DataGridCheckBoxColumn Header="Active" Binding="{Binding IsActive}" Width="80" />
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+                                    </DockPanel>
+                                </Border>
+                                <Border Grid.Column="1" Background="White" CornerRadius="8" Padding="10" Margin="4">
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Top" Text="Open / Edit Weighbridge" FontSize="18" FontWeight="SemiBold" Margin="4" />
+                                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="4">
+                                            <Button Content="Save" Command="{Binding SaveWeighbridgeMasterCommand}" />
+                                            <Button Content="New / Clear" Command="{Binding ClearWeighbridgeMasterFormCommand}" />
+                                        </StackPanel>
+                                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                            <StackPanel>
+                                                <GroupBox Header="General" Margin="4" Padding="8">
+                                                    <StackPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Weighbridge ID" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.WeighbridgeId, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Weighbridge Code *" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.WeighbridgeCode, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Weighbridge Name *" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.WeighbridgeName, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Description" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.Description, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Plant / Site *" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.PlantSite, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Warehouse" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.Warehouse, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Warehouse Address" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.WarehouseAddress, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="55" TextWrapping="Wrap" /></DockPanel>
+                                                    </StackPanel>
+                                                </GroupBox>
+                                                <GroupBox Header="Scale Setup" Margin="4" Padding="8">
+                                                    <StackPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Weighbridge Type *" Width="205" /><ComboBox IsEditable="True" Text="{Binding WeighbridgeMasterForm.WeighbridgeType, UpdateSourceTrigger=PropertyChanged}"><ComboBoxItem Content="Inbound" /><ComboBoxItem Content="Outbound" /><ComboBoxItem Content="Bidirectional" /></ComboBox></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Scale Type *" Width="205" /><ComboBox IsEditable="True" Text="{Binding WeighbridgeMasterForm.ScaleType, UpdateSourceTrigger=PropertyChanged}"><ComboBoxItem Content="Pit Scale" /><ComboBoxItem Content="Surface Scale" /><ComboBoxItem Content="Platform Scale" /><ComboBoxItem Content="Tank Scale" /></ComboBox></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Scale Capacity *" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.ScaleCapacity, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Capacity Unit *" Width="205" /><ComboBox IsEditable="True" Text="{Binding WeighbridgeMasterForm.CapacityUnit, UpdateSourceTrigger=PropertyChanged}"><ComboBoxItem Content="kg" /><ComboBoxItem Content="metric ton" /></ComboBox></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Minimum Weight" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.MinimumWeight, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Weight Increment" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.WeightIncrement, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Weight Stability Time" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.WeightStabilityTime, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                    </StackPanel>
+                                                </GroupBox>
+                                                <GroupBox Header="Communication" Margin="4" Padding="8">
+                                                    <StackPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Communication Type *" Width="205" /><ComboBox IsEditable="True" Text="{Binding WeighbridgeMasterForm.CommunicationType, UpdateSourceTrigger=PropertyChanged}"><ComboBoxItem Content="Mock" /><ComboBoxItem Content="TCP/IP" /><ComboBoxItem Content="Serial" /><ComboBoxItem Content="USB" /><ComboBoxItem Content="OPC" /><ComboBoxItem Content="API" /></ComboBox></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="TCP IP / Port" Width="205" /><StackPanel Orientation="Horizontal"><TextBox Text="{Binding WeighbridgeMasterForm.ScaleIpAddress, UpdateSourceTrigger=PropertyChanged}" Width="260" /><TextBox Text="{Binding WeighbridgeMasterForm.TcpPort, UpdateSourceTrigger=PropertyChanged}" Width="120" /></StackPanel></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Scale COM Port" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.ScaleComPort, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Baud Rate" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.BaudRate, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Parity" Width="205" /><ComboBox IsEditable="True" Text="{Binding WeighbridgeMasterForm.Parity, UpdateSourceTrigger=PropertyChanged}"><ComboBoxItem Content="None" /><ComboBoxItem Content="Odd" /><ComboBoxItem Content="Even" /><ComboBoxItem Content="Mark" /><ComboBoxItem Content="Space" /></ComboBox></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Data Bits" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.DataBits, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Stop Bits" Width="205" /><ComboBox IsEditable="True" Text="{Binding WeighbridgeMasterForm.StopBits, UpdateSourceTrigger=PropertyChanged}"><ComboBoxItem Content="One" /><ComboBoxItem Content="Two" /><ComboBoxItem Content="OnePointFive" /></ComboBox></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Scale Manufacturer" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.ScaleManufacturer, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Scale Model" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.ScaleModel, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Scale Serial Number" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.ScaleSerialNumber, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                    </StackPanel>
+                                                </GroupBox>
+                                                <GroupBox Header="Calibration / Printing" Margin="4" Padding="8">
+                                                    <StackPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Calibration Certificate No." Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.CalibrationCertificateNo, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Last Calibration Date" Width="205" /><DatePicker SelectedDate="{Binding WeighbridgeMasterForm.LastCalibrationDate, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Next Calibration Date" Width="205" /><DatePicker SelectedDate="{Binding WeighbridgeMasterForm.NextCalibrationDate, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Printer" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.Printer, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Default Ticket Template" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.DefaultTicketTemplate, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Default Currency" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.DefaultCurrency, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                    </StackPanel>
+                                                </GroupBox>
+                                                <GroupBox Header="Integrations / Operations" Margin="4" Padding="8">
+                                                    <StackPanel>
+                                                        <CheckBox Content="Camera Available" IsChecked="{Binding WeighbridgeMasterForm.CameraAvailable}" Margin="205,4,0,0" />
+                                                        <CheckBox Content="ANPR Available" IsChecked="{Binding WeighbridgeMasterForm.AnprAvailable}" Margin="205,4,0,0" />
+                                                        <CheckBox Content="Traffic Light Available" IsChecked="{Binding WeighbridgeMasterForm.TrafficLightAvailable}" Margin="205,4,0,0" />
+                                                        <CheckBox Content="Boom Barrier Available" IsChecked="{Binding WeighbridgeMasterForm.BoomBarrierAvailable}" Margin="205,4,0,0" />
+                                                        <CheckBox Content="CCTV Available" IsChecked="{Binding WeighbridgeMasterForm.CctvAvailable}" Margin="205,4,0,0" />
+                                                        <DockPanel Margin="0,2"><Label Content="Default Operator" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.DefaultOperator, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Allowed Operators *" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.AllowedOperators, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Operating Status *" Width="205" /><ComboBox IsEditable="True" Text="{Binding WeighbridgeMasterForm.OperatingStatus, UpdateSourceTrigger=PropertyChanged}"><ComboBoxItem Content="Active" /><ComboBoxItem Content="Inactive" /><ComboBoxItem Content="Under Maintenance" /><ComboBoxItem Content="Offline" /></ComboBox></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Effective From *" Width="205" /><DatePicker SelectedDate="{Binding WeighbridgeMasterForm.EffectiveFrom, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <CheckBox Content="Active" IsChecked="{Binding WeighbridgeMasterForm.IsActive}" Margin="205,4,0,0" />
+                                                        <DockPanel Margin="0,2"><Label Content="Remarks" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.Remarks, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="60" TextWrapping="Wrap" /></DockPanel>
+                                                    </StackPanel>
+                                                </GroupBox>
+                                            </StackPanel>
+                                        </ScrollViewer>
+                                    </DockPanel>
+                                </Border>
+                            </Grid>
+                        </TabItem>
+
+                        <TabItem Header="Operator Master">
+                            <Grid Margin="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="5*" />
+                                    <ColumnDefinition Width="4*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0" Background="White" CornerRadius="8" Padding="10" Margin="4">
+                                    <DockPanel LastChildFill="True">
+                                        <TextBlock DockPanel.Dock="Top" Text="View of &quot;Operator Master&quot;" FontSize="18" FontWeight="SemiBold" Margin="4" />
+                                        <WrapPanel DockPanel.Dock="Top" Margin="4,2,4,8">
+                                            <StackPanel Width="130" Margin="0,0,8,6"><TextBlock Text="Employee ID" /><TextBox Text="{Binding OperatorIdFilter, UpdateSourceTrigger=PropertyChanged}" /></StackPanel>
+                                            <StackPanel Width="170" Margin="0,0,8,6"><TextBlock Text="Operator Name" /><TextBox Text="{Binding OperatorNameFilter, UpdateSourceTrigger=PropertyChanged}" /></StackPanel>
+                                            <StackPanel Width="130" Margin="0,0,8,6"><TextBlock Text="Username" /><TextBox Text="{Binding OperatorUsernameFilter, UpdateSourceTrigger=PropertyChanged}" /></StackPanel>
+                                            <StackPanel Width="140" Margin="0,0,8,6"><TextBlock Text="Designation" /><TextBox Text="{Binding OperatorDesignationFilter, UpdateSourceTrigger=PropertyChanged}" /></StackPanel>
+                                            <StackPanel Width="140" Margin="0,0,8,6"><TextBlock Text="Department" /><TextBox Text="{Binding OperatorDepartmentFilter, UpdateSourceTrigger=PropertyChanged}" /></StackPanel>
+                                            <StackPanel Width="150" Margin="0,0,8,6"><TextBlock Text="Weighbridge" /><TextBox Text="{Binding OperatorWeighbridgeFilter, UpdateSourceTrigger=PropertyChanged}" /></StackPanel>
+                                            <StackPanel Width="120" Margin="0,0,8,6"><TextBlock Text="Status" /><TextBox Text="{Binding OperatorStatusFilter, UpdateSourceTrigger=PropertyChanged}" /></StackPanel>
+                                        </WrapPanel>
+                                        <DataGrid ItemsSource="{Binding FilteredOperatorMasters}" SelectedItem="{Binding SelectedOperatorMaster}" VerticalAlignment="Stretch" AutoGenerateColumns="False">
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Header="Operator ID" Binding="{Binding OperatorId}" Width="90" />
+                                                <DataGridTextColumn Header="Employee ID" Binding="{Binding EmployeeId}" Width="120" />
+                                                <DataGridTextColumn Header="Operator Name" Binding="{Binding OperatorName}" Width="170" />
+                                                <DataGridTextColumn Header="Username" Binding="{Binding Username}" Width="120" />
+                                                <DataGridTextColumn Header="Designation" Binding="{Binding Designation}" Width="150" />
+                                                <DataGridTextColumn Header="Department" Binding="{Binding Department}" Width="140" />
+                                                <DataGridTextColumn Header="Default Weighbridge" Binding="{Binding DefaultWeighbridge}" Width="160" />
+                                                <DataGridTextColumn Header="Role" Binding="{Binding Role}" Width="120" />
+                                                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="110" />
+                                                <DataGridCheckBoxColumn Header="Active" Binding="{Binding IsActive}" Width="80" />
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+                                    </DockPanel>
+                                </Border>
+                                <Border Grid.Column="1" Background="White" CornerRadius="8" Padding="10" Margin="4">
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Top" Text="Open / Edit Operator" FontSize="18" FontWeight="SemiBold" Margin="4" />
+                                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="4">
+                                            <Button Content="Save" Command="{Binding SaveOperatorMasterCommand}" />
+                                            <Button Content="New / Clear" Command="{Binding ClearOperatorMasterFormCommand}" />
+                                        </StackPanel>
+                                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                            <StackPanel>
+                                                <GroupBox Header="General" Margin="4" Padding="8">
+                                                    <StackPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Operator ID" Width="205" /><TextBox Text="{Binding OperatorMasterForm.OperatorId, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Employee ID *" Width="205" /><TextBox Text="{Binding OperatorMasterForm.EmployeeId, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Operator Name *" Width="205" /><TextBox Text="{Binding OperatorMasterForm.OperatorName, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Username *" Width="205" /><TextBox Text="{Binding OperatorMasterForm.Username, UpdateSourceTrigger=PropertyChanged}" ToolTip="Link this username with User Management." /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Email *" Width="205" /><TextBox Text="{Binding OperatorMasterForm.Email, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Mobile Number" Width="205" /><TextBox Text="{Binding OperatorMasterForm.MobileNumber, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                    </StackPanel>
+                                                </GroupBox>
+                                                <GroupBox Header="Organization" Margin="4" Padding="8">
+                                                    <StackPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Designation *" Width="205" /><ComboBox IsEditable="True" Text="{Binding OperatorMasterForm.Designation, UpdateSourceTrigger=PropertyChanged}"><ComboBoxItem Content="Weighbridge Operator" /><ComboBoxItem Content="Supervisor" /><ComboBoxItem Content="QC Inspector" /><ComboBoxItem Content="Administrator" /><ComboBoxItem Content="Cashier" /><ComboBoxItem Content="Manager" /></ComboBox></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Department *" Width="205" /><ComboBox IsEditable="True" Text="{Binding OperatorMasterForm.Department, UpdateSourceTrigger=PropertyChanged}"><ComboBoxItem Content="Operations" /><ComboBoxItem Content="Production" /><ComboBoxItem Content="Warehouse" /><ComboBoxItem Content="Quality" /><ComboBoxItem Content="Finance" /><ComboBoxItem Content="IT" /><ComboBoxItem Content="Administration" /></ComboBox></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Legal Entity *" Width="205" /><TextBox Text="{Binding OperatorMasterForm.LegalEntity, UpdateSourceTrigger=PropertyChanged}" ToolTip="Multi-select values can be separated by comma." /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Default Legal Entity" Width="205" /><TextBox Text="{Binding OperatorMasterForm.DefaultLegalEntity, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                    </StackPanel>
+                                                </GroupBox>
+                                                <GroupBox Header="Weighbridge Assignment" Margin="4" Padding="8">
+                                                    <StackPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Default Weighbridge" Width="205" /><TextBox Text="{Binding OperatorMasterForm.DefaultWeighbridge, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Assigned Weighbridges *" Width="205" /><TextBox Text="{Binding OperatorMasterForm.AssignedWeighbridges, UpdateSourceTrigger=PropertyChanged}" ToolTip="Multi-select values can be separated by comma." /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Default Shift" Width="205" /><TextBox Text="{Binding OperatorMasterForm.DefaultShift, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                    </StackPanel>
+                                                </GroupBox>
+                                                <GroupBox Header="Role / Permissions" Margin="4" Padding="8">
+                                                    <StackPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Role *" Width="205" /><ComboBox IsEditable="True" Text="{Binding OperatorMasterForm.Role, UpdateSourceTrigger=PropertyChanged}"><ComboBoxItem Content="Operator" /><ComboBoxItem Content="Supervisor" /><ComboBoxItem Content="Administrator" /><ComboBoxItem Content="QC Inspector" /><ComboBoxItem Content="Cashier" /></ComboBox></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Permission Profile *" Width="205" /><TextBox Text="{Binding OperatorMasterForm.PermissionProfile, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <CheckBox Content="Can Capture First Weight" IsChecked="{Binding OperatorMasterForm.CanCaptureFirstWeight}" Margin="205,4,0,0" />
+                                                        <CheckBox Content="Can Capture Second Weight" IsChecked="{Binding OperatorMasterForm.CanCaptureSecondWeight}" Margin="205,4,0,0" />
+                                                        <CheckBox Content="Can Perform Manual Weight Entry" IsChecked="{Binding OperatorMasterForm.CanPerformManualWeightEntry}" Margin="205,4,0,0" />
+                                                        <CheckBox Content="Can Correct Transactions" IsChecked="{Binding OperatorMasterForm.CanCorrectTransactions}" Margin="205,4,0,0" />
+                                                        <CheckBox Content="Can Cancel Transactions" IsChecked="{Binding OperatorMasterForm.CanCancelTransactions}" Margin="205,4,0,0" />
+                                                        <CheckBox Content="Can Override Weight" IsChecked="{Binding OperatorMasterForm.CanOverrideWeight}" Margin="205,4,0,0" />
+                                                        <CheckBox Content="Can Approve QC" IsChecked="{Binding OperatorMasterForm.CanApproveQc}" Margin="205,4,0,0" />
+                                                        <CheckBox Content="Can Retry Integration" IsChecked="{Binding OperatorMasterForm.CanRetryIntegration}" Margin="205,4,0,0" />
+                                                    </StackPanel>
+                                                </GroupBox>
+                                                <GroupBox Header="Status" Margin="4" Padding="8">
+                                                    <StackPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Last Login" Width="205" /><DatePicker SelectedDate="{Binding OperatorMasterForm.LastLogin, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Status *" Width="205" /><ComboBox IsEditable="True" Text="{Binding OperatorMasterForm.Status, UpdateSourceTrigger=PropertyChanged}"><ComboBoxItem Content="Active" /><ComboBoxItem Content="Inactive" /><ComboBoxItem Content="Suspended" /><ComboBoxItem Content="Locked" /></ComboBox></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Effective From *" Width="205" /><DatePicker SelectedDate="{Binding OperatorMasterForm.EffectiveFrom, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <CheckBox Content="Active" IsChecked="{Binding OperatorMasterForm.IsActive}" Margin="205,4,0,0" />
+                                                        <DockPanel Margin="0,2"><Label Content="Remarks" Width="205" /><TextBox Text="{Binding OperatorMasterForm.Remarks, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="60" TextWrapping="Wrap" /></DockPanel>
+                                                    </StackPanel>
+                                                </GroupBox>
+                                            </StackPanel>
+                                        </ScrollViewer>
+                                    </DockPanel>
+                                </Border>
+                            </Grid>
+                        </TabItem>
                 </TabControl>
             </TabItem>
 
@@ -1470,6 +1631,108 @@
                         </DockPanel>
                     </Border>
                 </Grid>
+            </TabItem>
+            <TabItem Header="Settings" Visibility="{Binding CanAccessSettings, Converter={StaticResource BoolToVisibilityConverter}}">
+                <ScrollViewer>
+                    <Border Background="White" CornerRadius="8" Padding="18" Margin="12" Width="760" HorizontalAlignment="Left">
+                        <StackPanel>
+                            <TextBlock Text="Settings" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,12" />
+
+                            <GroupBox Header="Database" Margin="0,0,0,12" Padding="10">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="170" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Label Grid.Row="0" Grid.Column="0" Content="Database Folder Path *" />
+                                    <Grid Grid.Row="0" Grid.Column="1">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="8" />
+                                            <ColumnDefinition Width="100" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Grid.Column="0" Text="{Binding DatabaseFolderPath, UpdateSourceTrigger=PropertyChanged}" ToolTip="Example: C:\BridgeOne\Database" />
+                                        <Button Grid.Column="2" Content="Browse" Click="DatabaseFolderBrowseButton_Click" />
+                                    </Grid>
+                                </Grid>
+                            </GroupBox>
+
+                            <GroupBox Header="Selected Weighbridge" Margin="0,0,0,12" Padding="10">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="170" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Label Grid.Row="0" Grid.Column="0" Content="Weighbridge *" />
+                                    <ComboBox Grid.Row="0" Grid.Column="1"
+                                              ItemsSource="{Binding WeighbridgeMasters}"
+                                              SelectedItem="{Binding SelectedSettingsWeighbridge}"
+                                              DisplayMemberPath="WeighbridgeDisplay"
+                                              IsEditable="False" />
+                                </Grid>
+                            </GroupBox>
+
+                            <GroupBox Header="Device Communication (Read-only from Weighbridge Master)" Padding="10">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="170" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <Label Grid.Row="0" Grid.Column="0" Content="Connection Type" />
+                                    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Settings.ConnectionType}" IsReadOnly="True" Background="#EFEFEF" />
+                                    <Label Grid.Row="1" Grid.Column="0" Content="COM Port" />
+                                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Settings.ComPort}" IsReadOnly="True" Background="#EFEFEF" />
+                                    <Label Grid.Row="2" Grid.Column="0" Content="Baud Rate" />
+                                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Settings.BaudRate}" IsReadOnly="True" Background="#EFEFEF" />
+                                    <Label Grid.Row="3" Grid.Column="0" Content="Parity" />
+                                    <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Settings.Parity}" IsReadOnly="True" Background="#EFEFEF" />
+                                    <Label Grid.Row="4" Grid.Column="0" Content="Data Bits" />
+                                    <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Settings.DataBits}" IsReadOnly="True" Background="#EFEFEF" />
+                                    <Label Grid.Row="5" Grid.Column="0" Content="Stop Bits" />
+                                    <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding Settings.StopBits}" IsReadOnly="True" Background="#EFEFEF" />
+                                    <Label Grid.Row="6" Grid.Column="0" Content="TCP IP / Port" />
+                                    <StackPanel Grid.Row="6" Grid.Column="1" Orientation="Horizontal">
+                                        <TextBox Text="{Binding Settings.IpAddress}" Width="260" IsReadOnly="True" Background="#EFEFEF" />
+                                        <TextBox Text="{Binding Settings.TcpPort}" Width="120" IsReadOnly="True" Background="#EFEFEF" />
+                                    </StackPanel>
+                                    <Label Grid.Row="7" Grid.Column="0" Content="Weight Stability Time" />
+                                    <TextBox Grid.Row="7" Grid.Column="1" Text="{Binding Settings.WeightStabilityTime}" IsReadOnly="True" Background="#EFEFEF" />
+                                    <Label Grid.Row="8" Grid.Column="0" Content="Minimum Weight" />
+                                    <TextBox Grid.Row="8" Grid.Column="1" Text="{Binding Settings.MinimumWeight}" IsReadOnly="True" Background="#EFEFEF" />
+                                    <Label Grid.Row="9" Grid.Column="0" Content="Weight Increment" />
+                                    <TextBox Grid.Row="9" Grid.Column="1" Text="{Binding Settings.WeightIncrement}" IsReadOnly="True" Background="#EFEFEF" />
+                                    <Label Grid.Row="10" Grid.Column="0" Content="Printer" />
+                                    <TextBox Grid.Row="10" Grid.Column="1" Text="{Binding Settings.Printer}" IsReadOnly="True" Background="#EFEFEF" />
+                                </Grid>
+                            </GroupBox>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                                <Button Content="Save Settings" Command="{Binding SaveSettingsCommand}" />
+                                <TextBlock Text="Maintain communication details in Weighbridge Master. Settings only selects which weighbridge to use." VerticalAlignment="Center" Foreground="Gray" Margin="8,0" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </ScrollViewer>
             </TabItem>
         </TabControl>
 
