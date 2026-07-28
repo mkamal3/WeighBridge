@@ -339,15 +339,13 @@ CREATE TABLE IF NOT EXISTS OperatorMasters (
     CanAccessWeighment INTEGER NOT NULL DEFAULT 1,
     CanAccessMasters INTEGER NOT NULL DEFAULT 0,
     CanAccessReports INTEGER NOT NULL DEFAULT 1,
+    CanAccessTransactions INTEGER NOT NULL DEFAULT 0,
     CanAccessSettings INTEGER NOT NULL DEFAULT 0,
     CanCaptureFirstWeight INTEGER NOT NULL DEFAULT 1,
     CanCaptureSecondWeight INTEGER NOT NULL DEFAULT 1,
     CanPerformManualWeightEntry INTEGER NOT NULL DEFAULT 0,
     CanCorrectTransactions INTEGER NOT NULL DEFAULT 0,
     CanCancelTransactions INTEGER NOT NULL DEFAULT 0,
-    CanOverrideWeight INTEGER NOT NULL DEFAULT 0,
-    CanApproveQc INTEGER NOT NULL DEFAULT 0,
-    CanRetryIntegration INTEGER NOT NULL DEFAULT 0,
     LastLogin TEXT,
     Status TEXT NOT NULL DEFAULT 'Active',
     EffectiveFrom TEXT,
@@ -543,8 +541,7 @@ TcpPort = excluded.TcpPort;";
                 Blacklisted = ReadBool(reader, "Blacklisted"),
                 BlacklistReason = ReadText(reader, "BlacklistReason"),
                 EffectiveFrom = ReadDate(reader, "EffectiveFrom"),
-                IsActive = ReadBool(reader, "IsActive"),
-                Remarks = ReadText(reader, "Remarks")
+                        Remarks = ReadText(reader, "Remarks")
             });
         }
         return result;
@@ -814,7 +811,6 @@ UPDATE WeighbridgeMasters SET
     AllowedOperators = $AllowedOperators,
     OperatingStatus = $OperatingStatus,
     EffectiveFrom = $EffectiveFrom,
-    IsActive = $IsActive,
     Remarks = $Remarks
 WHERE WeighbridgeId = $WeighbridgeId;" : @"
 INSERT INTO WeighbridgeMasters
@@ -908,25 +904,22 @@ UPDATE OperatorMasters SET
     CanAccessWeighment = $CanAccessWeighment,
     CanAccessMasters = $CanAccessMasters,
     CanAccessReports = $CanAccessReports,
+    CanAccessTransactions = $CanAccessTransactions,
     CanAccessSettings = $CanAccessSettings,
     CanCaptureFirstWeight = $CanCaptureFirstWeight,
     CanCaptureSecondWeight = $CanCaptureSecondWeight,
     CanPerformManualWeightEntry = $CanPerformManualWeightEntry,
     CanCorrectTransactions = $CanCorrectTransactions,
     CanCancelTransactions = $CanCancelTransactions,
-    CanOverrideWeight = $CanOverrideWeight,
-    CanApproveQc = $CanApproveQc,
-    CanRetryIntegration = $CanRetryIntegration,
     LastLogin = $LastLogin,
     Status = $Status,
     EffectiveFrom = $EffectiveFrom,
-    IsActive = $IsActive,
     Remarks = $Remarks
 WHERE OperatorId = $OperatorId;" : @"
 INSERT INTO OperatorMasters
-(EmployeeId, OperatorName, Username, PasswordHash, PasswordSalt, Email, MobileNumber, Designation, Department, LegalEntity, DefaultLegalEntity, DefaultWeighbridge, AssignedWeighbridges, DefaultShift, Role, PermissionProfile, CanAccessWeighment, CanAccessMasters, CanAccessReports, CanAccessSettings, CanCaptureFirstWeight, CanCaptureSecondWeight, CanPerformManualWeightEntry, CanCorrectTransactions, CanCancelTransactions, CanOverrideWeight, CanApproveQc, CanRetryIntegration, LastLogin, Status, EffectiveFrom, IsActive, Remarks, CreatedAt)
+(EmployeeId, OperatorName, Username, PasswordHash, PasswordSalt, Email, MobileNumber, Designation, Department, LegalEntity, DefaultLegalEntity, DefaultWeighbridge, AssignedWeighbridges, DefaultShift, Role, PermissionProfile, CanAccessWeighment, CanAccessMasters, CanAccessReports, CanAccessTransactions, CanAccessSettings, CanCaptureFirstWeight, CanCaptureSecondWeight, CanPerformManualWeightEntry, CanCorrectTransactions, CanCancelTransactions, LastLogin, Status, EffectiveFrom, Remarks, CreatedAt)
 VALUES
-($EmployeeId, $OperatorName, $Username, $PasswordHash, $PasswordSalt, $Email, $MobileNumber, $Designation, $Department, $LegalEntity, $DefaultLegalEntity, $DefaultWeighbridge, $AssignedWeighbridges, $DefaultShift, $Role, $PermissionProfile, $CanAccessWeighment, $CanAccessMasters, $CanAccessReports, $CanAccessSettings, $CanCaptureFirstWeight, $CanCaptureSecondWeight, $CanPerformManualWeightEntry, $CanCorrectTransactions, $CanCancelTransactions, $CanOverrideWeight, $CanApproveQc, $CanRetryIntegration, $LastLogin, $Status, $EffectiveFrom, $IsActive, $Remarks, $CreatedAt);";
+($EmployeeId, $OperatorName, $Username, $PasswordHash, $PasswordSalt, $Email, $MobileNumber, $Designation, $Department, $LegalEntity, $DefaultLegalEntity, $DefaultWeighbridge, $AssignedWeighbridges, $DefaultShift, $Role, $PermissionProfile, $CanAccessWeighment, $CanAccessMasters, $CanAccessReports, $CanAccessTransactions, $CanAccessSettings, $CanCaptureFirstWeight, $CanCaptureSecondWeight, $CanPerformManualWeightEntry, $CanCorrectTransactions, $CanCancelTransactions, $LastLogin, $Status, $EffectiveFrom, $Remarks, $CreatedAt);";
         AddOperatorMasterParameters(command, operatorMaster);
         command.Parameters.AddWithValue("$OperatorId", operatorMaster.OperatorId);
         command.Parameters.AddWithValue("$CreatedAt", DateTime.Now.ToString("O"));
@@ -1531,9 +1524,9 @@ ORDER BY w.CreatedAt DESC";
         using var command = connection.CreateCommand();
         command.CommandText = @"
 INSERT INTO OperatorMasters
-(EmployeeId, OperatorName, Username, PasswordHash, PasswordSalt, Email, MobileNumber, Designation, Department, LegalEntity, DefaultLegalEntity, DefaultWeighbridge, AssignedWeighbridges, DefaultShift, Role, PermissionProfile, CanAccessWeighment, CanAccessMasters, CanAccessReports, CanAccessSettings, CanCaptureFirstWeight, CanCaptureSecondWeight, CanPerformManualWeightEntry, CanCorrectTransactions, CanCancelTransactions, CanOverrideWeight, CanApproveQc, CanRetryIntegration, LastLogin, Status, EffectiveFrom, IsActive, Remarks, CreatedAt)
+(EmployeeId, OperatorName, Username, PasswordHash, PasswordSalt, Email, MobileNumber, Designation, Department, LegalEntity, DefaultLegalEntity, DefaultWeighbridge, AssignedWeighbridges, DefaultShift, Role, PermissionProfile, CanAccessWeighment, CanAccessMasters, CanAccessReports, CanAccessTransactions, CanAccessSettings, CanCaptureFirstWeight, CanCaptureSecondWeight, CanPerformManualWeightEntry, CanCorrectTransactions, CanCancelTransactions, LastLogin, Status, EffectiveFrom, Remarks, CreatedAt)
 VALUES
-($EmployeeId, $OperatorName, $Username, $PasswordHash, $PasswordSalt, '', '', 'Administrator', 'IT', $LegalEntity, $LegalEntity, 'WB-001', 'WB-001', '', 'Administrator', 'Admin', 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, NULL, 'Active', $EffectiveFrom, 1, 'Initial administrator operator created during first setup.', $CreatedAt);";
+($EmployeeId, $OperatorName, $Username, $PasswordHash, $PasswordSalt, '', '', 'Administrator', 'IT', $LegalEntity, $LegalEntity, 'WB-001', 'WB-001', '', 'Administrator', 'Admin', 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, NULL, 'Active', $EffectiveFrom, 'Initial administrator operator created during first setup.', $CreatedAt);";
         command.Parameters.AddWithValue("$EmployeeId", "ADMIN-001");
         command.Parameters.AddWithValue("$OperatorName", operatorName);
         command.Parameters.AddWithValue("$Username", username);
@@ -1560,7 +1553,7 @@ VALUES
         connection.Open();
 
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT * FROM OperatorMasters WHERE lower(trim(Username)) = lower(trim($Username)) AND IsActive = 1 LIMIT 1";
+        command.CommandText = "SELECT * FROM OperatorMasters WHERE lower(trim(Username)) = lower(trim($Username)) LIMIT 1";
         command.Parameters.AddWithValue("$Username", username.Trim());
 
         using var reader = command.ExecuteReader();
@@ -1864,6 +1857,8 @@ WHERE UserId = $UserId;";
         EnsureColumn(connection, "OperatorMasters", "CanAccessWeighment", "INTEGER NOT NULL DEFAULT 1");
         EnsureColumn(connection, "OperatorMasters", "CanAccessMasters", "INTEGER NOT NULL DEFAULT 0");
         EnsureColumn(connection, "OperatorMasters", "CanAccessReports", "INTEGER NOT NULL DEFAULT 1");
+        EnsureColumn(connection, "OperatorMasters", "CanAccessTransactions", "INTEGER NOT NULL DEFAULT 0");
+        ExecuteNonQuery(connection, "UPDATE OperatorMasters SET CanAccessTransactions = 1 WHERE lower(Username) = 'admin' OR lower(Role) = 'administrator'");
         EnsureColumn(connection, "OperatorMasters", "CanAccessSettings", "INTEGER NOT NULL DEFAULT 0");
         EnsureColumn(connection, "OperatorMasters", "MobileNumber", "TEXT NOT NULL DEFAULT ''");
         EnsureColumn(connection, "OperatorMasters", "Designation", "TEXT NOT NULL DEFAULT ''");
@@ -1880,9 +1875,6 @@ WHERE UserId = $UserId;";
         EnsureColumn(connection, "OperatorMasters", "CanPerformManualWeightEntry", "INTEGER NOT NULL DEFAULT 0");
         EnsureColumn(connection, "OperatorMasters", "CanCorrectTransactions", "INTEGER NOT NULL DEFAULT 0");
         EnsureColumn(connection, "OperatorMasters", "CanCancelTransactions", "INTEGER NOT NULL DEFAULT 0");
-        EnsureColumn(connection, "OperatorMasters", "CanOverrideWeight", "INTEGER NOT NULL DEFAULT 0");
-        EnsureColumn(connection, "OperatorMasters", "CanApproveQc", "INTEGER NOT NULL DEFAULT 0");
-        EnsureColumn(connection, "OperatorMasters", "CanRetryIntegration", "INTEGER NOT NULL DEFAULT 0");
         EnsureColumn(connection, "OperatorMasters", "LastLogin", "TEXT");
         EnsureColumn(connection, "OperatorMasters", "Status", "TEXT NOT NULL DEFAULT 'Active'");
         EnsureColumn(connection, "OperatorMasters", "EffectiveFrom", "TEXT");
@@ -1963,9 +1955,9 @@ INSERT OR IGNORE INTO WeighbridgeMasters (WeighbridgeCode, WeighbridgeName, Plan
         using var command = connection.CreateCommand();
         command.CommandText = @"
 INSERT INTO OperatorMasters
-(EmployeeId, OperatorName, Username, PasswordHash, PasswordSalt, Email, MobileNumber, Designation, Department, LegalEntity, DefaultLegalEntity, DefaultWeighbridge, AssignedWeighbridges, DefaultShift, Role, PermissionProfile, CanAccessWeighment, CanAccessMasters, CanAccessReports, CanAccessSettings, CanCaptureFirstWeight, CanCaptureSecondWeight, CanPerformManualWeightEntry, CanCorrectTransactions, CanCancelTransactions, CanOverrideWeight, CanApproveQc, CanRetryIntegration, LastLogin, Status, EffectiveFrom, IsActive, Remarks, CreatedAt)
+(EmployeeId, OperatorName, Username, PasswordHash, PasswordSalt, Email, MobileNumber, Designation, Department, LegalEntity, DefaultLegalEntity, DefaultWeighbridge, AssignedWeighbridges, DefaultShift, Role, PermissionProfile, CanAccessWeighment, CanAccessMasters, CanAccessReports, CanAccessTransactions, CanAccessSettings, CanCaptureFirstWeight, CanCaptureSecondWeight, CanPerformManualWeightEntry, CanCorrectTransactions, CanCancelTransactions, LastLogin, Status, EffectiveFrom, Remarks, CreatedAt)
 VALUES
-('ADMIN-001', 'Administrator', 'admin', $PasswordHash, $PasswordSalt, '', '', 'Administrator', 'IT', 'Default Company', 'Default Company', 'WB-001', 'WB-001', '', 'Administrator', 'Admin', 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, NULL, 'Active', $EffectiveFrom, 1, 'Default administrator created automatically for a new database. Change this password after first login.', $CreatedAt);";
+('ADMIN-001', 'Administrator', 'admin', $PasswordHash, $PasswordSalt, '', '', 'Administrator', 'IT', 'Default Company', 'Default Company', 'WB-001', 'WB-001', '', 'Administrator', 'Admin', 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, NULL, 'Active', $EffectiveFrom, 'Default administrator created automatically for a new database. Change this password after first login.', $CreatedAt);";
         command.Parameters.AddWithValue("$PasswordHash", passwordData.Hash);
         command.Parameters.AddWithValue("$PasswordSalt", passwordData.Salt);
         command.Parameters.AddWithValue("$EffectiveFrom", DateTime.Today.ToString("O"));
@@ -1985,6 +1977,16 @@ VALUES
         command.Parameters.AddWithValue("$CanDeleteCompletedTransaction", user.CanDeleteCompletedTransaction ? 1 : 0);
     }
 
+
+    private static bool HasColumn(SqliteDataReader reader, string columnName)
+    {
+        for (var i = 0; i < reader.FieldCount; i++)
+        {
+            if (string.Equals(reader.GetName(i), columnName, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
+    }
 
     private static string ReadText(SqliteDataReader reader, string columnName) =>
         Convert.ToString(reader[columnName]) ?? string.Empty;
@@ -2270,19 +2272,16 @@ VALUES
         command.Parameters.AddWithValue("$CanAccessWeighment", DbValue(operatorMaster.CanAccessWeighment));
         command.Parameters.AddWithValue("$CanAccessMasters", DbValue(operatorMaster.CanAccessMasters));
         command.Parameters.AddWithValue("$CanAccessReports", DbValue(operatorMaster.CanAccessReports));
+        command.Parameters.AddWithValue("$CanAccessTransactions", DbValue(operatorMaster.CanAccessTransactions));
         command.Parameters.AddWithValue("$CanAccessSettings", DbValue(operatorMaster.CanAccessSettings));
         command.Parameters.AddWithValue("$CanCaptureFirstWeight", DbValue(operatorMaster.CanCaptureFirstWeight));
         command.Parameters.AddWithValue("$CanCaptureSecondWeight", DbValue(operatorMaster.CanCaptureSecondWeight));
         command.Parameters.AddWithValue("$CanPerformManualWeightEntry", DbValue(operatorMaster.CanPerformManualWeightEntry));
         command.Parameters.AddWithValue("$CanCorrectTransactions", DbValue(operatorMaster.CanCorrectTransactions));
         command.Parameters.AddWithValue("$CanCancelTransactions", DbValue(operatorMaster.CanCancelTransactions));
-        command.Parameters.AddWithValue("$CanOverrideWeight", DbValue(operatorMaster.CanOverrideWeight));
-        command.Parameters.AddWithValue("$CanApproveQc", DbValue(operatorMaster.CanApproveQc));
-        command.Parameters.AddWithValue("$CanRetryIntegration", DbValue(operatorMaster.CanRetryIntegration));
         command.Parameters.AddWithValue("$LastLogin", DbValue(operatorMaster.LastLogin));
         command.Parameters.AddWithValue("$Status", DbValue(operatorMaster.Status));
         command.Parameters.AddWithValue("$EffectiveFrom", DbValue(operatorMaster.EffectiveFrom));
-        command.Parameters.AddWithValue("$IsActive", DbValue(operatorMaster.IsActive));
         command.Parameters.AddWithValue("$Remarks", DbValue(operatorMaster.Remarks));
     }
 
@@ -2328,7 +2327,6 @@ VALUES
         AllowedOperators = ReadText(reader, "AllowedOperators"),
         OperatingStatus = ReadText(reader, "OperatingStatus"),
         EffectiveFrom = ReadDate(reader, "EffectiveFrom"),
-        IsActive = ReadBool(reader, "IsActive"),
         Remarks = ReadText(reader, "Remarks")
     };
 
@@ -2354,19 +2352,16 @@ VALUES
         CanAccessWeighment = ReadBool(reader, "CanAccessWeighment"),
         CanAccessMasters = ReadBool(reader, "CanAccessMasters"),
         CanAccessReports = ReadBool(reader, "CanAccessReports"),
+        CanAccessTransactions = HasColumn(reader, "CanAccessTransactions") && ReadBool(reader, "CanAccessTransactions"),
         CanAccessSettings = ReadBool(reader, "CanAccessSettings"),
         CanCaptureFirstWeight = ReadBool(reader, "CanCaptureFirstWeight"),
         CanCaptureSecondWeight = ReadBool(reader, "CanCaptureSecondWeight"),
         CanPerformManualWeightEntry = ReadBool(reader, "CanPerformManualWeightEntry"),
         CanCorrectTransactions = ReadBool(reader, "CanCorrectTransactions"),
         CanCancelTransactions = ReadBool(reader, "CanCancelTransactions"),
-        CanOverrideWeight = ReadBool(reader, "CanOverrideWeight"),
-        CanApproveQc = ReadBool(reader, "CanApproveQc"),
-        CanRetryIntegration = ReadBool(reader, "CanRetryIntegration"),
         LastLogin = ReadDate(reader, "LastLogin"),
         Status = ReadText(reader, "Status"),
         EffectiveFrom = ReadDate(reader, "EffectiveFrom"),
-        IsActive = ReadBool(reader, "IsActive"),
         Remarks = ReadText(reader, "Remarks")
     };
 

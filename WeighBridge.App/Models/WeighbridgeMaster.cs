@@ -43,6 +43,7 @@ public class WeighbridgeMaster
     public string AllowedOperators { get; set; } = string.Empty;
     public string OperatingStatus { get; set; } = "Active";
     public DateTime? EffectiveFrom { get; set; } = DateTime.Today;
-    public bool IsActive { get; set; } = true;
+    // Availability is controlled by OperatingStatus. Kept only for backward compatibility with old databases.
+    public bool IsActive { get => string.Equals(OperatingStatus, "Active", StringComparison.OrdinalIgnoreCase); set { } }
     public string Remarks { get; set; } = string.Empty;
 }

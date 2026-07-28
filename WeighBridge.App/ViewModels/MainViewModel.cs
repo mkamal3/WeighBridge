@@ -208,7 +208,9 @@ public class MainViewModel : BaseViewModel
     public ObservableCollection<Party> FilteredParties { get; } = new();
     public ObservableCollection<Material> Materials { get; } = new();
     public ObservableCollection<Vehicle> Vehicles { get; } = new();
+    public ObservableCollection<Vehicle> ActiveVehicles { get; } = new();
     public ObservableCollection<Driver> Drivers { get; } = new();
+    public ObservableCollection<Driver> ActiveDrivers { get; } = new();
     public ObservableCollection<Customer> Customers { get; } = new();
     public ObservableCollection<Vendor> Vendors { get; } = new();
     public ObservableCollection<ItemMaster> ItemMasters { get; } = new();
@@ -220,6 +222,7 @@ public class MainViewModel : BaseViewModel
     public ObservableCollection<Vehicle> FilteredVehicles { get; } = new();
     public ObservableCollection<Driver> FilteredDrivers { get; } = new();
     public ObservableCollection<WeighbridgeMaster> WeighbridgeMasters { get; } = new();
+    public ObservableCollection<WeighbridgeMaster> ActiveWeighbridgeMasters { get; } = new();
     public ObservableCollection<WeighbridgeMaster> FilteredWeighbridgeMasters { get; } = new();
     public ObservableCollection<OperatorMaster> OperatorMasters { get; } = new();
     public ObservableCollection<OperatorMaster> FilteredOperatorMasters { get; } = new();
@@ -282,7 +285,7 @@ public class MainViewModel : BaseViewModel
     public bool CanAccessSettings => _currentUser.CanAccessSettings;
     public bool CanAccessMasters => _currentUser.CanAccessMasters;
     public bool CanAccessReports => _currentUser.CanAccessReports;
-    public bool CanAccessTransactions => _currentUser.CanAccessReports || _currentUser.CanCorrectTransactions || _currentUser.CanCancelTransactions;
+    public bool CanAccessTransactions => _currentUser.CanAccessTransactions;
     public bool CanAccessUserManagement => false;
     public bool CanCorrectTransactions => _currentUser.CanCorrectTransactions;
     public bool CanEditCompletedTransaction => CanCorrectTransactions;
@@ -1718,12 +1721,15 @@ public class MainViewModel : BaseViewModel
         ReplaceCollection(Parties, parties);
         ReplaceCollection(Materials, materials);
         ReplaceCollection(Vehicles, vehicles);
+        ReplaceCollection(ActiveVehicles, vehicles.Where(x => IsStatusActive(x.Status)));
         ReplaceCollection(Drivers, drivers);
+        ReplaceCollection(ActiveDrivers, drivers.Where(x => IsStatusActive(x.Status)));
         ReplaceCollection(Customers, customers);
         ReplaceCollection(Vendors, vendors);
         ReplaceCollection(ItemMasters, itemMasters);
         ReplaceCollection(WarehouseMasters, warehouseMasters);
         ReplaceCollection(WeighbridgeMasters, weighbridgeMasters);
+        ReplaceCollection(ActiveWeighbridgeMasters, weighbridgeMasters.Where(x => IsStatusActive(x.OperatingStatus)));
         ReplaceCollection(OperatorMasters, operatorMasters);
         if (SelectedSettingsWeighbridge == null)
             SelectSettingsWeighbridgeFromSavedSettings();
@@ -2709,7 +2715,7 @@ public class MainViewModel : BaseViewModel
     private void ClearVehicleMasterForm()
     {
         SelectedVehicleMaster = null;
-        VehicleMasterForm = new Vehicle { IsActive = true, Status = "Active" };
+        VehicleMasterForm = new Vehicle { Status = "Active" };
     }
 
     private void LoadSelectedVehicleMasterToForm()
@@ -2731,8 +2737,7 @@ public class MainViewModel : BaseViewModel
             DefaultDriver = SelectedVehicleMaster.DefaultDriver,
             RegistrationExpiryDate = SelectedVehicleMaster.RegistrationExpiryDate,
             LegalEntity = SelectedVehicleMaster.LegalEntity,
-            Status = SelectedVehicleMaster.Status,
-            IsActive = SelectedVehicleMaster.IsActive
+            Status = SelectedVehicleMaster.Status
         };
     }
 
@@ -2759,7 +2764,7 @@ public class MainViewModel : BaseViewModel
     private void ClearDriverMasterForm()
     {
         SelectedDriverMaster = null;
-        DriverMasterForm = new Driver { IsActive = true, Status = "Active", EffectiveFrom = DateTime.Today };
+        DriverMasterForm = new Driver { Status = "Active", EffectiveFrom = DateTime.Today };
     }
 
     private void LoadSelectedDriverMasterToForm()
@@ -2799,7 +2804,6 @@ public class MainViewModel : BaseViewModel
             Blacklisted = SelectedDriverMaster.Blacklisted,
             BlacklistReason = SelectedDriverMaster.BlacklistReason,
             EffectiveFrom = SelectedDriverMaster.EffectiveFrom,
-            IsActive = SelectedDriverMaster.IsActive,
             Remarks = SelectedDriverMaster.Remarks
         };
     }
@@ -2809,10 +2813,10 @@ public class MainViewModel : BaseViewModel
     private void SelectSettingsWeighbridgeFromSavedSettings()
     {
         var selectedCode = Settings.SelectedWeighbridgeCode;
-        SelectedSettingsWeighbridge = WeighbridgeMasters.FirstOrDefault(x =>
+        SelectedSettingsWeighbridge = ActiveWeighbridgeMasters.FirstOrDefault(x =>
             string.Equals(x.WeighbridgeCode, selectedCode, StringComparison.OrdinalIgnoreCase));
 
-        SelectedSettingsWeighbridge ??= WeighbridgeMasters.FirstOrDefault(x => x.IsActive);
+        SelectedSettingsWeighbridge ??= ActiveWeighbridgeMasters.FirstOrDefault();
         ApplySelectedWeighbridgeToSettings();
     }
 
@@ -2874,8 +2878,7 @@ public class MainViewModel : BaseViewModel
             DataBits = 8,
             StopBits = "One",
             OperatingStatus = "Active",
-            EffectiveFrom = DateTime.Today,
-            IsActive = true
+            EffectiveFrom = DateTime.Today
         };
     }
 
@@ -2926,7 +2929,6 @@ public class MainViewModel : BaseViewModel
             AllowedOperators = SelectedWeighbridgeMaster.AllowedOperators,
             OperatingStatus = SelectedWeighbridgeMaster.OperatingStatus,
             EffectiveFrom = SelectedWeighbridgeMaster.EffectiveFrom,
-            IsActive = SelectedWeighbridgeMaster.IsActive,
             Remarks = SelectedWeighbridgeMaster.Remarks
         };
     }
@@ -2958,11 +2960,11 @@ public class MainViewModel : BaseViewModel
         {
             CanAccessWeighment = true,
             CanAccessReports = true,
+            CanAccessTransactions = true,
             CanCaptureFirstWeight = true,
             CanCaptureSecondWeight = true,
             Status = "Active",
-            EffectiveFrom = DateTime.Today,
-            IsActive = true
+            EffectiveFrom = DateTime.Today
         };
     }
 
@@ -2995,19 +2997,16 @@ public class MainViewModel : BaseViewModel
             CanAccessWeighment = SelectedOperatorMaster.CanAccessWeighment,
             CanAccessMasters = SelectedOperatorMaster.CanAccessMasters,
             CanAccessReports = SelectedOperatorMaster.CanAccessReports,
+            CanAccessTransactions = SelectedOperatorMaster.CanAccessTransactions,
             CanAccessSettings = SelectedOperatorMaster.CanAccessSettings,
             CanCaptureFirstWeight = SelectedOperatorMaster.CanCaptureFirstWeight,
             CanCaptureSecondWeight = SelectedOperatorMaster.CanCaptureSecondWeight,
             CanPerformManualWeightEntry = SelectedOperatorMaster.CanPerformManualWeightEntry,
             CanCorrectTransactions = SelectedOperatorMaster.CanCorrectTransactions,
             CanCancelTransactions = SelectedOperatorMaster.CanCancelTransactions,
-            CanOverrideWeight = SelectedOperatorMaster.CanOverrideWeight,
-            CanApproveQc = SelectedOperatorMaster.CanApproveQc,
-            CanRetryIntegration = SelectedOperatorMaster.CanRetryIntegration,
             LastLogin = SelectedOperatorMaster.LastLogin,
             Status = SelectedOperatorMaster.Status,
             EffectiveFrom = SelectedOperatorMaster.EffectiveFrom,
-            IsActive = SelectedOperatorMaster.IsActive,
             Remarks = SelectedOperatorMaster.Remarks
         };
     }
@@ -3154,6 +3153,8 @@ public class MainViewModel : BaseViewModel
         return !string.IsNullOrWhiteSpace(value) &&
                value.Contains(filter?.Trim() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
     }
+
+    private static bool IsStatusActive(string? status) => string.Equals(status?.Trim(), "Active", StringComparison.OrdinalIgnoreCase);
 
     private static bool MatchesFilter(string value, string filter)
     {

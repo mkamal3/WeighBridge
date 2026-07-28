@@ -24,19 +24,18 @@ public class OperatorMaster
     public bool CanAccessWeighment { get; set; } = true;
     public bool CanAccessMasters { get; set; }
     public bool CanAccessReports { get; set; } = true;
+    public bool CanAccessTransactions { get; set; }
     public bool CanAccessSettings { get; set; }
     public bool CanCaptureFirstWeight { get; set; } = true;
     public bool CanCaptureSecondWeight { get; set; } = true;
     public bool CanPerformManualWeightEntry { get; set; }
     public bool CanCorrectTransactions { get; set; }
     public bool CanCancelTransactions { get; set; }
-    public bool CanOverrideWeight { get; set; }
-    public bool CanApproveQc { get; set; }
-    public bool CanRetryIntegration { get; set; }
     public DateTime? LastLogin { get; set; }
     public string Status { get; set; } = "Active";
     public DateTime? EffectiveFrom { get; set; } = DateTime.Today;
-    public bool IsActive { get; set; } = true;
+    // Login and availability are controlled by Status. Kept only for backward compatibility with old databases.
+    public bool IsActive { get => string.Equals(Status, "Active", StringComparison.OrdinalIgnoreCase); set { } }
     public string Remarks { get; set; } = string.Empty;
 
     // Compatibility aliases for old bindings/code while User Management is removed.
