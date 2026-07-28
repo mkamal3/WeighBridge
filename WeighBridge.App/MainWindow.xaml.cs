@@ -10,7 +10,7 @@ public partial class MainWindow : Window
 {
     private readonly MainViewModel _viewModel;
 
-    public MainWindow(AppUser currentUser)
+    public MainWindow(OperatorMaster currentUser)
     {
         InitializeComponent();
 

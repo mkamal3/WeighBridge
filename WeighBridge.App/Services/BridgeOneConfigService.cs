@@ -12,20 +12,34 @@ public static class BridgeOneConfigService
 
     public static string ConfigFilePath => System.IO.Path.Combine(AppContext.BaseDirectory, "BridgeOne.config.json");
 
+    public static string DefaultDatabaseFolderPath => System.IO.Path.Combine(AppContext.BaseDirectory, "Database");
+
     public static string GetDatabaseFolderPath()
     {
         try
         {
-            if (!System.IO.File.Exists(ConfigFilePath))
-                return string.Empty;
+            if (System.IO.File.Exists(ConfigFilePath))
+            {
+                var json = System.IO.File.ReadAllText(ConfigFilePath);
+                var config = JsonSerializer.Deserialize<BridgeOneConfig>(json);
+                var configuredPath = config?.DatabaseFolderPath?.Trim() ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(configuredPath))
+                {
+                    var normalizedConfiguredPath = System.IO.Path.GetFullPath(configuredPath);
+                    System.IO.Directory.CreateDirectory(normalizedConfiguredPath);
+                    return normalizedConfiguredPath;
+                }
+            }
 
-            var json = System.IO.File.ReadAllText(ConfigFilePath);
-            var config = JsonSerializer.Deserialize<BridgeOneConfig>(json);
-            return config?.DatabaseFolderPath?.Trim() ?? string.Empty;
+            // First run: use the application folder, not a hardcoded machine path.
+            // Example: <BridgeOne.exe folder>\Database\bridgeone.db
+            SaveDatabaseFolderPath(DefaultDatabaseFolderPath);
+            return System.IO.Path.GetFullPath(DefaultDatabaseFolderPath);
         }
         catch
         {
-            return string.Empty;
+            // Last safe fallback for read-only/corrupt config scenarios.
+            return System.IO.Path.GetFullPath(DefaultDatabaseFolderPath);
         }
     }
 
@@ -47,9 +61,6 @@ public static class BridgeOneConfigService
     public static string GetDatabaseFilePath()
     {
         var folderPath = GetDatabaseFolderPath();
-        if (string.IsNullOrWhiteSpace(folderPath))
-            return GetStartupDatabaseFilePath();
-
         System.IO.Directory.CreateDirectory(folderPath);
         return System.IO.Path.Combine(folderPath, "bridgeone.db");
     }
@@ -62,12 +73,5 @@ public static class BridgeOneConfigService
         var normalizedPath = System.IO.Path.GetFullPath(folderPath.Trim());
         System.IO.Directory.CreateDirectory(normalizedPath);
         return System.IO.Path.Combine(normalizedPath, "bridgeone.db");
-    }
-
-    public static string GetStartupDatabaseFilePath()
-    {
-        var fallbackFolder = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BridgeOne", "StartupDatabase");
-        System.IO.Directory.CreateDirectory(fallbackFolder);
-        return System.IO.Path.Combine(fallbackFolder, "bridgeone.db");
     }
 }

@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Login - BridgeOne"
-        Width="500"
+        Width="540"
         SizeToContent="Height"
         MinHeight="390"
         WindowStartupLocation="CenterScreen"
@@ -14,43 +14,96 @@
                 Padding="28"
                 Margin="36"
                 VerticalAlignment="Center">
-            <StackPanel>
-                <TextBlock Text="BridgeOne"
-                           FontSize="24"
-                           FontWeight="SemiBold"
-                           Margin="0,0,0,4" />
-                <TextBlock Text="Please login to continue"
-                           Foreground="Gray"
-                           Margin="0,0,0,18" />
+            <Grid>
+                <StackPanel x:Name="LoginPanel">
+                    <TextBlock Text="BridgeOne"
+                               FontSize="24"
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,4" />
+                    <TextBlock Text="Please login to continue"
+                               Foreground="Gray"
+                               Margin="0,0,0,18" />
 
-
-                <Label Content="Username" Padding="0,0,0,6" />
-                <TextBox x:Name="UsernameTextBox"
-                         Text="admin"
-                         Height="34"
-                         Padding="8"
-                         Margin="0,0,0,14" />
-
-                <Label Content="Password" Padding="0,0,0,6" />
-                <PasswordBox x:Name="PasswordBox"
+                    <Label Content="Username" Padding="0,0,0,6" />
+                    <TextBox x:Name="UsernameTextBox"
                              Height="34"
                              Padding="8"
-                             Margin="0,0,0,20"
-                             Password="admin123"
-                             KeyDown="PasswordBox_KeyDown" />
+                             Margin="0,0,0,14" />
 
-                <Button Content="Login"
-                        Height="40"
-                        MinWidth="120"
-                        HorizontalAlignment="Stretch"
-                        FontWeight="SemiBold"
-                        Click="LoginButton_Click" />
+                    <Label Content="Password" Padding="0,0,0,6" />
+                    <PasswordBox x:Name="PasswordBox"
+                                 Height="34"
+                                 Padding="8"
+                                 Margin="0,0,0,20"
+                                 KeyDown="PasswordBox_KeyDown" />
 
-                <TextBlock x:Name="StatusTextBlock"
-                           Foreground="DarkRed"
-                           TextWrapping="Wrap"
-                           Margin="0,14,0,0" />
-            </StackPanel>
+                    <Button Content="Login"
+                            Height="40"
+                            MinWidth="120"
+                            HorizontalAlignment="Stretch"
+                            FontWeight="SemiBold"
+                            Click="LoginButton_Click" />
+
+                    <TextBlock x:Name="StatusTextBlock"
+                               Foreground="DarkRed"
+                               TextWrapping="Wrap"
+                               Margin="0,14,0,0" />
+                </StackPanel>
+
+                <StackPanel x:Name="InitialSetupPanel" Visibility="Collapsed">
+                    <TextBlock Text="BridgeOne Initial Setup"
+                               FontSize="24"
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,4" />
+                    <TextBlock Text="No operator exists in the database. Create the first administrator operator."
+                               Foreground="Gray"
+                               TextWrapping="Wrap"
+                               Margin="0,0,0,18" />
+
+                    <Label Content="Operator Name" Padding="0,0,0,6" />
+                    <TextBox x:Name="SetupOperatorNameTextBox"
+                             Height="34"
+                             Padding="8"
+                             Margin="0,0,0,10" />
+
+                    <Label Content="Company / Legal Entity" Padding="0,0,0,6" />
+                    <TextBox x:Name="SetupLegalEntityTextBox"
+                             Height="34"
+                             Padding="8"
+                             Margin="0,0,0,10" />
+
+                    <Label Content="Username" Padding="0,0,0,6" />
+                    <TextBox x:Name="SetupUsernameTextBox"
+                             Height="34"
+                             Padding="8"
+                             Margin="0,0,0,10" />
+
+                    <Label Content="Password" Padding="0,0,0,6" />
+                    <PasswordBox x:Name="SetupPasswordBox"
+                                 Height="34"
+                                 Padding="8"
+                                 Margin="0,0,0,10" />
+
+                    <Label Content="Confirm Password" Padding="0,0,0,6" />
+                    <PasswordBox x:Name="SetupConfirmPasswordBox"
+                                 Height="34"
+                                 Padding="8"
+                                 Margin="0,0,0,18"
+                                 KeyDown="SetupConfirmPasswordBox_KeyDown" />
+
+                    <Button Content="Create Administrator"
+                            Height="40"
+                            MinWidth="120"
+                            HorizontalAlignment="Stretch"
+                            FontWeight="SemiBold"
+                            Click="CreateAdminButton_Click" />
+
+                    <TextBlock x:Name="SetupStatusTextBlock"
+                               Foreground="DarkRed"
+                               TextWrapping="Wrap"
+                               Margin="0,14,0,0" />
+                </StackPanel>
+            </Grid>
         </Border>
     </Grid>
 </Window>

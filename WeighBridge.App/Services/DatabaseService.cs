@@ -11,17 +11,19 @@ public class DatabaseService
 
     private const string WeighmentSelectSql = @"
 SELECT w.*,
-       CASE WHEN u1.UserId IS NULL THEN w.FirstWeightBy ELSE u1.FullName || ' (' || u1.Username || ')' END AS FirstWeightByDisplay,
-       CASE WHEN u2.UserId IS NULL THEN w.SecondWeightBy ELSE u2.FullName || ' (' || u2.Username || ')' END AS SecondWeightByDisplay
+       CASE WHEN o1.OperatorId IS NULL THEN w.FirstWeightBy ELSE o1.OperatorName || ' (' || o1.Username || ')' END AS FirstWeightByDisplay,
+       CASE WHEN o2.OperatorId IS NULL THEN w.SecondWeightBy ELSE o2.OperatorName || ' (' || o2.Username || ')' END AS SecondWeightByDisplay
 FROM Weighments w
-LEFT JOIN Users u1 ON lower(w.FirstWeightBy) = lower(u1.Username) OR w.FirstWeightBy = CAST(u1.UserId AS TEXT)
-LEFT JOIN Users u2 ON lower(w.SecondWeightBy) = lower(u2.Username) OR w.SecondWeightBy = CAST(u2.UserId AS TEXT)";
+LEFT JOIN OperatorMasters o1 ON lower(w.FirstWeightBy) = lower(o1.Username)
+LEFT JOIN OperatorMasters o2 ON lower(w.SecondWeightBy) = lower(o2.Username)";
 
     public string DatabaseFilePath => _dbPath;
 
-    public DatabaseService()
+    public DatabaseService(string? databaseFilePath = null)
     {
-        _dbPath = BridgeOneConfigService.GetDatabaseFilePath();
+        _dbPath = string.IsNullOrWhiteSpace(databaseFilePath)
+            ? BridgeOneConfigService.GetDatabaseFilePath()
+            : System.IO.Path.GetFullPath(databaseFilePath);
         _connectionString = $"Data Source={_dbPath}";
     }
 
@@ -320,7 +322,9 @@ CREATE TABLE IF NOT EXISTS OperatorMasters (
     OperatorId INTEGER PRIMARY KEY AUTOINCREMENT,
     EmployeeId TEXT NOT NULL UNIQUE,
     OperatorName TEXT NOT NULL,
-    Username TEXT NOT NULL,
+    Username TEXT NOT NULL UNIQUE,
+    PasswordHash TEXT NOT NULL DEFAULT '',
+    PasswordSalt TEXT NOT NULL DEFAULT '',
     Email TEXT NOT NULL DEFAULT '',
     MobileNumber TEXT NOT NULL DEFAULT '',
     Designation TEXT NOT NULL DEFAULT '',
@@ -332,6 +336,10 @@ CREATE TABLE IF NOT EXISTS OperatorMasters (
     DefaultShift TEXT NOT NULL DEFAULT '',
     Role TEXT NOT NULL DEFAULT '',
     PermissionProfile TEXT NOT NULL DEFAULT '',
+    CanAccessWeighment INTEGER NOT NULL DEFAULT 1,
+    CanAccessMasters INTEGER NOT NULL DEFAULT 0,
+    CanAccessReports INTEGER NOT NULL DEFAULT 1,
+    CanAccessSettings INTEGER NOT NULL DEFAULT 0,
     CanCaptureFirstWeight INTEGER NOT NULL DEFAULT 1,
     CanCaptureSecondWeight INTEGER NOT NULL DEFAULT 1,
     CanPerformManualWeightEntry INTEGER NOT NULL DEFAULT 0,
@@ -370,7 +378,6 @@ CREATE TABLE IF NOT EXISTS Users (
         MigrateSchema(connection);
         EnsureDefaultSettings(connection);
         SeedMasterData(connection);
-        EnsureDefaultAdminUser(connection);
     });
 
     public Task<DeviceSettings> GetSettingsAsync() => Task.Run(() =>
@@ -862,12 +869,31 @@ VALUES
 
         using var connection = CreateConnection();
         connection.Open();
+        EnsureOperatorUsernameIsUnique(connection, operatorMaster.Username, operatorMaster.OperatorId > 0 ? operatorMaster.OperatorId : null);
+
+        if (operatorMaster.OperatorId <= 0 && string.IsNullOrWhiteSpace(operatorMaster.Password))
+            throw new InvalidOperationException("Password is mandatory for new operator.");
+        if (!string.IsNullOrWhiteSpace(operatorMaster.Password) || !string.IsNullOrWhiteSpace(operatorMaster.ConfirmPassword))
+        {
+            if (!string.Equals(operatorMaster.Password, operatorMaster.ConfirmPassword, StringComparison.Ordinal))
+                throw new InvalidOperationException("Password and Confirm Password do not match.");
+            var passwordData = PasswordService.HashPassword(operatorMaster.Password);
+            operatorMaster.PasswordHash = passwordData.Hash;
+            operatorMaster.PasswordSalt = passwordData.Salt;
+        }
+        else if (operatorMaster.OperatorId > 0)
+        {
+            LoadExistingOperatorPassword(connection, operatorMaster);
+        }
+
         using var command = connection.CreateCommand();
         command.CommandText = operatorMaster.OperatorId > 0 ? @"
 UPDATE OperatorMasters SET
     EmployeeId = $EmployeeId,
     OperatorName = $OperatorName,
     Username = $Username,
+    PasswordHash = $PasswordHash,
+    PasswordSalt = $PasswordSalt,
     Email = $Email,
     MobileNumber = $MobileNumber,
     Designation = $Designation,
@@ -879,6 +905,10 @@ UPDATE OperatorMasters SET
     DefaultShift = $DefaultShift,
     Role = $Role,
     PermissionProfile = $PermissionProfile,
+    CanAccessWeighment = $CanAccessWeighment,
+    CanAccessMasters = $CanAccessMasters,
+    CanAccessReports = $CanAccessReports,
+    CanAccessSettings = $CanAccessSettings,
     CanCaptureFirstWeight = $CanCaptureFirstWeight,
     CanCaptureSecondWeight = $CanCaptureSecondWeight,
     CanPerformManualWeightEntry = $CanPerformManualWeightEntry,
@@ -894,9 +924,9 @@ UPDATE OperatorMasters SET
     Remarks = $Remarks
 WHERE OperatorId = $OperatorId;" : @"
 INSERT INTO OperatorMasters
-(EmployeeId, OperatorName, Username, Email, MobileNumber, Designation, Department, LegalEntity, DefaultLegalEntity, DefaultWeighbridge, AssignedWeighbridges, DefaultShift, Role, PermissionProfile, CanCaptureFirstWeight, CanCaptureSecondWeight, CanPerformManualWeightEntry, CanCorrectTransactions, CanCancelTransactions, CanOverrideWeight, CanApproveQc, CanRetryIntegration, LastLogin, Status, EffectiveFrom, IsActive, Remarks, CreatedAt)
+(EmployeeId, OperatorName, Username, PasswordHash, PasswordSalt, Email, MobileNumber, Designation, Department, LegalEntity, DefaultLegalEntity, DefaultWeighbridge, AssignedWeighbridges, DefaultShift, Role, PermissionProfile, CanAccessWeighment, CanAccessMasters, CanAccessReports, CanAccessSettings, CanCaptureFirstWeight, CanCaptureSecondWeight, CanPerformManualWeightEntry, CanCorrectTransactions, CanCancelTransactions, CanOverrideWeight, CanApproveQc, CanRetryIntegration, LastLogin, Status, EffectiveFrom, IsActive, Remarks, CreatedAt)
 VALUES
-($EmployeeId, $OperatorName, $Username, $Email, $MobileNumber, $Designation, $Department, $LegalEntity, $DefaultLegalEntity, $DefaultWeighbridge, $AssignedWeighbridges, $DefaultShift, $Role, $PermissionProfile, $CanCaptureFirstWeight, $CanCaptureSecondWeight, $CanPerformManualWeightEntry, $CanCorrectTransactions, $CanCancelTransactions, $CanOverrideWeight, $CanApproveQc, $CanRetryIntegration, $LastLogin, $Status, $EffectiveFrom, $IsActive, $Remarks, $CreatedAt);";
+($EmployeeId, $OperatorName, $Username, $PasswordHash, $PasswordSalt, $Email, $MobileNumber, $Designation, $Department, $LegalEntity, $DefaultLegalEntity, $DefaultWeighbridge, $AssignedWeighbridges, $DefaultShift, $Role, $PermissionProfile, $CanAccessWeighment, $CanAccessMasters, $CanAccessReports, $CanAccessSettings, $CanCaptureFirstWeight, $CanCaptureSecondWeight, $CanPerformManualWeightEntry, $CanCorrectTransactions, $CanCancelTransactions, $CanOverrideWeight, $CanApproveQc, $CanRetryIntegration, $LastLogin, $Status, $EffectiveFrom, $IsActive, $Remarks, $CreatedAt);";
         AddOperatorMasterParameters(command, operatorMaster);
         command.Parameters.AddWithValue("$OperatorId", operatorMaster.OperatorId);
         command.Parameters.AddWithValue("$CreatedAt", DateTime.Now.ToString("O"));
@@ -1289,7 +1319,7 @@ UPDATE Weighments SET
     NetWeight = $NetWeight,
     Remarks = $Remarks
 WHERE WeighmentId = $WeighmentId
-  AND Status = 'Completed';";
+  AND Status IN ('Open', 'Completed');";
         command.Parameters.AddWithValue("$WeighmentId", weighment.WeighmentId);
         command.Parameters.AddWithValue("$CompanyName", weighment.CompanyName.Trim());
         command.Parameters.AddWithValue("$VehicleNo", weighment.VehicleNo.Trim().ToUpperInvariant());
@@ -1314,17 +1344,109 @@ WHERE WeighmentId = $WeighmentId
             throw new InvalidOperationException("Completed transaction not found.");
     });
 
-    public Task DeleteWeighmentAsync(int weighmentId) => Task.Run(() =>
+    public Task UpdateWeighmentCorrectionAsync(Weighment weighment) => Task.Run(() =>
+    {
+        if (weighment.WeighmentId <= 0)
+            throw new InvalidOperationException("Please select a valid transaction.");
+
+        if (string.Equals(weighment.Status, "Cancelled", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Cancelled transactions cannot be corrected.");
+
+        if (string.IsNullOrWhiteSpace(weighment.CompanyName))
+            throw new InvalidOperationException("Company is mandatory.");
+
+        if (string.IsNullOrWhiteSpace(weighment.VehicleNo))
+            throw new InvalidOperationException("Vehicle number is mandatory.");
+
+        if (string.IsNullOrWhiteSpace(weighment.DriverName))
+            throw new InvalidOperationException("Driver name is mandatory.");
+
+        if (string.IsNullOrWhiteSpace(weighment.PartyType) || string.IsNullOrWhiteSpace(weighment.PartyName))
+            throw new InvalidOperationException("Party Type and Party are mandatory.");
+
+        if (string.IsNullOrWhiteSpace(weighment.ItemNumber) && string.IsNullOrWhiteSpace(weighment.ItemName))
+            throw new InvalidOperationException("Item Number or Item Name is mandatory.");
+
+        if (weighment.FirstWeight < 0)
+            throw new InvalidOperationException("First Weight cannot be negative.");
+
+        if (weighment.SecondWeight.HasValue && weighment.SecondWeight.Value < 0)
+            throw new InvalidOperationException("Second Weight cannot be negative.");
+
+        var status = weighment.SecondWeight.HasValue ? "Completed" : "Open";
+        DateTime? secondTime = weighment.SecondWeight.HasValue ? (weighment.SecondWeightTime ?? DateTime.Now) : null;
+        decimal? netWeight = weighment.SecondWeight.HasValue ? Math.Abs(weighment.SecondWeight.Value - weighment.FirstWeight) : null;
+
+        using var connection = CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = @"
+UPDATE Weighments SET
+    CompanyName = $CompanyName,
+    VehicleNo = $VehicleNo,
+    DriverName = $DriverName,
+    PartyAccount = $PartyAccount,
+    PartyName = $PartyName,
+    PartyType = $PartyType,
+    ItemNumber = $ItemNumber,
+    ItemName = $ItemName,
+    MaterialName = $MaterialName,
+    FirstWeight = $FirstWeight,
+    FirstWeightTime = $FirstWeightTime,
+    FirstWeightBy = $FirstWeightBy,
+    SecondWeight = $SecondWeight,
+    SecondWeightTime = $SecondWeightTime,
+    SecondWeightBy = $SecondWeightBy,
+    NetWeight = $NetWeight,
+    Status = $Status,
+    Remarks = $Remarks
+WHERE WeighmentId = $WeighmentId
+  AND Status <> 'Cancelled';";
+        command.Parameters.AddWithValue("$WeighmentId", weighment.WeighmentId);
+        command.Parameters.AddWithValue("$CompanyName", weighment.CompanyName.Trim());
+        command.Parameters.AddWithValue("$VehicleNo", weighment.VehicleNo.Trim().ToUpperInvariant());
+        command.Parameters.AddWithValue("$DriverName", weighment.DriverName ?? string.Empty);
+        command.Parameters.AddWithValue("$PartyAccount", weighment.PartyAccount ?? string.Empty);
+        command.Parameters.AddWithValue("$PartyName", weighment.PartyName ?? string.Empty);
+        command.Parameters.AddWithValue("$PartyType", weighment.PartyType ?? string.Empty);
+        command.Parameters.AddWithValue("$ItemNumber", weighment.ItemNumber ?? string.Empty);
+        command.Parameters.AddWithValue("$ItemName", weighment.ItemName ?? string.Empty);
+        command.Parameters.AddWithValue("$MaterialName", string.IsNullOrWhiteSpace(weighment.MaterialName) ? weighment.ItemName ?? string.Empty : weighment.MaterialName);
+        command.Parameters.AddWithValue("$FirstWeight", weighment.FirstWeight);
+        command.Parameters.AddWithValue("$FirstWeightTime", weighment.FirstWeightTime.ToString("O"));
+        command.Parameters.AddWithValue("$FirstWeightBy", weighment.FirstWeightBy ?? string.Empty);
+        command.Parameters.AddWithValue("$SecondWeight", (object?)weighment.SecondWeight ?? DBNull.Value);
+        command.Parameters.AddWithValue("$SecondWeightTime", secondTime.HasValue ? secondTime.Value.ToString("O") : DBNull.Value);
+        command.Parameters.AddWithValue("$SecondWeightBy", weighment.SecondWeight.HasValue ? weighment.SecondWeightBy ?? string.Empty : string.Empty);
+        command.Parameters.AddWithValue("$NetWeight", (object?)netWeight ?? DBNull.Value);
+        command.Parameters.AddWithValue("$Status", status);
+        command.Parameters.AddWithValue("$Remarks", weighment.Remarks ?? string.Empty);
+
+        var affected = command.ExecuteNonQuery();
+        if (affected == 0)
+            throw new InvalidOperationException("Transaction not found or already cancelled.");
+    });
+
+    public Task CancelWeighmentAsync(int weighmentId, string cancelledBy) => Task.Run(() =>
     {
         using var connection = CreateConnection();
         connection.Open();
         using var command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM Weighments WHERE WeighmentId = $WeighmentId AND Status = 'Completed'";
+        command.CommandText = @"
+UPDATE Weighments
+SET Status = 'Cancelled',
+    Remarks = trim(ifnull(Remarks, '') || ' Cancelled by ' || $CancelledBy || ' on ' || $CancelledAt)
+WHERE WeighmentId = $WeighmentId
+  AND Status IN ('Open', 'Completed');";
         command.Parameters.AddWithValue("$WeighmentId", weighmentId);
+        command.Parameters.AddWithValue("$CancelledBy", cancelledBy ?? string.Empty);
+        command.Parameters.AddWithValue("$CancelledAt", DateTime.Now.ToString("yyyy-MM-dd HH:mm"));
         var affected = command.ExecuteNonQuery();
         if (affected == 0)
-            throw new InvalidOperationException("Completed transaction not found or already deleted.");
+            throw new InvalidOperationException("Transaction not found or already cancelled.");
     });
+
+    public Task DeleteWeighmentAsync(int weighmentId) => CancelWeighmentAsync(weighmentId, string.Empty);
 
     public Task<List<Weighment>> GetOpenWeighmentsAsync() => Task.Run(() =>
     {
@@ -1367,26 +1489,99 @@ ORDER BY w.CreatedAt DESC";
         return ReadWeighments(command);
     });
 
-    public Task<AppUser?> AuthenticateUserAsync(string username, string password) => Task.Run(() =>
+    public Task<bool> HasAnyOperatorAsync() => Task.Run(() =>
     {
         using var connection = CreateConnection();
         connection.Open();
 
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT * FROM Users WHERE lower(Username) = lower($Username) AND IsActive = 1 LIMIT 1";
+        command.CommandText = "SELECT COUNT(1) FROM OperatorMasters";
+        return Convert.ToInt32(command.ExecuteScalar()) > 0;
+    });
+
+    public Task<OperatorMaster> CreateInitialAdminOperatorAsync(string operatorName, string username, string password, string confirmPassword, string legalEntity) => Task.Run(() =>
+    {
+        operatorName = operatorName.Trim();
+        username = username.Trim();
+        legalEntity = legalEntity.Trim();
+
+        if (string.IsNullOrWhiteSpace(operatorName))
+            throw new InvalidOperationException("Operator Name is mandatory.");
+        if (string.IsNullOrWhiteSpace(username))
+            throw new InvalidOperationException("Username is mandatory.");
+        if (string.IsNullOrWhiteSpace(password))
+            throw new InvalidOperationException("Password is mandatory.");
+        if (!string.Equals(password, confirmPassword, StringComparison.Ordinal))
+            throw new InvalidOperationException("Password and Confirm Password do not match.");
+        if (string.IsNullOrWhiteSpace(legalEntity))
+            throw new InvalidOperationException("Company / Legal Entity is mandatory.");
+
+        using var connection = CreateConnection();
+        connection.Open();
+
+        using var countCommand = connection.CreateCommand();
+        countCommand.CommandText = "SELECT COUNT(1) FROM OperatorMasters";
+        if (Convert.ToInt32(countCommand.ExecuteScalar()) > 0)
+            throw new InvalidOperationException("Initial administrator already exists. Please login with an existing operator.");
+
+        EnsureOperatorUsernameIsUnique(connection, username, null);
+
+        var passwordData = PasswordService.HashPassword(password);
+
+        using var command = connection.CreateCommand();
+        command.CommandText = @"
+INSERT INTO OperatorMasters
+(EmployeeId, OperatorName, Username, PasswordHash, PasswordSalt, Email, MobileNumber, Designation, Department, LegalEntity, DefaultLegalEntity, DefaultWeighbridge, AssignedWeighbridges, DefaultShift, Role, PermissionProfile, CanAccessWeighment, CanAccessMasters, CanAccessReports, CanAccessSettings, CanCaptureFirstWeight, CanCaptureSecondWeight, CanPerformManualWeightEntry, CanCorrectTransactions, CanCancelTransactions, CanOverrideWeight, CanApproveQc, CanRetryIntegration, LastLogin, Status, EffectiveFrom, IsActive, Remarks, CreatedAt)
+VALUES
+($EmployeeId, $OperatorName, $Username, $PasswordHash, $PasswordSalt, '', '', 'Administrator', 'IT', $LegalEntity, $LegalEntity, 'WB-001', 'WB-001', '', 'Administrator', 'Admin', 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, NULL, 'Active', $EffectiveFrom, 1, 'Initial administrator operator created during first setup.', $CreatedAt);";
+        command.Parameters.AddWithValue("$EmployeeId", "ADMIN-001");
+        command.Parameters.AddWithValue("$OperatorName", operatorName);
+        command.Parameters.AddWithValue("$Username", username);
+        command.Parameters.AddWithValue("$PasswordHash", passwordData.Hash);
+        command.Parameters.AddWithValue("$PasswordSalt", passwordData.Salt);
+        command.Parameters.AddWithValue("$LegalEntity", legalEntity);
+        command.Parameters.AddWithValue("$EffectiveFrom", DateTime.Today.ToString("O"));
+        command.Parameters.AddWithValue("$CreatedAt", DateTime.Now.ToString("O"));
+        command.ExecuteNonQuery();
+
+        using var readCommand = connection.CreateCommand();
+        readCommand.CommandText = "SELECT * FROM OperatorMasters WHERE lower(trim(Username)) = lower(trim($Username)) LIMIT 1";
+        readCommand.Parameters.AddWithValue("$Username", username);
+        using var reader = readCommand.ExecuteReader();
+        if (!reader.Read())
+            throw new InvalidOperationException("Initial administrator was not created correctly.");
+
+        return MapOperatorMaster(reader);
+    });
+
+    public Task<OperatorMaster?> AuthenticateOperatorAsync(string username, string password) => Task.Run(() =>
+    {
+        using var connection = CreateConnection();
+        connection.Open();
+
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT * FROM OperatorMasters WHERE lower(trim(Username)) = lower(trim($Username)) AND IsActive = 1 LIMIT 1";
         command.Parameters.AddWithValue("$Username", username.Trim());
 
         using var reader = command.ExecuteReader();
         if (!reader.Read())
             return null;
 
-        var passwordHash = Convert.ToString(reader["PasswordHash"]) ?? string.Empty;
-        var passwordSalt = Convert.ToString(reader["PasswordSalt"]) ?? string.Empty;
+        var status = ReadText(reader, "Status");
+        if (!string.Equals(status, "Active", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        var passwordHash = ReadText(reader, "PasswordHash");
+        var passwordSalt = ReadText(reader, "PasswordSalt");
 
         if (!PasswordService.VerifyPassword(password, passwordHash, passwordSalt))
             return null;
 
-        return MapUser(reader);
+        var op = MapOperatorMaster(reader);
+        reader.Dispose();
+        UpdateOperatorLastLogin(connection, op.OperatorId);
+        op.LastLogin = DateTime.Now;
+        return op;
     });
 
     public Task<List<AppUser>> GetUsersAsync() => Task.Run(() =>
@@ -1514,6 +1709,44 @@ WHERE UserId = $UserId;";
             throw new InvalidOperationException("Username already exists. Please enter a unique username.");
     }
 
+    private static void EnsureOperatorUsernameIsUnique(SqliteConnection connection, string username, int? excludeOperatorId)
+    {
+        var trimmedUsername = username.Trim();
+        using var command = connection.CreateCommand();
+        command.CommandText = excludeOperatorId.HasValue
+            ? "SELECT COUNT(1) FROM OperatorMasters WHERE lower(trim(Username)) = lower(trim($Username)) AND OperatorId <> $OperatorId"
+            : "SELECT COUNT(1) FROM OperatorMasters WHERE lower(trim(Username)) = lower(trim($Username))";
+        command.Parameters.AddWithValue("$Username", trimmedUsername);
+        if (excludeOperatorId.HasValue)
+            command.Parameters.AddWithValue("$OperatorId", excludeOperatorId.Value);
+
+        var duplicateCount = Convert.ToInt32(command.ExecuteScalar());
+        if (duplicateCount > 0)
+            throw new InvalidOperationException("Username already exists. Please enter a unique username.");
+    }
+
+    private static void LoadExistingOperatorPassword(SqliteConnection connection, OperatorMaster operatorMaster)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT PasswordHash, PasswordSalt FROM OperatorMasters WHERE OperatorId = $OperatorId LIMIT 1";
+        command.Parameters.AddWithValue("$OperatorId", operatorMaster.OperatorId);
+        using var reader = command.ExecuteReader();
+        if (reader.Read())
+        {
+            operatorMaster.PasswordHash = ReadText(reader, "PasswordHash");
+            operatorMaster.PasswordSalt = ReadText(reader, "PasswordSalt");
+        }
+    }
+
+    private static void UpdateOperatorLastLogin(SqliteConnection connection, int operatorId)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "UPDATE OperatorMasters SET LastLogin = $LastLogin WHERE OperatorId = $OperatorId";
+        command.Parameters.AddWithValue("$LastLogin", DateTime.Now.ToString("O"));
+        command.Parameters.AddWithValue("$OperatorId", operatorId);
+        command.ExecuteNonQuery();
+    }
+
     private SqliteConnection CreateConnection() => new(_connectionString);
 
     private static void ExecuteNonQuery(SqliteConnection connection, string sql)
@@ -1626,6 +1859,12 @@ WHERE UserId = $UserId;";
         EnsureColumn(connection, "WeighbridgeMasters", "Remarks", "TEXT NOT NULL DEFAULT ''");
 
         // Operator master migration
+        EnsureColumn(connection, "OperatorMasters", "PasswordHash", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "OperatorMasters", "PasswordSalt", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "OperatorMasters", "CanAccessWeighment", "INTEGER NOT NULL DEFAULT 1");
+        EnsureColumn(connection, "OperatorMasters", "CanAccessMasters", "INTEGER NOT NULL DEFAULT 0");
+        EnsureColumn(connection, "OperatorMasters", "CanAccessReports", "INTEGER NOT NULL DEFAULT 1");
+        EnsureColumn(connection, "OperatorMasters", "CanAccessSettings", "INTEGER NOT NULL DEFAULT 0");
         EnsureColumn(connection, "OperatorMasters", "MobileNumber", "TEXT NOT NULL DEFAULT ''");
         EnsureColumn(connection, "OperatorMasters", "Designation", "TEXT NOT NULL DEFAULT ''");
         EnsureColumn(connection, "OperatorMasters", "Department", "TEXT NOT NULL DEFAULT ''");
@@ -1651,9 +1890,6 @@ WHERE UserId = $UserId;";
         EnsureColumn(connection, "OperatorMasters", "Remarks", "TEXT NOT NULL DEFAULT ''");
 
         ExecuteNonQuery(connection, "UPDATE Users SET CompanyName = 'Default Company' WHERE trim(ifnull(CompanyName, '')) = ''; ");
-        ExecuteNonQuery(connection, "UPDATE Weighments SET FirstWeightBy = (SELECT Username FROM Users WHERE CAST(Users.UserId AS TEXT) = Weighments.FirstWeightBy LIMIT 1) WHERE trim(ifnull(FirstWeightBy, '')) <> '' AND EXISTS (SELECT 1 FROM Users WHERE CAST(Users.UserId AS TEXT) = Weighments.FirstWeightBy);");
-        ExecuteNonQuery(connection, "UPDATE Weighments SET SecondWeightBy = (SELECT Username FROM Users WHERE CAST(Users.UserId AS TEXT) = Weighments.SecondWeightBy LIMIT 1) WHERE trim(ifnull(SecondWeightBy, '')) <> '' AND EXISTS (SELECT 1 FROM Users WHERE CAST(Users.UserId AS TEXT) = Weighments.SecondWeightBy);");
-        ExecuteNonQuery(connection, "UPDATE Users SET CanEditCompletedTransaction = 1, CanDeleteCompletedTransaction = 1 WHERE lower(Username) = 'admin';");
         ExecuteNonQuery(connection, "UPDATE Weighments SET CompanyName = 'Default Company' WHERE trim(ifnull(CompanyName, '')) = ''; ");
         ExecuteNonQuery(connection, "UPDATE DeviceSettings SET SelectedWeighbridgeCode = 'WB-001' WHERE trim(ifnull(SelectedWeighbridgeCode, '')) = ''; ");
     }
@@ -1698,28 +1934,6 @@ VALUES
         insert.ExecuteNonQuery();
     }
 
-    private static void EnsureDefaultAdminUser(SqliteConnection connection)
-    {
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT COUNT(*) FROM Users";
-        var count = Convert.ToInt32(command.ExecuteScalar());
-        if (count > 0)
-            return;
-
-        var passwordData = PasswordService.HashPassword("admin123");
-
-        using var insert = connection.CreateCommand();
-        insert.CommandText = @"
-INSERT INTO Users
-(Username, FullName, CompanyName, PasswordHash, PasswordSalt, IsActive, CanAccessWeighment, CanAccessSettings, CanAccessMasters, CanAccessReports, CanAccessUserManagement, CanEditCompletedTransaction, CanDeleteCompletedTransaction, CreatedAt)
-VALUES
-('admin', 'System Administrator', 'Default Company', $PasswordHash, $PasswordSalt, 1, 1, 1, 1, 1, 1, 1, 1, $CreatedAt);";
-        insert.Parameters.AddWithValue("$PasswordHash", passwordData.Hash);
-        insert.Parameters.AddWithValue("$PasswordSalt", passwordData.Salt);
-        insert.Parameters.AddWithValue("$CreatedAt", DateTime.Now.ToString("O"));
-        insert.ExecuteNonQuery();
-    }
-
     private static void SeedMasterData(SqliteConnection connection)
     {
         ExecuteNonQuery(connection, @"
@@ -1732,8 +1946,31 @@ INSERT OR IGNORE INTO ItemMasters (ItemNumber, ProductName, CreatedAt) VALUES ('
 INSERT OR IGNORE INTO Vehicles (VehicleNo, PlateNumber, PlateEmirate, PlateCategory, VehicleType, Status, IsActive) VALUES ('TEST-0001', 'TEST-0001', 'Dubai', 'Commercial', 'Truck', 'Active', 1);
 INSERT OR IGNORE INTO Drivers (DriverName, MobileNumber, MobileNo, DriverType, EmployerPartyType, IdentificationType, IdentificationNumber, CNIC, DrivingLicenceNumber, LicenseNo, DrivingLicenceIssuedBy, DrivingLicenceExpiryDate, LegalEntity, Status, EffectiveFrom, IsActive) VALUES ('Default Driver', '0000000000', '0000000000', 'Company Driver', 'Legal Entity', 'Emirates ID', 'ID-0001', 'ID-0001', 'LIC-0001', 'LIC-0001', 'Dubai', date('now', '+1 year'), 'Default Company', 'Active', date('now'), 1);
 INSERT OR IGNORE INTO WeighbridgeMasters (WeighbridgeCode, WeighbridgeName, PlantSite, Warehouse, WeighbridgeType, ScaleType, ScaleCapacity, CapacityUnit, CommunicationType, ScaleIpAddress, TcpPort, ScaleComPort, BaudRate, Parity, DataBits, StopBits, OperatingStatus, EffectiveFrom, IsActive, CreatedAt) VALUES ('WB-001', 'Default Weighbridge', 'Default Site', 'Default Warehouse', 'Bidirectional', 'Platform Scale', 100000, 'kg', 'Mock', '192.168.1.100', 4001, 'COM1', 9600, 'None', 8, 'One', 'Active', date('now'), 1, datetime('now'));
-INSERT OR IGNORE INTO OperatorMasters (EmployeeId, OperatorName, Username, Email, Designation, Department, LegalEntity, DefaultWeighbridge, AssignedWeighbridges, Role, PermissionProfile, CanCaptureFirstWeight, CanCaptureSecondWeight, Status, EffectiveFrom, IsActive, CreatedAt) VALUES ('EMP-0001', 'System Administrator', 'admin', 'admin@bridgeone.local', 'Administrator', 'IT', 'Default Company', 'WB-001', 'WB-001', 'Administrator', 'Admin', 1, 1, 'Active', date('now'), 1, datetime('now'));
 ");
+
+        SeedDefaultAdminOperator(connection);
+    }
+
+    private static void SeedDefaultAdminOperator(SqliteConnection connection)
+    {
+        using var countCommand = connection.CreateCommand();
+        countCommand.CommandText = "SELECT COUNT(1) FROM OperatorMasters";
+        if (Convert.ToInt32(countCommand.ExecuteScalar()) > 0)
+            return;
+
+        var passwordData = PasswordService.HashPassword("admin123");
+
+        using var command = connection.CreateCommand();
+        command.CommandText = @"
+INSERT INTO OperatorMasters
+(EmployeeId, OperatorName, Username, PasswordHash, PasswordSalt, Email, MobileNumber, Designation, Department, LegalEntity, DefaultLegalEntity, DefaultWeighbridge, AssignedWeighbridges, DefaultShift, Role, PermissionProfile, CanAccessWeighment, CanAccessMasters, CanAccessReports, CanAccessSettings, CanCaptureFirstWeight, CanCaptureSecondWeight, CanPerformManualWeightEntry, CanCorrectTransactions, CanCancelTransactions, CanOverrideWeight, CanApproveQc, CanRetryIntegration, LastLogin, Status, EffectiveFrom, IsActive, Remarks, CreatedAt)
+VALUES
+('ADMIN-001', 'Administrator', 'admin', $PasswordHash, $PasswordSalt, '', '', 'Administrator', 'IT', 'Default Company', 'Default Company', 'WB-001', 'WB-001', '', 'Administrator', 'Admin', 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, NULL, 'Active', $EffectiveFrom, 1, 'Default administrator created automatically for a new database. Change this password after first login.', $CreatedAt);";
+        command.Parameters.AddWithValue("$PasswordHash", passwordData.Hash);
+        command.Parameters.AddWithValue("$PasswordSalt", passwordData.Salt);
+        command.Parameters.AddWithValue("$EffectiveFrom", DateTime.Today.ToString("O"));
+        command.Parameters.AddWithValue("$CreatedAt", DateTime.Now.ToString("O"));
+        command.ExecuteNonQuery();
     }
 
     private static void AddUserPermissionParameters(SqliteCommand command, AppUser user)
@@ -2017,6 +2254,8 @@ INSERT OR IGNORE INTO OperatorMasters (EmployeeId, OperatorName, Username, Email
         command.Parameters.AddWithValue("$EmployeeId", DbValue(operatorMaster.EmployeeId));
         command.Parameters.AddWithValue("$OperatorName", DbValue(operatorMaster.OperatorName));
         command.Parameters.AddWithValue("$Username", DbValue(operatorMaster.Username));
+        command.Parameters.AddWithValue("$PasswordHash", DbValue(operatorMaster.PasswordHash));
+        command.Parameters.AddWithValue("$PasswordSalt", DbValue(operatorMaster.PasswordSalt));
         command.Parameters.AddWithValue("$Email", DbValue(operatorMaster.Email));
         command.Parameters.AddWithValue("$MobileNumber", DbValue(operatorMaster.MobileNumber));
         command.Parameters.AddWithValue("$Designation", DbValue(operatorMaster.Designation));
@@ -2028,6 +2267,10 @@ INSERT OR IGNORE INTO OperatorMasters (EmployeeId, OperatorName, Username, Email
         command.Parameters.AddWithValue("$DefaultShift", DbValue(operatorMaster.DefaultShift));
         command.Parameters.AddWithValue("$Role", DbValue(operatorMaster.Role));
         command.Parameters.AddWithValue("$PermissionProfile", DbValue(operatorMaster.PermissionProfile));
+        command.Parameters.AddWithValue("$CanAccessWeighment", DbValue(operatorMaster.CanAccessWeighment));
+        command.Parameters.AddWithValue("$CanAccessMasters", DbValue(operatorMaster.CanAccessMasters));
+        command.Parameters.AddWithValue("$CanAccessReports", DbValue(operatorMaster.CanAccessReports));
+        command.Parameters.AddWithValue("$CanAccessSettings", DbValue(operatorMaster.CanAccessSettings));
         command.Parameters.AddWithValue("$CanCaptureFirstWeight", DbValue(operatorMaster.CanCaptureFirstWeight));
         command.Parameters.AddWithValue("$CanCaptureSecondWeight", DbValue(operatorMaster.CanCaptureSecondWeight));
         command.Parameters.AddWithValue("$CanPerformManualWeightEntry", DbValue(operatorMaster.CanPerformManualWeightEntry));
@@ -2095,6 +2338,8 @@ INSERT OR IGNORE INTO OperatorMasters (EmployeeId, OperatorName, Username, Email
         EmployeeId = ReadText(reader, "EmployeeId"),
         OperatorName = ReadText(reader, "OperatorName"),
         Username = ReadText(reader, "Username"),
+        PasswordHash = ReadText(reader, "PasswordHash"),
+        PasswordSalt = ReadText(reader, "PasswordSalt"),
         Email = ReadText(reader, "Email"),
         MobileNumber = ReadText(reader, "MobileNumber"),
         Designation = ReadText(reader, "Designation"),
@@ -2106,6 +2351,10 @@ INSERT OR IGNORE INTO OperatorMasters (EmployeeId, OperatorName, Username, Email
         DefaultShift = ReadText(reader, "DefaultShift"),
         Role = ReadText(reader, "Role"),
         PermissionProfile = ReadText(reader, "PermissionProfile"),
+        CanAccessWeighment = ReadBool(reader, "CanAccessWeighment"),
+        CanAccessMasters = ReadBool(reader, "CanAccessMasters"),
+        CanAccessReports = ReadBool(reader, "CanAccessReports"),
+        CanAccessSettings = ReadBool(reader, "CanAccessSettings"),
         CanCaptureFirstWeight = ReadBool(reader, "CanCaptureFirstWeight"),
         CanCaptureSecondWeight = ReadBool(reader, "CanCaptureSecondWeight"),
         CanPerformManualWeightEntry = ReadBool(reader, "CanPerformManualWeightEntry"),

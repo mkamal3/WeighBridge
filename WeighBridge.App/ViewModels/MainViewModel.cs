@@ -9,7 +9,7 @@ namespace WeightBridgeApp.ViewModels;
 public class MainViewModel : BaseViewModel
 {
     private readonly DatabaseService _databaseService;
-    private readonly AppUser _currentUser;
+    private readonly OperatorMaster _currentUser;
     private IWeightReader? _weightReader;
     private int? _loadedOpenWeighmentId;
 
@@ -46,6 +46,17 @@ public class MainViewModel : BaseViewModel
     private string _reportPartyTypeFilter = string.Empty;
     private string _reportItemFilter = string.Empty;
     private string _reportStatusFilter = string.Empty;
+    private DateTime _transactionFrom = DateTime.Today;
+    private DateTime _transactionTo = DateTime.Today;
+    private string _transactionTicketFilter = string.Empty;
+    private string _transactionCompanyFilter = string.Empty;
+    private string _transactionVehicleFilter = string.Empty;
+    private string _transactionDriverFilter = string.Empty;
+    private string _transactionPartyFilter = string.Empty;
+    private string _transactionPartyTypeFilter = string.Empty;
+    private string _transactionItemFilter = string.Empty;
+    private string _transactionStatusFilter = string.Empty;
+    private Weighment? _selectedTransactionWeighment;
     private string _newPartyName = string.Empty;
     private string _newPartyType = "Customer";
     private string _newMaterialName = string.Empty;
@@ -135,7 +146,7 @@ public class MainViewModel : BaseViewModel
     private bool _userCanEditCompletedTransaction;
     private bool _userCanDeleteCompletedTransaction;
 
-    public MainViewModel(DatabaseService databaseService, AppUser currentUser)
+    public MainViewModel(DatabaseService databaseService, OperatorMaster currentUser)
     {
         _databaseService = databaseService;
         _currentUser = currentUser;
@@ -150,7 +161,7 @@ public class MainViewModel : BaseViewModel
         SaveSettingsCommand = new RelayCommand(SaveSettingsAsync);
         SaveFirstWeightCommand = new RelayCommand(SaveFirstWeightAsync);
         SaveSecondWeightCommand = new RelayCommand(SaveSecondWeightAsync);
-        LoadOpenTicketCommand = new RelayCommand(LoadSelectedOpenTicket);
+        LoadOpenTicketCommand = new RelayCommand(LoadSelectedOpenTicket); // kept for compatibility; open ticket loads automatically on row selection
         RefreshCommand = new RelayCommand(RefreshAllAsync);
         ClearCommand = new RelayCommand(ClearEntry);
         AddPartyCommand = new RelayCommand(AddPartyAsync);
@@ -164,6 +175,10 @@ public class MainViewModel : BaseViewModel
         DeleteCompletedCommand = new RelayCommand(DeleteCompletedAsync);
         SaveReportEditCommand = new RelayCommand(SaveReportEditAsync);
         DeleteReportRowCommand = new RelayCommand(DeleteReportRowAsync);
+        LoadTransactionsCommand = new RelayCommand(LoadTransactionsAsync);
+        ClearTransactionFiltersCommand = new RelayCommand(ClearTransactionFilters);
+        CorrectTransactionCommand = new RelayCommand(CorrectTransactionAsync);
+        CancelTransactionCommand = new RelayCommand(CancelTransactionAsync);
         SaveUserCommand = new RelayCommand(SaveUserAsync);
         ClearUserFormCommand = new RelayCommand(ClearUserForm);
         SaveCustomerCommand = new RelayCommand(SaveCustomerAsync);
@@ -212,6 +227,8 @@ public class MainViewModel : BaseViewModel
     public ObservableCollection<Weighment> CompletedToday { get; } = new();
     public ObservableCollection<Weighment> ReportRows { get; } = new();
     public ObservableCollection<Weighment> FilteredReportRows { get; } = new();
+    public ObservableCollection<Weighment> TransactionRows { get; } = new();
+    public ObservableCollection<Weighment> FilteredTransactionRows { get; } = new();
     public ObservableCollection<AppUser> Users { get; } = new();
 
     public RelayCommand ConnectCommand { get; }
@@ -233,6 +250,10 @@ public class MainViewModel : BaseViewModel
     public RelayCommand DeleteCompletedCommand { get; }
     public RelayCommand SaveReportEditCommand { get; }
     public RelayCommand DeleteReportRowCommand { get; }
+    public RelayCommand LoadTransactionsCommand { get; }
+    public RelayCommand ClearTransactionFiltersCommand { get; }
+    public RelayCommand CorrectTransactionCommand { get; }
+    public RelayCommand CancelTransactionCommand { get; }
     public RelayCommand SaveUserCommand { get; }
     public RelayCommand ClearUserFormCommand { get; }
     public RelayCommand SaveCustomerCommand { get; }
@@ -253,21 +274,26 @@ public class MainViewModel : BaseViewModel
     public RelayCommand ClearOperatorMasterFormCommand { get; }
     public RelayCommand RefreshUsersCommand { get; }
 
-    public string CurrentUserDisplay => $"{_currentUser.FullName} ({_currentUser.Username})";
-    public string CurrentUserId => _currentUser.UserId.ToString();
+    public string CurrentUserDisplay => $"{_currentUser.OperatorName} ({_currentUser.Username})";
+    public string CurrentUserId => _currentUser.OperatorId.ToString();
     public string CurrentUsername => _currentUser.Username;
-    public string CurrentUserCompany => _currentUser.CompanyName;
+    public string CurrentUserCompany => string.IsNullOrWhiteSpace(_currentUser.DefaultLegalEntity) ? _currentUser.LegalEntity : _currentUser.DefaultLegalEntity;
     public bool CanAccessWeighment => _currentUser.CanAccessWeighment;
     public bool CanAccessSettings => _currentUser.CanAccessSettings;
     public bool CanAccessMasters => _currentUser.CanAccessMasters;
     public bool CanAccessReports => _currentUser.CanAccessReports;
-    public bool CanAccessUserManagement => _currentUser.CanAccessUserManagement;
-    public bool CanEditCompletedTransaction => _currentUser.CanEditCompletedTransaction;
-    public bool CanDeleteCompletedTransaction => _currentUser.CanDeleteCompletedTransaction;
-    public bool IsCompletedGridReadOnly => !_currentUser.CanEditCompletedTransaction;
+    public bool CanAccessTransactions => _currentUser.CanAccessReports || _currentUser.CanCorrectTransactions || _currentUser.CanCancelTransactions;
+    public bool CanAccessUserManagement => false;
+    public bool CanCorrectTransactions => _currentUser.CanCorrectTransactions;
+    public bool CanEditCompletedTransaction => CanCorrectTransactions;
+    public bool CanCancelTransactions => _currentUser.CanCancelTransactions;
+    public bool CanDeleteCompletedTransaction => CanCancelTransactions;
+    public bool CanCorrectSelectedTransaction => CanCorrectTransactions && SelectedTransactionWeighment != null && !string.Equals(SelectedTransactionWeighment.Status, "Cancelled", StringComparison.OrdinalIgnoreCase);
+    public bool CanCancelSelectedTransaction => CanCancelTransactions && SelectedTransactionWeighment != null && !string.Equals(SelectedTransactionWeighment.Status, "Cancelled", StringComparison.OrdinalIgnoreCase);
+    public bool IsCompletedGridReadOnly => !_currentUser.CanCorrectTransactions;
 
-    public bool CanSaveFirstWeight => CanAccessWeighment && _loadedOpenWeighmentId == null && !FirstWeight.HasValue;
-    public bool CanSaveSecondWeight => CanAccessWeighment && _loadedOpenWeighmentId.HasValue && FirstWeight.HasValue && !SecondWeight.HasValue;
+    public bool CanSaveFirstWeight => CanAccessWeighment && _currentUser.CanCaptureFirstWeight && _loadedOpenWeighmentId == null && !FirstWeight.HasValue;
+    public bool CanSaveSecondWeight => CanAccessWeighment && _currentUser.CanCaptureSecondWeight && _loadedOpenWeighmentId.HasValue && FirstWeight.HasValue && !SecondWeight.HasValue;
 
     public DeviceSettings Settings
     {
@@ -406,7 +432,13 @@ public class MainViewModel : BaseViewModel
     public Weighment? SelectedOpenWeighment
     {
         get => _selectedOpenWeighment;
-        set => SetProperty(ref _selectedOpenWeighment, value);
+        set
+        {
+            if (SetProperty(ref _selectedOpenWeighment, value) && value != null)
+            {
+                LoadSelectedOpenTicket();
+            }
+        }
     }
 
     public Weighment? SelectedCompletedWeighment
@@ -419,6 +451,19 @@ public class MainViewModel : BaseViewModel
     {
         get => _selectedReportWeighment;
         set => SetProperty(ref _selectedReportWeighment, value);
+    }
+
+    public Weighment? SelectedTransactionWeighment
+    {
+        get => _selectedTransactionWeighment;
+        set
+        {
+            if (SetProperty(ref _selectedTransactionWeighment, value))
+            {
+                OnPropertyChanged(nameof(CanCorrectSelectedTransaction));
+                OnPropertyChanged(nameof(CanCancelSelectedTransaction));
+            }
+        }
     }
 
     public decimal? FirstWeight
@@ -552,6 +597,98 @@ public class MainViewModel : BaseViewModel
         {
             if (SetProperty(ref _reportStatusFilter, value))
                 ApplyReportFilter();
+        }
+    }
+
+    public DateTime TransactionFrom
+    {
+        get => _transactionFrom;
+        set => SetProperty(ref _transactionFrom, value);
+    }
+
+    public DateTime TransactionTo
+    {
+        get => _transactionTo;
+        set => SetProperty(ref _transactionTo, value);
+    }
+
+    public string TransactionTicketFilter
+    {
+        get => _transactionTicketFilter;
+        set
+        {
+            if (SetProperty(ref _transactionTicketFilter, value))
+                ApplyTransactionFilter();
+        }
+    }
+
+    public string TransactionCompanyFilter
+    {
+        get => _transactionCompanyFilter;
+        set
+        {
+            if (SetProperty(ref _transactionCompanyFilter, value))
+                ApplyTransactionFilter();
+        }
+    }
+
+    public string TransactionVehicleFilter
+    {
+        get => _transactionVehicleFilter;
+        set
+        {
+            if (SetProperty(ref _transactionVehicleFilter, value))
+                ApplyTransactionFilter();
+        }
+    }
+
+    public string TransactionDriverFilter
+    {
+        get => _transactionDriverFilter;
+        set
+        {
+            if (SetProperty(ref _transactionDriverFilter, value))
+                ApplyTransactionFilter();
+        }
+    }
+
+    public string TransactionPartyFilter
+    {
+        get => _transactionPartyFilter;
+        set
+        {
+            if (SetProperty(ref _transactionPartyFilter, value))
+                ApplyTransactionFilter();
+        }
+    }
+
+    public string TransactionPartyTypeFilter
+    {
+        get => _transactionPartyTypeFilter;
+        set
+        {
+            if (SetProperty(ref _transactionPartyTypeFilter, value))
+                ApplyTransactionFilter();
+        }
+    }
+
+    public string TransactionItemFilter
+    {
+        get => _transactionItemFilter;
+        set
+        {
+            if (SetProperty(ref _transactionItemFilter, value))
+                ApplyTransactionFilter();
+        }
+    }
+
+    public string TransactionStatusFilter
+    {
+        get => _transactionStatusFilter;
+        set
+        {
+            if (SetProperty(ref _transactionStatusFilter, value))
+                ApplyTransactionFilter();
         }
     }
 
@@ -1283,17 +1420,7 @@ public class MainViewModel : BaseViewModel
             await RefreshWeighmentsAsync();
             if (CanAccessReports)
                 await LoadReportAsync();
-            if (CanAccessUserManagement)
-                await LoadUsersAsync();
-            if (!BridgeOneConfigService.IsDatabaseFolderConfigured())
-            {
-                System.Windows.MessageBox.Show("Database folder path is not defined. Please define it in Settings.", "BridgeOne", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-                StatusMessage = "Database folder path is not defined. Please define it in Settings.";
-            }
-            else
-            {
-                StatusMessage = "Application loaded. Use Mock mode first, then test Serial/TCP with your indicator.";
-            }
+            StatusMessage = $"Application loaded. Database: {DatabaseFolderPath}. Use Mock mode first, then test Serial/TCP with your indicator.";
         }
         catch (Exception ex)
         {
@@ -1390,20 +1517,27 @@ public class MainViewModel : BaseViewModel
             }
 
             var previousDatabaseFolderPath = BridgeOneConfigService.GetDatabaseFolderPath();
-            var newDatabaseFilePath = BridgeOneConfigService.GetDatabaseFilePathForFolder(DatabaseFolderPath);
+            var normalizedNewDatabaseFolderPath = System.IO.Path.GetFullPath(DatabaseFolderPath.Trim());
+            var newDatabaseFilePath = BridgeOneConfigService.GetDatabaseFilePathForFolder(normalizedNewDatabaseFolderPath);
+            var wasNewDatabaseCreated = !System.IO.File.Exists(newDatabaseFilePath);
 
             ApplySelectedWeighbridgeToSettings();
             await _databaseService.SaveSettingsAsync(Settings);
 
-            BridgeOneConfigService.SaveDatabaseFolderPath(DatabaseFolderPath);
+            BridgeOneConfigService.SaveDatabaseFolderPath(normalizedNewDatabaseFolderPath);
 
-            if (!string.Equals(previousDatabaseFolderPath, DatabaseFolderPath, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(previousDatabaseFolderPath, normalizedNewDatabaseFolderPath, StringComparison.OrdinalIgnoreCase))
             {
-                if (!System.IO.File.Exists(newDatabaseFilePath) && System.IO.File.Exists(_databaseService.DatabaseFilePath))
-                    System.IO.File.Copy(_databaseService.DatabaseFilePath, newDatabaseFilePath);
+                var targetDatabaseService = new DatabaseService(newDatabaseFilePath);
+                await targetDatabaseService.InitializeAsync();
+                await targetDatabaseService.SaveSettingsAsync(Settings);
 
-                System.Windows.MessageBox.Show("Database folder path saved. Please restart BridgeOne to use the selected database path.", "BridgeOne", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-                StatusMessage = "Database folder path saved. Restart BridgeOne to use the selected database path.";
+                var message = wasNewDatabaseCreated
+                    ? "Database folder path saved. No database was found in the selected folder, so a new BridgeOne database was created with seed data. Default login: admin / admin123. Please restart BridgeOne."
+                    : "Database folder path saved. Existing database found in the selected folder. Please restart BridgeOne to use it.";
+
+                System.Windows.MessageBox.Show(message, "BridgeOne", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                StatusMessage = message;
             }
             else
             {
@@ -1422,6 +1556,12 @@ public class MainViewModel : BaseViewModel
         {
             if (!ValidateEntryBeforeFirstWeight())
                 return;
+
+            if (!_currentUser.CanCaptureFirstWeight)
+            {
+                StatusMessage = "You do not have permission to capture First Weight.";
+                return;
+            }
 
             if (!CanSaveFirstWeight)
             {
@@ -1454,12 +1594,18 @@ public class MainViewModel : BaseViewModel
                 CreatedAt = DateTime.Now
             };
 
-            SetLoadedOpenWeighmentId(await _databaseService.InsertFirstWeightAsync(weighment));
+            var savedTicketNo = TicketNo;
+            await _databaseService.InsertFirstWeightAsync(weighment);
             await _databaseService.AddVehicleAsync(weighment.VehicleNo);
             await _databaseService.AddDriverAsync(weighment.DriverName);
             await RefreshAllAsync();
 
-            StatusMessage = $"First weight saved. Ticket: {TicketNo}";
+            // Safety control: after first weight is saved, clear the entry screen and do not keep
+            // the open ticket loaded. The operator must select the ticket row from Open Tickets
+            // before saving the second weight.
+            ClearEntry();
+
+            StatusMessage = $"First weight saved. Ticket: {savedTicketNo}. Select the ticket from Open Tickets before saving Second Weight.";
         }
         catch (Exception ex)
         {
@@ -1479,7 +1625,13 @@ public class MainViewModel : BaseViewModel
 
             if (_loadedOpenWeighmentId == null)
             {
-                StatusMessage = "Please select an open ticket and click Load Selected first.";
+                StatusMessage = "Please select an open ticket from Open Tickets first.";
+                return;
+            }
+
+            if (!_currentUser.CanCaptureSecondWeight)
+            {
+                StatusMessage = "You do not have permission to capture Second Weight.";
                 return;
             }
 
@@ -1546,6 +1698,8 @@ public class MainViewModel : BaseViewModel
         await RefreshWeighmentsAsync();
         if (CanAccessReports)
             await LoadReportAsync();
+        if (CanAccessTransactions)
+            await LoadTransactionsAsync();
     }
 
     private async Task LoadMastersAsync()
@@ -1764,9 +1918,9 @@ public class MainViewModel : BaseViewModel
     {
         try
         {
-            if (!CanEditCompletedTransaction)
+            if (!CanCorrectTransactions)
             {
-                StatusMessage = "You do not have edit access for completed transactions.";
+                StatusMessage = "You do not have correction access for completed transactions.";
                 return;
             }
 
@@ -1800,9 +1954,9 @@ public class MainViewModel : BaseViewModel
     {
         try
         {
-            if (!CanDeleteCompletedTransaction)
+            if (!CanCancelTransactions)
             {
-                StatusMessage = "You do not have delete access for completed transactions.";
+                StatusMessage = "You do not have cancel access for completed transactions.";
                 return;
             }
 
@@ -1812,24 +1966,205 @@ public class MainViewModel : BaseViewModel
                 return;
             }
 
+            if (string.Equals(weighment.Status, "Cancelled", StringComparison.OrdinalIgnoreCase))
+            {
+                StatusMessage = "This transaction is already cancelled.";
+                return;
+            }
+
+            var ticketNo = weighment.TicketNo;
+            var weighmentId = weighment.WeighmentId;
+
             var confirm = System.Windows.MessageBox.Show(
-                $"Delete completed ticket {weighment.TicketNo}?",
-                "Confirm Delete",
+                $"Cancel completed ticket {ticketNo}?",
+                "Confirm Cancel",
                 System.Windows.MessageBoxButton.YesNo,
                 System.Windows.MessageBoxImage.Warning);
 
             if (confirm != System.Windows.MessageBoxResult.Yes)
                 return;
 
-            await _databaseService.DeleteWeighmentAsync(weighment.WeighmentId);
+            await _databaseService.CancelWeighmentAsync(weighmentId, CurrentUsername);
+            SelectedCompletedWeighment = null;
+            SelectedReportWeighment = null;
+            SelectedTransactionWeighment = null;
             await RefreshAllAsync();
-            StatusMessage = $"Completed transaction deleted: {weighment.TicketNo}";
+            StatusMessage = $"Completed transaction cancelled: {ticketNo}";
+        }
+        catch (InvalidOperationException ex)
+        {
+            StatusMessage = ex.Message;
         }
         catch (Exception ex)
         {
-            StatusMessage = "Completed transaction delete error: " + ex.Message;
+            StatusMessage = "Completed transaction cancel error: " + ex.Message;
         }
     }
+    private async Task LoadTransactionsAsync()
+    {
+        try
+        {
+            if (!CanAccessTransactions)
+            {
+                StatusMessage = "You do not have access to Transactions.";
+                return;
+            }
+
+            if (TransactionTo < TransactionFrom)
+            {
+                StatusMessage = "Transaction To date cannot be earlier than From date.";
+                return;
+            }
+
+            var rows = await _databaseService.SearchWeighmentsAsync(TransactionFrom, TransactionTo);
+            ReplaceCollection(TransactionRows, rows);
+            ApplyTransactionFilter();
+            StatusMessage = $"Transactions loaded. Rows: {FilteredTransactionRows.Count} of {TransactionRows.Count}";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Transaction load error: " + ex.Message;
+        }
+    }
+
+    private void ClearTransactionFilters()
+    {
+        TransactionTicketFilter = string.Empty;
+        TransactionCompanyFilter = string.Empty;
+        TransactionVehicleFilter = string.Empty;
+        TransactionDriverFilter = string.Empty;
+        TransactionPartyFilter = string.Empty;
+        TransactionPartyTypeFilter = string.Empty;
+        TransactionItemFilter = string.Empty;
+        TransactionStatusFilter = string.Empty;
+        ApplyTransactionFilter();
+    }
+
+    private async Task CorrectTransactionAsync()
+    {
+        try
+        {
+            if (!CanCorrectTransactions)
+            {
+                StatusMessage = "You do not have permission to correct transactions.";
+                return;
+            }
+
+            if (SelectedTransactionWeighment == null)
+            {
+                StatusMessage = "Please select a transaction first.";
+                return;
+            }
+
+            if (string.Equals(SelectedTransactionWeighment.Status, "Cancelled", StringComparison.OrdinalIgnoreCase))
+            {
+                StatusMessage = "Cancelled transactions cannot be corrected.";
+                return;
+            }
+
+            var editable = CloneWeighment(SelectedTransactionWeighment);
+            var window = new WeightBridgeApp.TransactionCorrectionWindow(editable)
+            {
+                Owner = System.Windows.Application.Current.MainWindow
+            };
+
+            if (window.ShowDialog() != true)
+                return;
+
+            await _databaseService.UpdateWeighmentCorrectionAsync(editable);
+            await RefreshAllAsync();
+            StatusMessage = $"Transaction corrected: {editable.TicketNo}";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Transaction correction error: " + ex.Message;
+        }
+    }
+
+    private async Task CancelTransactionAsync()
+    {
+        try
+        {
+            if (!CanCancelTransactions)
+            {
+                StatusMessage = "You do not have permission to cancel transactions.";
+                return;
+            }
+
+            var selected = SelectedTransactionWeighment;
+            if (selected == null)
+            {
+                StatusMessage = "Please select a transaction first.";
+                return;
+            }
+
+            if (string.Equals(selected.Status, "Cancelled", StringComparison.OrdinalIgnoreCase))
+            {
+                StatusMessage = "This transaction is already cancelled.";
+                return;
+            }
+
+            var ticketNo = selected.TicketNo;
+            var weighmentId = selected.WeighmentId;
+
+            var confirm = System.Windows.MessageBox.Show(
+                $"Cancel ticket {ticketNo}?",
+                "Confirm Cancel",
+                System.Windows.MessageBoxButton.YesNo,
+                System.Windows.MessageBoxImage.Warning);
+
+            if (confirm != System.Windows.MessageBoxResult.Yes)
+                return;
+
+            await _databaseService.CancelWeighmentAsync(weighmentId, CurrentUsername);
+            SelectedTransactionWeighment = null;
+            SelectedCompletedWeighment = null;
+            SelectedReportWeighment = null;
+            await RefreshAllAsync();
+            StatusMessage = $"Transaction cancelled: {ticketNo}";
+        }
+        catch (InvalidOperationException ex)
+        {
+            StatusMessage = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Transaction cancel error: " + ex.Message;
+        }
+    }
+
+    private static Weighment CloneWeighment(Weighment source)
+    {
+        return new Weighment
+        {
+            WeighmentId = source.WeighmentId,
+            TicketNo = source.TicketNo,
+            CompanyName = source.CompanyName,
+            VehicleNo = source.VehicleNo,
+            DriverName = source.DriverName,
+            PartyId = source.PartyId,
+            PartyAccount = source.PartyAccount,
+            PartyName = source.PartyName,
+            PartyType = source.PartyType,
+            MaterialId = source.MaterialId,
+            ItemNumber = source.ItemNumber,
+            ItemName = source.ItemName,
+            MaterialName = source.MaterialName,
+            FirstWeight = source.FirstWeight,
+            FirstWeightTime = source.FirstWeightTime,
+            FirstWeightBy = source.FirstWeightBy,
+            FirstWeightByDisplay = source.FirstWeightByDisplay,
+            SecondWeight = source.SecondWeight,
+            SecondWeightTime = source.SecondWeightTime,
+            SecondWeightBy = source.SecondWeightBy,
+            SecondWeightByDisplay = source.SecondWeightByDisplay,
+            NetWeight = source.NetWeight,
+            Status = source.Status,
+            Remarks = source.Remarks,
+            CreatedAt = source.CreatedAt
+        };
+    }
+
 
 
     private async Task SaveCustomerAsync()
@@ -2216,6 +2551,8 @@ public class MainViewModel : BaseViewModel
         OnPropertyChanged(nameof(CanAccessMasters));
         OnPropertyChanged(nameof(CanAccessReports));
         OnPropertyChanged(nameof(CanAccessUserManagement));
+        OnPropertyChanged(nameof(CanCorrectTransactions));
+        OnPropertyChanged(nameof(CanCancelTransactions));
         OnPropertyChanged(nameof(CanEditCompletedTransaction));
         OnPropertyChanged(nameof(CanDeleteCompletedTransaction));
         OnPropertyChanged(nameof(IsCompletedGridReadOnly));
@@ -2290,27 +2627,38 @@ public class MainViewModel : BaseViewModel
             return false;
         }
 
+        if (!_currentUser.CanCaptureFirstWeight)
+        {
+            StatusMessage = "You do not have permission to capture First Weight.";
+            return false;
+        }
+
         if (string.IsNullOrWhiteSpace(CurrentUserCompany))
         {
-            StatusMessage = "Company is mandatory. Please update company in User Management for this user.";
+            StatusMessage = "Company / Legal Entity is mandatory. Please update Legal Entity in Operator Master for this operator.";
             return false;
         }
+
+        var missingFields = new List<string>();
 
         if (string.IsNullOrWhiteSpace(VehicleNo))
-        {
-            StatusMessage = "Please enter vehicle number.";
-            return false;
-        }
+            missingFields.Add("Vehicle No");
+
+        if (string.IsNullOrWhiteSpace(DriverName))
+            missingFields.Add("Driver Name");
+
+        if (string.IsNullOrWhiteSpace(SelectedPartyType))
+            missingFields.Add("Party Type");
 
         if (string.IsNullOrWhiteSpace(PartyName))
-        {
-            StatusMessage = "Please select or enter party.";
-            return false;
-        }
+            missingFields.Add("Party");
 
         if (string.IsNullOrWhiteSpace(ItemName))
+            missingFields.Add("Item");
+
+        if (missingFields.Count > 0)
         {
-            StatusMessage = "Please select or enter item.";
+            StatusMessage = "Mandatory field(s) missing: " + string.Join(", ", missingFields) + ".";
             return false;
         }
 
@@ -2608,6 +2956,8 @@ public class MainViewModel : BaseViewModel
         SelectedOperatorMaster = null;
         OperatorMasterForm = new OperatorMaster
         {
+            CanAccessWeighment = true,
+            CanAccessReports = true,
             CanCaptureFirstWeight = true,
             CanCaptureSecondWeight = true,
             Status = "Active",
@@ -2627,6 +2977,10 @@ public class MainViewModel : BaseViewModel
             EmployeeId = SelectedOperatorMaster.EmployeeId,
             OperatorName = SelectedOperatorMaster.OperatorName,
             Username = SelectedOperatorMaster.Username,
+            PasswordHash = SelectedOperatorMaster.PasswordHash,
+            PasswordSalt = SelectedOperatorMaster.PasswordSalt,
+            Password = string.Empty,
+            ConfirmPassword = string.Empty,
             Email = SelectedOperatorMaster.Email,
             MobileNumber = SelectedOperatorMaster.MobileNumber,
             Designation = SelectedOperatorMaster.Designation,
@@ -2638,6 +2992,10 @@ public class MainViewModel : BaseViewModel
             DefaultShift = SelectedOperatorMaster.DefaultShift,
             Role = SelectedOperatorMaster.Role,
             PermissionProfile = SelectedOperatorMaster.PermissionProfile,
+            CanAccessWeighment = SelectedOperatorMaster.CanAccessWeighment,
+            CanAccessMasters = SelectedOperatorMaster.CanAccessMasters,
+            CanAccessReports = SelectedOperatorMaster.CanAccessReports,
+            CanAccessSettings = SelectedOperatorMaster.CanAccessSettings,
             CanCaptureFirstWeight = SelectedOperatorMaster.CanCaptureFirstWeight,
             CanCaptureSecondWeight = SelectedOperatorMaster.CanCaptureSecondWeight,
             CanPerformManualWeightEntry = SelectedOperatorMaster.CanPerformManualWeightEntry,
@@ -2678,6 +3036,19 @@ public class MainViewModel : BaseViewModel
             MatchesFilter(x.PartyType, ReportPartyTypeFilter) &&
             (MatchesFilter(x.ItemNumber, ReportItemFilter) || MatchesFilter(x.ItemName, ReportItemFilter) || MatchesFilter(x.MaterialName, ReportItemFilter)) &&
             MatchesFilter(x.Status, ReportStatusFilter)));
+    }
+
+    private void ApplyTransactionFilter()
+    {
+        ReplaceCollection(FilteredTransactionRows, TransactionRows.Where(x =>
+            MatchesFilter(x.TicketNo, TransactionTicketFilter) &&
+            MatchesFilter(x.CompanyName, TransactionCompanyFilter) &&
+            MatchesFilter(x.VehicleNo, TransactionVehicleFilter) &&
+            MatchesFilter(x.DriverName, TransactionDriverFilter) &&
+            (MatchesFilter(x.PartyAccount, TransactionPartyFilter) || MatchesFilter(x.PartyName, TransactionPartyFilter)) &&
+            MatchesFilter(x.PartyType, TransactionPartyTypeFilter) &&
+            (MatchesFilter(x.ItemNumber, TransactionItemFilter) || MatchesFilter(x.ItemName, TransactionItemFilter) || MatchesFilter(x.MaterialName, TransactionItemFilter)) &&
+            MatchesFilter(x.Status, TransactionStatusFilter)));
     }
 
     private void ApplyMasterFilters()
