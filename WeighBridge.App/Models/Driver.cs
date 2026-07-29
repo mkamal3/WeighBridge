@@ -32,7 +32,8 @@ public class Driver
     public bool Blacklisted { get; set; }
     public string BlacklistReason { get; set; } = string.Empty;
     public DateTime? EffectiveFrom { get; set; } = DateTime.Today;
-    public bool IsActive { get; set; } = true;
+    // Availability is controlled by Status. Kept only for backward compatibility with old databases.
+    public bool IsActive { get => string.Equals(Status, "Active", StringComparison.OrdinalIgnoreCase); set { } }
     public string Remarks { get; set; } = string.Empty;
 
     // Backward-compatible aliases used by old UI/filter bindings.

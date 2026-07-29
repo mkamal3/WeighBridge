@@ -4,11 +4,11 @@
         Title="Login - BridgeOne"
         Width="540"
         SizeToContent="Height"
-        MinHeight="390"
+        MinHeight="430"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
         Loaded="Window_Loaded">
-    <Grid Background="#5F6F9F" MinHeight="390">
+    <Grid Background="#5F6F9F" MinHeight="430">
         <Border Background="White"
                 CornerRadius="10"
                 Padding="28"

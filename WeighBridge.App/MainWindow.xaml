@@ -89,14 +89,14 @@
 
                                     <Label Grid.Row="3" Grid.Column="0" Content="Vehicle No *" />
                                     <ComboBox Grid.Row="3" Grid.Column="1"
-                                              ItemsSource="{Binding Vehicles}"
+                                              ItemsSource="{Binding ActiveVehicles}"
                                               DisplayMemberPath="VehicleNo"
                                               Text="{Binding VehicleNo, UpdateSourceTrigger=PropertyChanged}"
                                               IsEditable="True" />
 
                                     <Label Grid.Row="4" Grid.Column="0" Content="Driver Name *" />
                                     <ComboBox Grid.Row="4" Grid.Column="1"
-                                              ItemsSource="{Binding Drivers}"
+                                              ItemsSource="{Binding ActiveDrivers}"
                                               DisplayMemberPath="DriverName"
                                               Text="{Binding DriverName, UpdateSourceTrigger=PropertyChanged}"
                                               IsEditable="True" />
@@ -1113,7 +1113,6 @@
                                                                 <ComboBoxItem Content="Under Maintenance" />
                                                             </ComboBox>
                                                         </DockPanel>
-                                                        <CheckBox Content="Active" IsChecked="{Binding VehicleMasterForm.IsActive}" Margin="180,6,0,0" />
                                                     </StackPanel>
                                                 </GroupBox>
                                             </StackPanel>
@@ -1179,7 +1178,6 @@
                                                 <DataGridTextColumn Header="Legal Entity" Binding="{Binding LegalEntity}" Width="140" />
                                                 <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="120" />
                                                 <DataGridCheckBoxColumn Header="Blacklisted" Binding="{Binding Blacklisted}" Width="110" />
-                                                <DataGridCheckBoxColumn Header="Active" Binding="{Binding IsActive}" Width="80" />
                                             </DataGrid.Columns>
                                         </DataGrid>
                                     </DockPanel>
@@ -1245,7 +1243,6 @@
                                                         <CheckBox Content="Blacklisted" IsChecked="{Binding DriverMasterForm.Blacklisted}" Margin="200,6,0,0" />
                                                         <DockPanel Margin="0,2"><Label Content="Blacklist Reason" Width="200" /><TextBox Text="{Binding DriverMasterForm.BlacklistReason, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="60" TextWrapping="Wrap" /></DockPanel>
                                                         <DockPanel Margin="0,2"><Label Content="Effective From *" Width="200" /><DatePicker SelectedDate="{Binding DriverMasterForm.EffectiveFrom, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
-                                                        <CheckBox Content="Active" IsChecked="{Binding DriverMasterForm.IsActive}" Margin="200,6,0,0" />
                                                         <DockPanel Margin="0,2"><Label Content="Remarks" Width="200" /><TextBox Text="{Binding DriverMasterForm.Remarks, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="60" TextWrapping="Wrap" /></DockPanel>
                                                     </StackPanel>
                                                 </GroupBox>
@@ -1284,7 +1281,6 @@
                                                 <DataGridTextColumn Header="Scale Capacity" Binding="{Binding ScaleCapacity}" Width="120" />
                                                 <DataGridTextColumn Header="Communication Type" Binding="{Binding CommunicationType}" Width="150" />
                                                 <DataGridTextColumn Header="Operating Status" Binding="{Binding OperatingStatus}" Width="130" />
-                                                <DataGridCheckBoxColumn Header="Active" Binding="{Binding IsActive}" Width="80" />
                                             </DataGrid.Columns>
                                         </DataGrid>
                                     </DockPanel>
@@ -1355,7 +1351,6 @@
                                                         <DockPanel Margin="0,2"><Label Content="Allowed Operators *" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.AllowedOperators, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
                                                         <DockPanel Margin="0,2"><Label Content="Operating Status *" Width="205" /><ComboBox IsEditable="True" Text="{Binding WeighbridgeMasterForm.OperatingStatus, UpdateSourceTrigger=PropertyChanged}"><ComboBoxItem Content="Active" /><ComboBoxItem Content="Inactive" /><ComboBoxItem Content="Under Maintenance" /><ComboBoxItem Content="Offline" /></ComboBox></DockPanel>
                                                         <DockPanel Margin="0,2"><Label Content="Effective From *" Width="205" /><DatePicker SelectedDate="{Binding WeighbridgeMasterForm.EffectiveFrom, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
-                                                        <CheckBox Content="Active" IsChecked="{Binding WeighbridgeMasterForm.IsActive}" Margin="205,4,0,0" />
                                                         <DockPanel Margin="0,2"><Label Content="Remarks" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.Remarks, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="60" TextWrapping="Wrap" /></DockPanel>
                                                     </StackPanel>
                                                 </GroupBox>
@@ -1395,7 +1390,6 @@
                                                 <DataGridTextColumn Header="Default Weighbridge" Binding="{Binding DefaultWeighbridge}" Width="160" />
                                                 <DataGridTextColumn Header="Role" Binding="{Binding Role}" Width="120" />
                                                 <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="110" />
-                                                <DataGridCheckBoxColumn Header="Active" Binding="{Binding IsActive}" Width="80" />
                                             </DataGrid.Columns>
                                         </DataGrid>
                                     </DockPanel>
@@ -1444,6 +1438,7 @@
                                                         <CheckBox Content="Can Access Weighment" IsChecked="{Binding OperatorMasterForm.CanAccessWeighment}" Margin="205,4,0,0" />
                                                         <CheckBox Content="Can Access Masters" IsChecked="{Binding OperatorMasterForm.CanAccessMasters}" Margin="205,4,0,0" />
                                                         <CheckBox Content="Can Access Reports" IsChecked="{Binding OperatorMasterForm.CanAccessReports}" Margin="205,4,0,0" />
+                                                        <CheckBox Content="Can Access Transactions" IsChecked="{Binding OperatorMasterForm.CanAccessTransactions}" Margin="205,4,0,0" />
                                                         <CheckBox Content="Can Access Settings" IsChecked="{Binding OperatorMasterForm.CanAccessSettings}" Margin="205,4,0,0" />
                                                         <TextBlock Text="Transaction Permissions" FontWeight="SemiBold" Margin="205,10,0,4" />
                                                         <CheckBox Content="Can Capture First Weight" IsChecked="{Binding OperatorMasterForm.CanCaptureFirstWeight}" Margin="205,4,0,0" />
@@ -1451,9 +1446,6 @@
                                                         <CheckBox Content="Can Perform Manual Weight Entry" IsChecked="{Binding OperatorMasterForm.CanPerformManualWeightEntry}" Margin="205,4,0,0" />
                                                         <CheckBox Content="Can Correct Transactions" IsChecked="{Binding OperatorMasterForm.CanCorrectTransactions}" Margin="205,4,0,0" />
                                                         <CheckBox Content="Can Cancel Transactions" IsChecked="{Binding OperatorMasterForm.CanCancelTransactions}" Margin="205,4,0,0" />
-                                                        <CheckBox Content="Can Override Weight" IsChecked="{Binding OperatorMasterForm.CanOverrideWeight}" Margin="205,4,0,0" />
-                                                        <CheckBox Content="Can Approve QC" IsChecked="{Binding OperatorMasterForm.CanApproveQc}" Margin="205,4,0,0" />
-                                                        <CheckBox Content="Can Retry Integration" IsChecked="{Binding OperatorMasterForm.CanRetryIntegration}" Margin="205,4,0,0" />
                                                     </StackPanel>
                                                 </GroupBox>
                                                 <GroupBox Header="Status" Margin="4" Padding="8">
@@ -1461,7 +1453,6 @@
                                                         <DockPanel Margin="0,2"><Label Content="Last Login" Width="205" /><DatePicker SelectedDate="{Binding OperatorMasterForm.LastLogin, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
                                                         <DockPanel Margin="0,2"><Label Content="Status *" Width="205" /><ComboBox IsEditable="True" Text="{Binding OperatorMasterForm.Status, UpdateSourceTrigger=PropertyChanged}"><ComboBoxItem Content="Active" /><ComboBoxItem Content="Inactive" /><ComboBoxItem Content="Suspended" /><ComboBoxItem Content="Locked" /></ComboBox></DockPanel>
                                                         <DockPanel Margin="0,2"><Label Content="Effective From *" Width="205" /><DatePicker SelectedDate="{Binding OperatorMasterForm.EffectiveFrom, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
-                                                        <CheckBox Content="Active" IsChecked="{Binding OperatorMasterForm.IsActive}" Margin="205,4,0,0" />
                                                         <DockPanel Margin="0,2"><Label Content="Remarks" Width="205" /><TextBox Text="{Binding OperatorMasterForm.Remarks, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="60" TextWrapping="Wrap" /></DockPanel>
                                                     </StackPanel>
                                                 </GroupBox>
@@ -1717,7 +1708,7 @@
                                     </Grid.RowDefinitions>
                                     <Label Grid.Row="0" Grid.Column="0" Content="Weighbridge *" />
                                     <ComboBox Grid.Row="0" Grid.Column="1"
-                                              ItemsSource="{Binding WeighbridgeMasters}"
+                                              ItemsSource="{Binding ActiveWeighbridgeMasters}"
                                               SelectedItem="{Binding SelectedSettingsWeighbridge}"
                                               DisplayMemberPath="WeighbridgeDisplay"
                                               IsEditable="False" />

@@ -23,5 +23,6 @@ public class Vehicle
     public DateTime? RegistrationExpiryDate { get; set; }
     public string LegalEntity { get; set; } = string.Empty;
     public string Status { get; set; } = "Active";
-    public bool IsActive { get; set; } = true;
+    // Availability is controlled by Status. Kept only for backward compatibility with old databases.
+    public bool IsActive { get => string.Equals(Status, "Active", StringComparison.OrdinalIgnoreCase); set { } }
 }

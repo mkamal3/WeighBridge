@@ -13,11 +13,14 @@ BridgeOne is a WPF desktop weighbridge application using:
 
 Login is controlled from **Operator Master**.
 
+On first run, BridgeOne creates `ApplicationFolder\Database\bridgeone.db` and seeds an administrator operator for initial access:
+
 ```text
-No hardcoded default login is used. If no operator exists, BridgeOne opens the Initial Setup screen to create the first administrator operator.
+Username: admin
+Password: admin123
 ```
 
-The first administrator operator is saved in the database and has full access.
+The seeded administrator is saved in the database as an operator record. Change the password after first login.
 
 ## Latest Update - Operator-Based Security
 
@@ -39,6 +42,7 @@ Operator Master now controls:
   - Can Access Weighment
   - Can Access Masters
   - Can Access Reports
+  - Can Access Transactions
   - Can Access Settings
 - Transaction permissions:
   - Can Capture First Weight
@@ -46,10 +50,7 @@ Operator Master now controls:
   - Can Perform Manual Weight Entry
   - Can Correct Transactions
   - Can Cancel Transactions
-  - Can Override Weight
-  - Can Approve QC
-  - Can Retry Integration
-- Status / Active
+- Status
 
 ## Transaction Rules
 
@@ -70,8 +71,7 @@ Can Edit Completed Transaction   -> Can Correct Transactions
 Can Delete Completed Transaction -> Can Cancel Transactions
 ```
 
-Completed transactions are corrected from the Completed Today grid when the operator has correction access.
-Completed transactions are cancelled, not physically deleted, when the operator has cancellation access.
+Transactions are corrected and cancelled from the Transactions screen when the operator has the required permissions.
 
 ## Weighbridge Settings
 
@@ -164,3 +164,15 @@ If old columns or old security behavior appears, delete the old `bridgeone.db` f
 - Correct Transaction opens a separate form with transaction data and updates the same transaction after Save.
 - Correction is allowed for both Open and Completed transactions, except Cancelled transactions.
 - Cancel Transaction can cancel both Open and Completed transactions and changes status to Cancelled.
+
+
+### Latest Update - Operator Transaction Access and Status Logic
+
+- Added `Can Access Transactions` in Operator Master screen access.
+- The Transactions tab is controlled by `Can Access Transactions`.
+- Removed `Can Override Weight`, `Can Approve QC`, and `Can Retry Integration` from Operator Master.
+- Removed Active checkbox/column from Vehicle, Driver, Weighbridge, and Operator masters.
+- Availability/login logic now uses Status fields:
+  - Vehicle/Driver Status = Active -> available in weighment lookups.
+  - Weighbridge Operating Status = Active -> available in Settings lookup.
+  - Operator Status = Active -> can login.
