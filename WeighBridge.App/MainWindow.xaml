@@ -278,6 +278,10 @@
                                                 <TextBox Text="{Binding CustomerForm.CustomerAccount, UpdateSourceTrigger=PropertyChanged}" />
                                             </DockPanel>
                                             <DockPanel Margin="0,2">
+                                                <Label Content="Legal Entity *" Width="190" />
+                                                <TextBox Text="{Binding CustomerForm.DataAreaId, UpdateSourceTrigger=PropertyChanged}" />
+                                            </DockPanel>
+                                            <DockPanel Margin="0,2">
                                                 <Label Content="Organization/Person" Width="190" />
                                                 <TextBox Text="{Binding CustomerForm.OrganizationPerson, UpdateSourceTrigger=PropertyChanged}" />
                                             </DockPanel>
@@ -456,6 +460,10 @@
                                             <DockPanel Margin="0,2">
                                                 <Label Content="Vendor Account *" Width="190" />
                                                 <TextBox Text="{Binding VendorForm.VendorAccount, UpdateSourceTrigger=PropertyChanged}" />
+                                            </DockPanel>
+                                            <DockPanel Margin="0,2">
+                                                <Label Content="Legal Entity *" Width="190" />
+                                                <TextBox Text="{Binding VendorForm.DataAreaId, UpdateSourceTrigger=PropertyChanged}" />
                                             </DockPanel>
                                             <DockPanel Margin="0,2">
                                                 <Label Content="Type" Width="190" />
@@ -638,6 +646,10 @@
                                             <DockPanel Margin="0,2">
                                                 <Label Content="Product Number" Width="190" />
                                                 <TextBox Text="{Binding ItemMasterForm.ProductNumber, UpdateSourceTrigger=PropertyChanged}" />
+                                            </DockPanel>
+                                            <DockPanel Margin="0,2">
+                                                <Label Content="Legal Entity *" Width="190" />
+                                                <TextBox Text="{Binding ItemMasterForm.DataAreaId, UpdateSourceTrigger=PropertyChanged}" />
                                             </DockPanel>
                                             <DockPanel Margin="0,2">
                                                 <Label Content="Item Number *" Width="190" />
@@ -895,6 +907,10 @@
                                                 <TextBox Text="{Binding WarehouseMasterForm.Warehouse, UpdateSourceTrigger=PropertyChanged}" />
                                             </DockPanel>
                                             <DockPanel Margin="0,2">
+                                                <Label Content="Legal Entity *" Width="190" />
+                                                <TextBox Text="{Binding WarehouseMasterForm.DataAreaId, UpdateSourceTrigger=PropertyChanged}" />
+                                            </DockPanel>
+                                            <DockPanel Margin="0,2">
                                                 <Label Content="Name *" Width="190" />
                                                 <TextBox Text="{Binding WarehouseMasterForm.Name, UpdateSourceTrigger=PropertyChanged}" />
                                             </DockPanel>
@@ -1102,7 +1118,7 @@
                                                         </DockPanel>
                                                         <DockPanel Margin="0,2">
                                                             <Label Content="Legal Entity" Width="180" />
-                                                            <TextBox Text="{Binding VehicleMasterForm.LegalEntity, UpdateSourceTrigger=PropertyChanged}" />
+                                                            <TextBox Text="{Binding VehicleMasterForm.DataAreaId, UpdateSourceTrigger=PropertyChanged}" />
                                                         </DockPanel>
                                                         <DockPanel Margin="0,2">
                                                             <Label Content="Status" Width="180" />
@@ -1238,7 +1254,7 @@
 
                                                 <GroupBox Header="Status" Margin="4" Padding="8">
                                                     <StackPanel>
-                                                        <DockPanel Margin="0,2"><Label Content="Legal Entity *" Width="200" /><TextBox Text="{Binding DriverMasterForm.LegalEntity, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Legal Entity *" Width="200" /><TextBox Text="{Binding DriverMasterForm.DataAreaId, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
                                                         <DockPanel Margin="0,2"><Label Content="Status *" Width="200" /><ComboBox IsEditable="True" Text="{Binding DriverMasterForm.Status, UpdateSourceTrigger=PropertyChanged}"><ComboBoxItem Content="Active" /><ComboBoxItem Content="Inactive" /><ComboBoxItem Content="Blocked" /><ComboBoxItem Content="Suspended" /></ComboBox></DockPanel>
                                                         <CheckBox Content="Blacklisted" IsChecked="{Binding DriverMasterForm.Blacklisted}" Margin="200,6,0,0" />
                                                         <DockPanel Margin="0,2"><Label Content="Blacklist Reason" Width="200" /><TextBox Text="{Binding DriverMasterForm.BlacklistReason, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="60" TextWrapping="Wrap" /></DockPanel>
@@ -1297,6 +1313,7 @@
                                                 <GroupBox Header="General" Margin="4" Padding="8">
                                                     <StackPanel>
                                                         <DockPanel Margin="0,2"><Label Content="Weighbridge ID" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.WeighbridgeId, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Legal Entity *" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.DataAreaId, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
                                                         <DockPanel Margin="0,2"><Label Content="Weighbridge Code *" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.WeighbridgeCode, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
                                                         <DockPanel Margin="0,2"><Label Content="Weighbridge Name *" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.WeighbridgeName, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
                                                         <DockPanel Margin="0,2"><Label Content="Description" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.Description, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
@@ -1419,8 +1436,7 @@
                                                     <StackPanel>
                                                         <DockPanel Margin="0,2"><Label Content="Designation *" Width="205" /><ComboBox IsEditable="True" Text="{Binding OperatorMasterForm.Designation, UpdateSourceTrigger=PropertyChanged}"><ComboBoxItem Content="Weighbridge Operator" /><ComboBoxItem Content="Supervisor" /><ComboBoxItem Content="QC Inspector" /><ComboBoxItem Content="Administrator" /><ComboBoxItem Content="Cashier" /><ComboBoxItem Content="Manager" /></ComboBox></DockPanel>
                                                         <DockPanel Margin="0,2"><Label Content="Department *" Width="205" /><ComboBox IsEditable="True" Text="{Binding OperatorMasterForm.Department, UpdateSourceTrigger=PropertyChanged}"><ComboBoxItem Content="Operations" /><ComboBoxItem Content="Production" /><ComboBoxItem Content="Warehouse" /><ComboBoxItem Content="Quality" /><ComboBoxItem Content="Finance" /><ComboBoxItem Content="IT" /><ComboBoxItem Content="Administration" /></ComboBox></DockPanel>
-                                                        <DockPanel Margin="0,2"><Label Content="Legal Entity *" Width="205" /><TextBox Text="{Binding OperatorMasterForm.LegalEntity, UpdateSourceTrigger=PropertyChanged}" ToolTip="Multi-select values can be separated by comma." /></DockPanel>
-                                                        <DockPanel Margin="0,2"><Label Content="Default Legal Entity" Width="205" /><TextBox Text="{Binding OperatorMasterForm.DefaultLegalEntity, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Legal Entity *" Width="205" /><TextBox Text="{Binding OperatorMasterForm.DataAreaId, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
                                                     </StackPanel>
                                                 </GroupBox>
                                                 <GroupBox Header="Weighbridge Assignment" Margin="4" Padding="8">

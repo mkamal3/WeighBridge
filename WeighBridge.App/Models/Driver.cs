@@ -27,7 +27,8 @@ public class Driver
     public string EmiratesIdAttachment { get; set; } = string.Empty;
     public string PassportAttachment { get; set; } = string.Empty;
     public string DrivingLicenceAttachment { get; set; } = string.Empty;
-    public string LegalEntity { get; set; } = string.Empty;
+    public string DataAreaId { get; set; } = string.Empty;
+    public string LegalEntity { get => DataAreaId; set => DataAreaId = value; }
     public string Status { get; set; } = "Active";
     public bool Blacklisted { get; set; }
     public string BlacklistReason { get; set; } = string.Empty;

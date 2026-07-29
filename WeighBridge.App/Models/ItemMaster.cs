@@ -3,6 +3,7 @@ namespace WeightBridgeApp.Models;
 public class ItemMaster
 {
     public int ItemMasterId { get; set; }
+    public string DataAreaId { get; set; } = string.Empty;
     public string ItemNumber { get; set; } = string.Empty;
     public string ProductName { get; set; } = string.Empty;
     public string SearchName { get; set; } = string.Empty;

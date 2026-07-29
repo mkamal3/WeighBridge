@@ -176,3 +176,11 @@ If old columns or old security behavior appears, delete the old `bridgeone.db` f
   - Vehicle/Driver Status = Active -> available in weighment lookups.
   - Weighbridge Operating Status = Active -> available in Settings lookup.
   - Operator Status = Active -> can login.
+
+## Latest DataAreaId / Legal Entity Update
+- Added `DataAreaId` to all master models and master database tables.
+- Frontend label is shown as **Legal Entity**.
+- Operator Master now uses one Legal Entity field only; duplicate Default Legal Entity field is removed from the UI.
+- Existing `LegalEntity`/`DefaultLegalEntity` columns are migrated into `DataAreaId` for backward compatibility with old SQLite databases.
+- Master lookups are filtered by the current operator's `DataAreaId`/Legal Entity.
+- Weighment transactions also store `DataAreaId` together with Company/Legal Entity for reporting and identification.

@@ -3,6 +3,7 @@ namespace WeightBridgeApp.Models;
 public class Vendor
 {
     public int VendorId { get; set; }
+    public string DataAreaId { get; set; } = string.Empty;
     public string VendorAccount { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string MethodOfPayment { get; set; } = string.Empty;

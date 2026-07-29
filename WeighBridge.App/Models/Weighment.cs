@@ -3,6 +3,7 @@ namespace WeightBridgeApp.Models;
 public class Weighment
 {
     public int WeighmentId { get; set; }
+    public string DataAreaId { get; set; } = string.Empty;
     public string TicketNo { get; set; } = string.Empty;
     public string CompanyName { get; set; } = string.Empty;
     public string VehicleNo { get; set; } = string.Empty;

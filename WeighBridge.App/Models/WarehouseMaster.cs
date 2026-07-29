@@ -3,6 +3,7 @@ namespace WeightBridgeApp.Models;
 public class WarehouseMaster
 {
     public int WarehouseMasterId { get; set; }
+    public string DataAreaId { get; set; } = string.Empty;
     public string Warehouse { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string Site { get; set; } = string.Empty;
