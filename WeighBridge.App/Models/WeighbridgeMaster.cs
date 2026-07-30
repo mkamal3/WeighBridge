@@ -3,6 +3,7 @@ namespace WeightBridgeApp.Models;
 public class WeighbridgeMaster
 {
     public int WeighbridgeId { get; set; }
+    public string DataAreaId { get; set; } = string.Empty;
     public string WeighbridgeCode { get; set; } = string.Empty;
     public string WeighbridgeName { get; set; } = string.Empty;
     public string WeighbridgeDisplay => string.IsNullOrWhiteSpace(WeighbridgeName) ? WeighbridgeCode : $"{WeighbridgeCode} - {WeighbridgeName}";

@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS Materials (
 
 CREATE TABLE IF NOT EXISTS Vehicles (
     VehicleId INTEGER PRIMARY KEY AUTOINCREMENT,
+    DataAreaId TEXT NOT NULL DEFAULT 'DAT',
     VehicleNo TEXT NOT NULL UNIQUE,
     PlateNumber TEXT NOT NULL DEFAULT '',
     PlateEmirate TEXT NOT NULL DEFAULT '',
@@ -79,6 +80,7 @@ CREATE TABLE IF NOT EXISTS Vehicles (
 
 CREATE TABLE IF NOT EXISTS Drivers (
     DriverId INTEGER PRIMARY KEY AUTOINCREMENT,
+    DataAreaId TEXT NOT NULL DEFAULT 'DAT',
     DriverName TEXT NOT NULL UNIQUE,
     MobileNumber TEXT NOT NULL DEFAULT '',
     SecondaryMobile TEXT NOT NULL DEFAULT '',
@@ -117,6 +119,7 @@ CREATE TABLE IF NOT EXISTS Drivers (
 
 CREATE TABLE IF NOT EXISTS Weighments (
     WeighmentId INTEGER PRIMARY KEY AUTOINCREMENT,
+    DataAreaId TEXT NOT NULL DEFAULT 'DAT',
     TicketNo TEXT NOT NULL UNIQUE,
     CompanyName TEXT NOT NULL DEFAULT '',
     VehicleNo TEXT NOT NULL,
@@ -145,6 +148,7 @@ CREATE TABLE IF NOT EXISTS Weighments (
 
 CREATE TABLE IF NOT EXISTS Customers (
     CustomerId INTEGER PRIMARY KEY AUTOINCREMENT,
+    DataAreaId TEXT NOT NULL DEFAULT 'DAT',
     CustomerAccount TEXT NOT NULL UNIQUE,
     Name TEXT NOT NULL,
     MethodOfPayment TEXT NOT NULL DEFAULT '',
@@ -174,6 +178,7 @@ CREATE TABLE IF NOT EXISTS Customers (
 
 CREATE TABLE IF NOT EXISTS Vendors (
     VendorId INTEGER PRIMARY KEY AUTOINCREMENT,
+    DataAreaId TEXT NOT NULL DEFAULT 'DAT',
     VendorAccount TEXT NOT NULL UNIQUE,
     Name TEXT NOT NULL,
     MethodOfPayment TEXT NOT NULL DEFAULT '',
@@ -203,6 +208,7 @@ CREATE TABLE IF NOT EXISTS Vendors (
 
 CREATE TABLE IF NOT EXISTS ItemMasters (
     ItemMasterId INTEGER PRIMARY KEY AUTOINCREMENT,
+    DataAreaId TEXT NOT NULL DEFAULT 'DAT',
     ItemNumber TEXT NOT NULL UNIQUE,
     ProductName TEXT NOT NULL,
     SearchName TEXT NOT NULL DEFAULT '',
@@ -253,6 +259,7 @@ CREATE TABLE IF NOT EXISTS ItemMasters (
 
 CREATE TABLE IF NOT EXISTS WarehouseMasters (
     WarehouseMasterId INTEGER PRIMARY KEY AUTOINCREMENT,
+    DataAreaId TEXT NOT NULL DEFAULT 'DAT',
     Warehouse TEXT NOT NULL UNIQUE,
     Name TEXT NOT NULL,
     Site TEXT NOT NULL DEFAULT '',
@@ -274,6 +281,7 @@ CREATE TABLE IF NOT EXISTS WarehouseMasters (
 
 CREATE TABLE IF NOT EXISTS WeighbridgeMasters (
     WeighbridgeId INTEGER PRIMARY KEY AUTOINCREMENT,
+    DataAreaId TEXT NOT NULL DEFAULT 'DAT',
     WeighbridgeCode TEXT NOT NULL UNIQUE,
     WeighbridgeName TEXT NOT NULL,
     Description TEXT NOT NULL DEFAULT '',
@@ -320,6 +328,7 @@ CREATE TABLE IF NOT EXISTS WeighbridgeMasters (
 
 CREATE TABLE IF NOT EXISTS OperatorMasters (
     OperatorId INTEGER PRIMARY KEY AUTOINCREMENT,
+    DataAreaId TEXT NOT NULL DEFAULT 'DAT',
     EmployeeId TEXT NOT NULL UNIQUE,
     OperatorName TEXT NOT NULL,
     Username TEXT NOT NULL UNIQUE,
@@ -481,6 +490,7 @@ TcpPort = excluded.TcpPort;";
             result.Add(new Vehicle
             {
                 VehicleId = Convert.ToInt32(reader["VehicleId"]),
+                DataAreaId = ReadDataAreaId(reader),
                 PlateNumber = plateNumber,
                 PlateEmirate = ReadText(reader, "PlateEmirate"),
                 PlateCategory = ReadText(reader, "PlateCategory"),
@@ -512,6 +522,7 @@ TcpPort = excluded.TcpPort;";
             result.Add(new Driver
             {
                 DriverId = Convert.ToInt32(reader["DriverId"]),
+                DataAreaId = ReadDataAreaId(reader),
                 DriverName = ReadText(reader, "DriverName"),
                 MobileNumber = string.IsNullOrWhiteSpace(ReadText(reader, "MobileNumber")) ? ReadText(reader, "MobileNo") : ReadText(reader, "MobileNumber"),
                 SecondaryMobile = ReadText(reader, "SecondaryMobile"),
@@ -585,6 +596,8 @@ TcpPort = excluded.TcpPort;";
 
     public Task SaveVehicleAsync(Vehicle vehicle) => Task.Run(() =>
     {
+        if (string.IsNullOrWhiteSpace(vehicle.DataAreaId))
+            throw new InvalidOperationException("Legal Entity is mandatory.");
         if (string.IsNullOrWhiteSpace(vehicle.PlateNumber))
             throw new InvalidOperationException("Plate Number is mandatory.");
         if (string.IsNullOrWhiteSpace(vehicle.PlateEmirate))
@@ -600,6 +613,7 @@ TcpPort = excluded.TcpPort;";
         {
             command.CommandText = @"
 UPDATE Vehicles SET
+DataAreaId = $DataAreaId,
 VehicleNo = $VehicleNo,
 PlateNumber = $PlateNumber,
 PlateEmirate = $PlateEmirate,
@@ -621,9 +635,9 @@ WHERE VehicleId = $VehicleId;";
         {
             command.CommandText = @"
 INSERT INTO Vehicles
-(VehicleNo, PlateNumber, PlateEmirate, PlateCategory, VehicleType, OwnershipType, OwnerPartyAccount, Transporter, Capacity, DefaultDriver, RegistrationExpiryDate, LegalEntity, Status, IsActive)
+(DataAreaId, VehicleNo, PlateNumber, PlateEmirate, PlateCategory, VehicleType, OwnershipType, OwnerPartyAccount, Transporter, Capacity, DefaultDriver, RegistrationExpiryDate, LegalEntity, Status, IsActive)
 VALUES
-($VehicleNo, $PlateNumber, $PlateEmirate, $PlateCategory, $VehicleType, $OwnershipType, $OwnerPartyAccount, $Transporter, $Capacity, $DefaultDriver, $RegistrationExpiryDate, $LegalEntity, $Status, $IsActive);";
+($DataAreaId, $VehicleNo, $PlateNumber, $PlateEmirate, $PlateCategory, $VehicleType, $OwnershipType, $OwnerPartyAccount, $Transporter, $Capacity, $DefaultDriver, $RegistrationExpiryDate, $LegalEntity, $Status, $IsActive);";
         }
 
         AddVehicleParameters(command, vehicle);
@@ -646,6 +660,8 @@ VALUES
 
     public Task SaveDriverAsync(Driver driver) => Task.Run(() =>
     {
+        if (string.IsNullOrWhiteSpace(driver.DataAreaId))
+            throw new InvalidOperationException("Legal Entity is mandatory.");
         if (string.IsNullOrWhiteSpace(driver.DriverName))
             throw new InvalidOperationException("Driver Name is mandatory.");
         if (string.IsNullOrWhiteSpace(driver.MobileNumber))
@@ -679,6 +695,7 @@ VALUES
         {
             command.CommandText = @"
 UPDATE Drivers SET
+DataAreaId = $DataAreaId,
 DriverName = $DriverName,
 MobileNumber = $MobileNumber,
 MobileNo = $MobileNumber,
@@ -720,9 +737,9 @@ WHERE DriverId = $DriverId;";
         {
             command.CommandText = @"
 INSERT INTO Drivers
-(DriverName, MobileNumber, MobileNo, SecondaryMobile, Email, Nationality, DriverType, EmployerPartyType, EmployerAccount, IdentificationType, IdentificationNumber, CNIC, IdentificationExpiryDate, EmiratesIdExpiryDate, PassportNumber, PassportExpiryDate, DrivingLicenceNumber, LicenseNo, DrivingLicenceIssuedBy, DrivingLicenceExpiryDate, LicenceCategories, DefaultVehicle, Address, DriverPhoto, EmiratesIdAttachment, PassportAttachment, DrivingLicenceAttachment, LegalEntity, Status, Blacklisted, BlacklistReason, EffectiveFrom, IsActive, Remarks)
+(DataAreaId, DriverName, MobileNumber, MobileNo, SecondaryMobile, Email, Nationality, DriverType, EmployerPartyType, EmployerAccount, IdentificationType, IdentificationNumber, CNIC, IdentificationExpiryDate, EmiratesIdExpiryDate, PassportNumber, PassportExpiryDate, DrivingLicenceNumber, LicenseNo, DrivingLicenceIssuedBy, DrivingLicenceExpiryDate, LicenceCategories, DefaultVehicle, Address, DriverPhoto, EmiratesIdAttachment, PassportAttachment, DrivingLicenceAttachment, LegalEntity, Status, Blacklisted, BlacklistReason, EffectiveFrom, IsActive, Remarks)
 VALUES
-($DriverName, $MobileNumber, $MobileNumber, $SecondaryMobile, $Email, $Nationality, $DriverType, $EmployerPartyType, $EmployerAccount, $IdentificationType, $IdentificationNumber, $IdentificationNumber, $IdentificationExpiryDate, $EmiratesIdExpiryDate, $PassportNumber, $PassportExpiryDate, $DrivingLicenceNumber, $DrivingLicenceNumber, $DrivingLicenceIssuedBy, $DrivingLicenceExpiryDate, $LicenceCategories, $DefaultVehicle, $Address, $DriverPhoto, $EmiratesIdAttachment, $PassportAttachment, $DrivingLicenceAttachment, $LegalEntity, $Status, $Blacklisted, $BlacklistReason, $EffectiveFrom, $IsActive, $Remarks);";
+($DataAreaId, $DriverName, $MobileNumber, $MobileNumber, $SecondaryMobile, $Email, $Nationality, $DriverType, $EmployerPartyType, $EmployerAccount, $IdentificationType, $IdentificationNumber, $IdentificationNumber, $IdentificationExpiryDate, $EmiratesIdExpiryDate, $PassportNumber, $PassportExpiryDate, $DrivingLicenceNumber, $DrivingLicenceNumber, $DrivingLicenceIssuedBy, $DrivingLicenceExpiryDate, $LicenceCategories, $DefaultVehicle, $Address, $DriverPhoto, $EmiratesIdAttachment, $PassportAttachment, $DrivingLicenceAttachment, $LegalEntity, $Status, $Blacklisted, $BlacklistReason, $EffectiveFrom, $IsActive, $Remarks);";
         }
 
         AddDriverParameters(command, driver);
@@ -746,6 +763,8 @@ VALUES
 
     public Task SaveWeighbridgeMasterAsync(WeighbridgeMaster weighbridge) => Task.Run(() =>
     {
+        if (string.IsNullOrWhiteSpace(weighbridge.DataAreaId))
+            throw new InvalidOperationException("Legal Entity is mandatory.");
         if (string.IsNullOrWhiteSpace(weighbridge.WeighbridgeCode))
             throw new InvalidOperationException("Weighbridge Code is mandatory.");
         if (string.IsNullOrWhiteSpace(weighbridge.WeighbridgeName))
@@ -772,6 +791,7 @@ VALUES
         using var command = connection.CreateCommand();
         command.CommandText = weighbridge.WeighbridgeId > 0 ? @"
 UPDATE WeighbridgeMasters SET
+    DataAreaId = $DataAreaId,
     WeighbridgeCode = $WeighbridgeCode,
     WeighbridgeName = $WeighbridgeName,
     Description = $Description,
@@ -814,9 +834,9 @@ UPDATE WeighbridgeMasters SET
     Remarks = $Remarks
 WHERE WeighbridgeId = $WeighbridgeId;" : @"
 INSERT INTO WeighbridgeMasters
-(WeighbridgeCode, WeighbridgeName, Description, PlantSite, Warehouse, WarehouseAddress, WeighbridgeType, ScaleType, ScaleCapacity, CapacityUnit, MinimumWeight, WeightIncrement, WeightStabilityTime, ScaleIpAddress, TcpPort, ScaleComPort, BaudRate, Parity, DataBits, StopBits, CommunicationType, ScaleManufacturer, ScaleModel, ScaleSerialNumber, CalibrationCertificateNo, LastCalibrationDate, NextCalibrationDate, Printer, CameraAvailable, AnprAvailable, TrafficLightAvailable, BoomBarrierAvailable, CctvAvailable, DefaultTicketTemplate, DefaultCurrency, DefaultOperator, AllowedOperators, OperatingStatus, EffectiveFrom, IsActive, Remarks, CreatedAt)
+(DataAreaId, WeighbridgeCode, WeighbridgeName, Description, PlantSite, Warehouse, WarehouseAddress, WeighbridgeType, ScaleType, ScaleCapacity, CapacityUnit, MinimumWeight, WeightIncrement, WeightStabilityTime, ScaleIpAddress, TcpPort, ScaleComPort, BaudRate, Parity, DataBits, StopBits, CommunicationType, ScaleManufacturer, ScaleModel, ScaleSerialNumber, CalibrationCertificateNo, LastCalibrationDate, NextCalibrationDate, Printer, CameraAvailable, AnprAvailable, TrafficLightAvailable, BoomBarrierAvailable, CctvAvailable, DefaultTicketTemplate, DefaultCurrency, DefaultOperator, AllowedOperators, OperatingStatus, EffectiveFrom, IsActive, Remarks, CreatedAt)
 VALUES
-($WeighbridgeCode, $WeighbridgeName, $Description, $PlantSite, $Warehouse, $WarehouseAddress, $WeighbridgeType, $ScaleType, $ScaleCapacity, $CapacityUnit, $MinimumWeight, $WeightIncrement, $WeightStabilityTime, $ScaleIpAddress, $TcpPort, $ScaleComPort, $BaudRate, $Parity, $DataBits, $StopBits, $CommunicationType, $ScaleManufacturer, $ScaleModel, $ScaleSerialNumber, $CalibrationCertificateNo, $LastCalibrationDate, $NextCalibrationDate, $Printer, $CameraAvailable, $AnprAvailable, $TrafficLightAvailable, $BoomBarrierAvailable, $CctvAvailable, $DefaultTicketTemplate, $DefaultCurrency, $DefaultOperator, $AllowedOperators, $OperatingStatus, $EffectiveFrom, $IsActive, $Remarks, $CreatedAt);";
+($DataAreaId, $WeighbridgeCode, $WeighbridgeName, $Description, $PlantSite, $Warehouse, $WarehouseAddress, $WeighbridgeType, $ScaleType, $ScaleCapacity, $CapacityUnit, $MinimumWeight, $WeightIncrement, $WeightStabilityTime, $ScaleIpAddress, $TcpPort, $ScaleComPort, $BaudRate, $Parity, $DataBits, $StopBits, $CommunicationType, $ScaleManufacturer, $ScaleModel, $ScaleSerialNumber, $CalibrationCertificateNo, $LastCalibrationDate, $NextCalibrationDate, $Printer, $CameraAvailable, $AnprAvailable, $TrafficLightAvailable, $BoomBarrierAvailable, $CctvAvailable, $DefaultTicketTemplate, $DefaultCurrency, $DefaultOperator, $AllowedOperators, $OperatingStatus, $EffectiveFrom, $IsActive, $Remarks, $CreatedAt);";
         AddWeighbridgeMasterParameters(command, weighbridge);
         command.Parameters.AddWithValue("$WeighbridgeId", weighbridge.WeighbridgeId);
         command.Parameters.AddWithValue("$CreatedAt", DateTime.Now.ToString("O"));
@@ -838,6 +858,8 @@ VALUES
 
     public Task SaveOperatorMasterAsync(OperatorMaster operatorMaster) => Task.Run(() =>
     {
+        if (string.IsNullOrWhiteSpace(operatorMaster.DataAreaId))
+            throw new InvalidOperationException("Legal Entity is mandatory.");
         if (string.IsNullOrWhiteSpace(operatorMaster.EmployeeId))
             throw new InvalidOperationException("Employee ID is mandatory.");
         if (string.IsNullOrWhiteSpace(operatorMaster.OperatorName))
@@ -885,6 +907,7 @@ VALUES
         using var command = connection.CreateCommand();
         command.CommandText = operatorMaster.OperatorId > 0 ? @"
 UPDATE OperatorMasters SET
+    DataAreaId = $DataAreaId,
     EmployeeId = $EmployeeId,
     OperatorName = $OperatorName,
     Username = $Username,
@@ -917,9 +940,9 @@ UPDATE OperatorMasters SET
     Remarks = $Remarks
 WHERE OperatorId = $OperatorId;" : @"
 INSERT INTO OperatorMasters
-(EmployeeId, OperatorName, Username, PasswordHash, PasswordSalt, Email, MobileNumber, Designation, Department, LegalEntity, DefaultLegalEntity, DefaultWeighbridge, AssignedWeighbridges, DefaultShift, Role, PermissionProfile, CanAccessWeighment, CanAccessMasters, CanAccessReports, CanAccessTransactions, CanAccessSettings, CanCaptureFirstWeight, CanCaptureSecondWeight, CanPerformManualWeightEntry, CanCorrectTransactions, CanCancelTransactions, LastLogin, Status, EffectiveFrom, Remarks, CreatedAt)
+(DataAreaId, EmployeeId, OperatorName, Username, PasswordHash, PasswordSalt, Email, MobileNumber, Designation, Department, LegalEntity, DefaultLegalEntity, DefaultWeighbridge, AssignedWeighbridges, DefaultShift, Role, PermissionProfile, CanAccessWeighment, CanAccessMasters, CanAccessReports, CanAccessTransactions, CanAccessSettings, CanCaptureFirstWeight, CanCaptureSecondWeight, CanPerformManualWeightEntry, CanCorrectTransactions, CanCancelTransactions, LastLogin, Status, EffectiveFrom, Remarks, CreatedAt)
 VALUES
-($EmployeeId, $OperatorName, $Username, $PasswordHash, $PasswordSalt, $Email, $MobileNumber, $Designation, $Department, $LegalEntity, $DefaultLegalEntity, $DefaultWeighbridge, $AssignedWeighbridges, $DefaultShift, $Role, $PermissionProfile, $CanAccessWeighment, $CanAccessMasters, $CanAccessReports, $CanAccessTransactions, $CanAccessSettings, $CanCaptureFirstWeight, $CanCaptureSecondWeight, $CanPerformManualWeightEntry, $CanCorrectTransactions, $CanCancelTransactions, $LastLogin, $Status, $EffectiveFrom, $Remarks, $CreatedAt);";
+($DataAreaId, $EmployeeId, $OperatorName, $Username, $PasswordHash, $PasswordSalt, $Email, $MobileNumber, $Designation, $Department, $DataAreaId, $DataAreaId, $DefaultWeighbridge, $AssignedWeighbridges, $DefaultShift, $Role, $PermissionProfile, $CanAccessWeighment, $CanAccessMasters, $CanAccessReports, $CanAccessTransactions, $CanAccessSettings, $CanCaptureFirstWeight, $CanCaptureSecondWeight, $CanPerformManualWeightEntry, $CanCorrectTransactions, $CanCancelTransactions, $LastLogin, $Status, $EffectiveFrom, $Remarks, $CreatedAt);";
         AddOperatorMasterParameters(command, operatorMaster);
         command.Parameters.AddWithValue("$OperatorId", operatorMaster.OperatorId);
         command.Parameters.AddWithValue("$CreatedAt", DateTime.Now.ToString("O"));
@@ -941,6 +964,8 @@ VALUES
 
     public Task SaveCustomerAsync(Customer customer) => Task.Run(() =>
     {
+        if (string.IsNullOrWhiteSpace(customer.DataAreaId))
+            throw new InvalidOperationException("Legal Entity is mandatory.");
         if (string.IsNullOrWhiteSpace(customer.CustomerAccount))
             throw new InvalidOperationException("Customer Account is mandatory.");
         if (string.IsNullOrWhiteSpace(customer.Name))
@@ -951,6 +976,7 @@ VALUES
         using var command = connection.CreateCommand();
         command.CommandText = customer.CustomerId > 0 ? @"
 UPDATE Customers SET
+    DataAreaId = $DataAreaId,
     CustomerAccount = $CustomerAccount,
     Name = $Name,
     MethodOfPayment = $MethodOfPayment,
@@ -977,9 +1003,9 @@ UPDATE Customers SET
     SalesTaxGroup = $SalesTaxGroup
 WHERE CustomerId = $CustomerId;" : @"
 INSERT INTO Customers
-(CustomerAccount, Name, MethodOfPayment, TermsOfPayment, DeliveryTerms, AccountStatus, AccountStatusReason, CustomerGroup, EmployeeResponsible, Currency, Telephone, OrganizationPerson, SearchName, ClassificationGroup, AddressNameDescription, Address, AddressPurpose, ContactDescription, ContactType, ContactNumberAddress, ContactExtension, InvoiceAccount, ModeOfDelivery, SalesTaxGroup, CreatedAt)
+(DataAreaId, CustomerAccount, Name, MethodOfPayment, TermsOfPayment, DeliveryTerms, AccountStatus, AccountStatusReason, CustomerGroup, EmployeeResponsible, Currency, Telephone, OrganizationPerson, SearchName, ClassificationGroup, AddressNameDescription, Address, AddressPurpose, ContactDescription, ContactType, ContactNumberAddress, ContactExtension, InvoiceAccount, ModeOfDelivery, SalesTaxGroup, CreatedAt)
 VALUES
-($CustomerAccount, $Name, $MethodOfPayment, $TermsOfPayment, $DeliveryTerms, $AccountStatus, $AccountStatusReason, $CustomerGroup, $EmployeeResponsible, $Currency, $Telephone, $OrganizationPerson, $SearchName, $ClassificationGroup, $AddressNameDescription, $Address, $AddressPurpose, $ContactDescription, $ContactType, $ContactNumberAddress, $ContactExtension, $InvoiceAccount, $ModeOfDelivery, $SalesTaxGroup, $CreatedAt);";
+($DataAreaId, $CustomerAccount, $Name, $MethodOfPayment, $TermsOfPayment, $DeliveryTerms, $AccountStatus, $AccountStatusReason, $CustomerGroup, $EmployeeResponsible, $Currency, $Telephone, $OrganizationPerson, $SearchName, $ClassificationGroup, $AddressNameDescription, $Address, $AddressPurpose, $ContactDescription, $ContactType, $ContactNumberAddress, $ContactExtension, $InvoiceAccount, $ModeOfDelivery, $SalesTaxGroup, $CreatedAt);";
         AddCustomerParameters(command, customer);
         command.Parameters.AddWithValue("$CustomerId", customer.CustomerId);
         command.Parameters.AddWithValue("$CreatedAt", DateTime.Now.ToString("O"));
@@ -1001,6 +1027,8 @@ VALUES
 
     public Task SaveVendorAsync(Vendor vendor) => Task.Run(() =>
     {
+        if (string.IsNullOrWhiteSpace(vendor.DataAreaId))
+            throw new InvalidOperationException("Legal Entity is mandatory.");
         if (string.IsNullOrWhiteSpace(vendor.VendorAccount))
             throw new InvalidOperationException("Vendor Account is mandatory.");
         if (string.IsNullOrWhiteSpace(vendor.Name))
@@ -1011,6 +1039,7 @@ VALUES
         using var command = connection.CreateCommand();
         command.CommandText = vendor.VendorId > 0 ? @"
 UPDATE Vendors SET
+    DataAreaId = $DataAreaId,
     VendorAccount = $VendorAccount,
     Name = $Name,
     MethodOfPayment = $MethodOfPayment,
@@ -1037,9 +1066,9 @@ UPDATE Vendors SET
     SalesTaxGroup = $SalesTaxGroup
 WHERE VendorId = $VendorId;" : @"
 INSERT INTO Vendors
-(VendorAccount, Name, MethodOfPayment, TermsOfPayment, DeliveryTerms, AccountStatus, AccountStatusReason, VendorGroup, EmployeeResponsible, Currency, Telephone, Type, VendorClassificationGroup, SearchName, AddressNameDescription, Address, AddressPurpose, ContactDescription, ContactType, ContactNumberAddress, ContactExtension, InvoiceAccount, ModeOfDelivery, SalesTaxGroup, CreatedAt)
+(DataAreaId, VendorAccount, Name, MethodOfPayment, TermsOfPayment, DeliveryTerms, AccountStatus, AccountStatusReason, VendorGroup, EmployeeResponsible, Currency, Telephone, Type, VendorClassificationGroup, SearchName, AddressNameDescription, Address, AddressPurpose, ContactDescription, ContactType, ContactNumberAddress, ContactExtension, InvoiceAccount, ModeOfDelivery, SalesTaxGroup, CreatedAt)
 VALUES
-($VendorAccount, $Name, $MethodOfPayment, $TermsOfPayment, $DeliveryTerms, $AccountStatus, $AccountStatusReason, $VendorGroup, $EmployeeResponsible, $Currency, $Telephone, $Type, $VendorClassificationGroup, $SearchName, $AddressNameDescription, $Address, $AddressPurpose, $ContactDescription, $ContactType, $ContactNumberAddress, $ContactExtension, $InvoiceAccount, $ModeOfDelivery, $SalesTaxGroup, $CreatedAt);";
+($DataAreaId, $VendorAccount, $Name, $MethodOfPayment, $TermsOfPayment, $DeliveryTerms, $AccountStatus, $AccountStatusReason, $VendorGroup, $EmployeeResponsible, $Currency, $Telephone, $Type, $VendorClassificationGroup, $SearchName, $AddressNameDescription, $Address, $AddressPurpose, $ContactDescription, $ContactType, $ContactNumberAddress, $ContactExtension, $InvoiceAccount, $ModeOfDelivery, $SalesTaxGroup, $CreatedAt);";
         AddVendorParameters(command, vendor);
         command.Parameters.AddWithValue("$VendorId", vendor.VendorId);
         command.Parameters.AddWithValue("$CreatedAt", DateTime.Now.ToString("O"));
@@ -1061,6 +1090,8 @@ VALUES
 
     public Task SaveItemMasterAsync(ItemMaster item) => Task.Run(() =>
     {
+        if (string.IsNullOrWhiteSpace(item.DataAreaId))
+            throw new InvalidOperationException("Legal Entity is mandatory.");
         if (string.IsNullOrWhiteSpace(item.ItemNumber))
             throw new InvalidOperationException("Item Number is mandatory.");
         if (string.IsNullOrWhiteSpace(item.ProductName))
@@ -1071,6 +1102,7 @@ VALUES
         using var command = connection.CreateCommand();
         command.CommandText = item.ItemMasterId > 0 ? @"
 UPDATE ItemMasters SET
+    DataAreaId = $DataAreaId,
     ItemNumber = $ItemNumber,
     ProductName = $ProductName,
     SearchName = $SearchName,
@@ -1118,9 +1150,9 @@ UPDATE ItemMasters SET
     UnitSequenceGroupId = $UnitSequenceGroupId
 WHERE ItemMasterId = $ItemMasterId;" : @"
 INSERT INTO ItemMasters
-(ItemNumber, ProductName, SearchName, ProductType, ProductSubtype, ProductNumber, Description, StorageDimensionGroup, TrackingDimensionGroup, ItemModelGroup, ReservationHierarchy, PurchaseUnit, PurchaseOverDelivery, PurchaseUnderDelivery, BuyerGroup, ItemPriceToleranceGroup, Vendor, PurchaseItemSalesTaxGroup, SellUnit, SellOverDelivery, SellUnderDelivery, SellItemSalesTaxGroup, BatchNumberGroup, SerialNumberGroup, InventoryOverDelivery, InventoryUnderDelivery, CatchWeightItem, CWUnit, NominalQuantity, MinimumQuantity, MaximumQuantity, BOMUnit, ConstantScrap, VariableScrap, CostingLevel, PlanningLevel, CostCalculationLevel, Phantom, CalculationGroup, ProductionType, ItemGroup, CostUnit, LastCostPrice, DateOfPrice, UnitSequenceGroupId, CreatedAt)
+(DataAreaId, ItemNumber, ProductName, SearchName, ProductType, ProductSubtype, ProductNumber, Description, StorageDimensionGroup, TrackingDimensionGroup, ItemModelGroup, ReservationHierarchy, PurchaseUnit, PurchaseOverDelivery, PurchaseUnderDelivery, BuyerGroup, ItemPriceToleranceGroup, Vendor, PurchaseItemSalesTaxGroup, SellUnit, SellOverDelivery, SellUnderDelivery, SellItemSalesTaxGroup, BatchNumberGroup, SerialNumberGroup, InventoryOverDelivery, InventoryUnderDelivery, CatchWeightItem, CWUnit, NominalQuantity, MinimumQuantity, MaximumQuantity, BOMUnit, ConstantScrap, VariableScrap, CostingLevel, PlanningLevel, CostCalculationLevel, Phantom, CalculationGroup, ProductionType, ItemGroup, CostUnit, LastCostPrice, DateOfPrice, UnitSequenceGroupId, CreatedAt)
 VALUES
-($ItemNumber, $ProductName, $SearchName, $ProductType, $ProductSubtype, $ProductNumber, $Description, $StorageDimensionGroup, $TrackingDimensionGroup, $ItemModelGroup, $ReservationHierarchy, $PurchaseUnit, $PurchaseOverDelivery, $PurchaseUnderDelivery, $BuyerGroup, $ItemPriceToleranceGroup, $Vendor, $PurchaseItemSalesTaxGroup, $SellUnit, $SellOverDelivery, $SellUnderDelivery, $SellItemSalesTaxGroup, $BatchNumberGroup, $SerialNumberGroup, $InventoryOverDelivery, $InventoryUnderDelivery, $CatchWeightItem, $CWUnit, $NominalQuantity, $MinimumQuantity, $MaximumQuantity, $BOMUnit, $ConstantScrap, $VariableScrap, $CostingLevel, $PlanningLevel, $CostCalculationLevel, $Phantom, $CalculationGroup, $ProductionType, $ItemGroup, $CostUnit, $LastCostPrice, $DateOfPrice, $UnitSequenceGroupId, $CreatedAt);";
+($DataAreaId, $ItemNumber, $ProductName, $SearchName, $ProductType, $ProductSubtype, $ProductNumber, $Description, $StorageDimensionGroup, $TrackingDimensionGroup, $ItemModelGroup, $ReservationHierarchy, $PurchaseUnit, $PurchaseOverDelivery, $PurchaseUnderDelivery, $BuyerGroup, $ItemPriceToleranceGroup, $Vendor, $PurchaseItemSalesTaxGroup, $SellUnit, $SellOverDelivery, $SellUnderDelivery, $SellItemSalesTaxGroup, $BatchNumberGroup, $SerialNumberGroup, $InventoryOverDelivery, $InventoryUnderDelivery, $CatchWeightItem, $CWUnit, $NominalQuantity, $MinimumQuantity, $MaximumQuantity, $BOMUnit, $ConstantScrap, $VariableScrap, $CostingLevel, $PlanningLevel, $CostCalculationLevel, $Phantom, $CalculationGroup, $ProductionType, $ItemGroup, $CostUnit, $LastCostPrice, $DateOfPrice, $UnitSequenceGroupId, $CreatedAt);";
         AddItemMasterParameters(command, item);
         command.Parameters.AddWithValue("$ItemMasterId", item.ItemMasterId);
         command.Parameters.AddWithValue("$CreatedAt", DateTime.Now.ToString("O"));
@@ -1142,6 +1174,8 @@ VALUES
 
     public Task SaveWarehouseMasterAsync(WarehouseMaster warehouse) => Task.Run(() =>
     {
+        if (string.IsNullOrWhiteSpace(warehouse.DataAreaId))
+            throw new InvalidOperationException("Legal Entity is mandatory.");
         if (string.IsNullOrWhiteSpace(warehouse.Warehouse))
             throw new InvalidOperationException("Warehouse is mandatory.");
         if (string.IsNullOrWhiteSpace(warehouse.Name))
@@ -1152,6 +1186,7 @@ VALUES
         using var command = connection.CreateCommand();
         command.CommandText = warehouse.WarehouseMasterId > 0 ? @"
 UPDATE WarehouseMasters SET
+    DataAreaId = $DataAreaId,
     Warehouse = $Warehouse,
     Name = $Name,
     Site = $Site,
@@ -1169,9 +1204,9 @@ UPDATE WarehouseMasters SET
     Purpose = $Purpose
 WHERE WarehouseMasterId = $WarehouseMasterId;" : @"
 INSERT INTO WarehouseMasters
-(Warehouse, Name, Site, Type, QuarantineWarehouse, TransitWarehouse, GoodsInTransitWarehouse, UnderDeliveryWarehouse, VendorAccount, DefaultReceiptLocation, DefaultIssueLocation, DefaultProductionFinishedGood, AddressNameDescription, Address, Purpose, CreatedAt)
+(DataAreaId, Warehouse, Name, Site, Type, QuarantineWarehouse, TransitWarehouse, GoodsInTransitWarehouse, UnderDeliveryWarehouse, VendorAccount, DefaultReceiptLocation, DefaultIssueLocation, DefaultProductionFinishedGood, AddressNameDescription, Address, Purpose, CreatedAt)
 VALUES
-($Warehouse, $Name, $Site, $Type, $QuarantineWarehouse, $TransitWarehouse, $GoodsInTransitWarehouse, $UnderDeliveryWarehouse, $VendorAccount, $DefaultReceiptLocation, $DefaultIssueLocation, $DefaultProductionFinishedGood, $AddressNameDescription, $Address, $Purpose, $CreatedAt);";
+($DataAreaId, $Warehouse, $Name, $Site, $Type, $QuarantineWarehouse, $TransitWarehouse, $GoodsInTransitWarehouse, $UnderDeliveryWarehouse, $VendorAccount, $DefaultReceiptLocation, $DefaultIssueLocation, $DefaultProductionFinishedGood, $AddressNameDescription, $Address, $Purpose, $CreatedAt);";
         AddWarehouseMasterParameters(command, warehouse);
         command.Parameters.AddWithValue("$WarehouseMasterId", warehouse.WarehouseMasterId);
         command.Parameters.AddWithValue("$CreatedAt", DateTime.Now.ToString("O"));
@@ -1209,10 +1244,11 @@ VALUES
         using var command = connection.CreateCommand();
         command.CommandText = @"
 INSERT INTO Weighments
-(TicketNo, CompanyName, VehicleNo, DriverName, PartyId, PartyAccount, PartyName, PartyType, MaterialId, ItemNumber, ItemName, MaterialName, FirstWeight, FirstWeightTime, FirstWeightBy, Status, Remarks, CreatedAt)
+(DataAreaId, TicketNo, CompanyName, VehicleNo, DriverName, PartyId, PartyAccount, PartyName, PartyType, MaterialId, ItemNumber, ItemName, MaterialName, FirstWeight, FirstWeightTime, FirstWeightBy, Status, Remarks, CreatedAt)
 VALUES
-($TicketNo, $CompanyName, $VehicleNo, $DriverName, $PartyId, $PartyAccount, $PartyName, $PartyType, $MaterialId, $ItemNumber, $ItemName, $MaterialName, $FirstWeight, $FirstWeightTime, $FirstWeightBy, $Status, $Remarks, $CreatedAt);
+($DataAreaId, $TicketNo, $CompanyName, $VehicleNo, $DriverName, $PartyId, $PartyAccount, $PartyName, $PartyType, $MaterialId, $ItemNumber, $ItemName, $MaterialName, $FirstWeight, $FirstWeightTime, $FirstWeightBy, $Status, $Remarks, $CreatedAt);
 SELECT last_insert_rowid();";
+        command.Parameters.AddWithValue("$DataAreaId", string.IsNullOrWhiteSpace(weighment.DataAreaId) ? weighment.CompanyName.Trim() : weighment.DataAreaId.Trim());
         command.Parameters.AddWithValue("$TicketNo", weighment.TicketNo);
         command.Parameters.AddWithValue("$CompanyName", weighment.CompanyName.Trim());
         command.Parameters.AddWithValue("$VehicleNo", weighment.VehicleNo);
@@ -1524,14 +1560,15 @@ ORDER BY w.CreatedAt DESC";
         using var command = connection.CreateCommand();
         command.CommandText = @"
 INSERT INTO OperatorMasters
-(EmployeeId, OperatorName, Username, PasswordHash, PasswordSalt, Email, MobileNumber, Designation, Department, LegalEntity, DefaultLegalEntity, DefaultWeighbridge, AssignedWeighbridges, DefaultShift, Role, PermissionProfile, CanAccessWeighment, CanAccessMasters, CanAccessReports, CanAccessTransactions, CanAccessSettings, CanCaptureFirstWeight, CanCaptureSecondWeight, CanPerformManualWeightEntry, CanCorrectTransactions, CanCancelTransactions, LastLogin, Status, EffectiveFrom, Remarks, CreatedAt)
+(DataAreaId, EmployeeId, OperatorName, Username, PasswordHash, PasswordSalt, Email, MobileNumber, Designation, Department, LegalEntity, DefaultLegalEntity, DefaultWeighbridge, AssignedWeighbridges, DefaultShift, Role, PermissionProfile, CanAccessWeighment, CanAccessMasters, CanAccessReports, CanAccessTransactions, CanAccessSettings, CanCaptureFirstWeight, CanCaptureSecondWeight, CanPerformManualWeightEntry, CanCorrectTransactions, CanCancelTransactions, LastLogin, Status, EffectiveFrom, Remarks, CreatedAt)
 VALUES
-($EmployeeId, $OperatorName, $Username, $PasswordHash, $PasswordSalt, '', '', 'Administrator', 'IT', $LegalEntity, $LegalEntity, 'WB-001', 'WB-001', '', 'Administrator', 'Admin', 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, NULL, 'Active', $EffectiveFrom, 'Initial administrator operator created during first setup.', $CreatedAt);";
+($DataAreaId, $EmployeeId, $OperatorName, $Username, $PasswordHash, $PasswordSalt, '', '', 'Administrator', 'IT', $DataAreaId, $DataAreaId, 'WB-001', 'WB-001', '', 'Administrator', 'Admin', 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, NULL, 'Active', $EffectiveFrom, 'Initial administrator operator created during first setup.', $CreatedAt);";
         command.Parameters.AddWithValue("$EmployeeId", "ADMIN-001");
         command.Parameters.AddWithValue("$OperatorName", operatorName);
         command.Parameters.AddWithValue("$Username", username);
         command.Parameters.AddWithValue("$PasswordHash", passwordData.Hash);
         command.Parameters.AddWithValue("$PasswordSalt", passwordData.Salt);
+        command.Parameters.AddWithValue("$DataAreaId", legalEntity);
         command.Parameters.AddWithValue("$LegalEntity", legalEntity);
         command.Parameters.AddWithValue("$EffectiveFrom", DateTime.Today.ToString("O"));
         command.Parameters.AddWithValue("$CreatedAt", DateTime.Now.ToString("O"));
@@ -1761,6 +1798,15 @@ WHERE UserId = $UserId;";
         EnsureColumn(connection, "Weighments", "ItemName", "TEXT NOT NULL DEFAULT ''");
         EnsureColumn(connection, "Weighments", "FirstWeightBy", "TEXT NOT NULL DEFAULT ''");
         EnsureColumn(connection, "Weighments", "SecondWeightBy", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Weighments", "DataAreaId", "TEXT NOT NULL DEFAULT 'DAT'");
+        EnsureColumn(connection, "Customers", "DataAreaId", "TEXT NOT NULL DEFAULT 'DAT'");
+        EnsureColumn(connection, "Vendors", "DataAreaId", "TEXT NOT NULL DEFAULT 'DAT'");
+        EnsureColumn(connection, "ItemMasters", "DataAreaId", "TEXT NOT NULL DEFAULT 'DAT'");
+        EnsureColumn(connection, "WarehouseMasters", "DataAreaId", "TEXT NOT NULL DEFAULT 'DAT'");
+        EnsureColumn(connection, "Vehicles", "DataAreaId", "TEXT NOT NULL DEFAULT 'DAT'");
+        EnsureColumn(connection, "Drivers", "DataAreaId", "TEXT NOT NULL DEFAULT 'DAT'");
+        EnsureColumn(connection, "WeighbridgeMasters", "DataAreaId", "TEXT NOT NULL DEFAULT 'DAT'");
+        EnsureColumn(connection, "OperatorMasters", "DataAreaId", "TEXT NOT NULL DEFAULT 'DAT'");
 
         // Vehicle master migration
         EnsureColumn(connection, "Vehicles", "PlateNumber", "TEXT NOT NULL DEFAULT ''");
@@ -1881,6 +1927,20 @@ WHERE UserId = $UserId;";
         EnsureColumn(connection, "OperatorMasters", "IsActive", "INTEGER NOT NULL DEFAULT 1");
         EnsureColumn(connection, "OperatorMasters", "Remarks", "TEXT NOT NULL DEFAULT ''");
 
+        ExecuteNonQuery(connection, "UPDATE Customers SET DataAreaId = 'DAT' WHERE trim(ifnull(DataAreaId, '')) = ''; ");
+        ExecuteNonQuery(connection, "UPDATE Vendors SET DataAreaId = 'DAT' WHERE trim(ifnull(DataAreaId, '')) = ''; ");
+        ExecuteNonQuery(connection, "UPDATE ItemMasters SET DataAreaId = 'DAT' WHERE trim(ifnull(DataAreaId, '')) = ''; ");
+        ExecuteNonQuery(connection, "UPDATE WarehouseMasters SET DataAreaId = 'DAT' WHERE trim(ifnull(DataAreaId, '')) = ''; ");
+        ExecuteNonQuery(connection, "UPDATE Vehicles SET DataAreaId = LegalEntity WHERE trim(ifnull(DataAreaId, '')) = '' AND trim(ifnull(LegalEntity, '')) <> ''; ");
+        ExecuteNonQuery(connection, "UPDATE Vehicles SET DataAreaId = 'DAT' WHERE trim(ifnull(DataAreaId, '')) = ''; ");
+        ExecuteNonQuery(connection, "UPDATE Drivers SET DataAreaId = LegalEntity WHERE trim(ifnull(DataAreaId, '')) = '' AND trim(ifnull(LegalEntity, '')) <> ''; ");
+        ExecuteNonQuery(connection, "UPDATE Drivers SET DataAreaId = 'DAT' WHERE trim(ifnull(DataAreaId, '')) = ''; ");
+        ExecuteNonQuery(connection, "UPDATE WeighbridgeMasters SET DataAreaId = 'DAT' WHERE trim(ifnull(DataAreaId, '')) = ''; ");
+        ExecuteNonQuery(connection, "UPDATE OperatorMasters SET DataAreaId = DefaultLegalEntity WHERE trim(ifnull(DataAreaId, '')) = '' AND trim(ifnull(DefaultLegalEntity, '')) <> ''; ");
+        ExecuteNonQuery(connection, "UPDATE OperatorMasters SET DataAreaId = LegalEntity WHERE trim(ifnull(DataAreaId, '')) = '' AND trim(ifnull(LegalEntity, '')) <> ''; ");
+        ExecuteNonQuery(connection, "UPDATE OperatorMasters SET DataAreaId = 'DAT' WHERE trim(ifnull(DataAreaId, '')) = ''; ");
+        ExecuteNonQuery(connection, "UPDATE Weighments SET DataAreaId = CompanyName WHERE trim(ifnull(DataAreaId, '')) = '' AND trim(ifnull(CompanyName, '')) <> ''; ");
+        ExecuteNonQuery(connection, "UPDATE Weighments SET DataAreaId = 'DAT' WHERE trim(ifnull(DataAreaId, '')) = ''; ");
         ExecuteNonQuery(connection, "UPDATE Users SET CompanyName = 'Default Company' WHERE trim(ifnull(CompanyName, '')) = ''; ");
         ExecuteNonQuery(connection, "UPDATE Weighments SET CompanyName = 'Default Company' WHERE trim(ifnull(CompanyName, '')) = ''; ");
         ExecuteNonQuery(connection, "UPDATE DeviceSettings SET SelectedWeighbridgeCode = 'WB-001' WHERE trim(ifnull(SelectedWeighbridgeCode, '')) = ''; ");
@@ -1932,12 +1992,12 @@ VALUES
 INSERT OR IGNORE INTO Parties (PartyName, PartyType) VALUES ('Default Customer', 'Customer');
 INSERT OR IGNORE INTO Parties (PartyName, PartyType) VALUES ('Default Vendor', 'Vendor');
 INSERT OR IGNORE INTO Materials (MaterialName) VALUES ('General Material');
-INSERT OR IGNORE INTO Customers (CustomerAccount, Name, CreatedAt) VALUES ('CUST-0001', 'Default Customer', datetime('now'));
-INSERT OR IGNORE INTO Vendors (VendorAccount, Name, CreatedAt) VALUES ('VEND-0001', 'Default Vendor', datetime('now'));
-INSERT OR IGNORE INTO ItemMasters (ItemNumber, ProductName, CreatedAt) VALUES ('ITEM-0001', 'General Item', datetime('now'));
-INSERT OR IGNORE INTO Vehicles (VehicleNo, PlateNumber, PlateEmirate, PlateCategory, VehicleType, Status, IsActive) VALUES ('TEST-0001', 'TEST-0001', 'Dubai', 'Commercial', 'Truck', 'Active', 1);
-INSERT OR IGNORE INTO Drivers (DriverName, MobileNumber, MobileNo, DriverType, EmployerPartyType, IdentificationType, IdentificationNumber, CNIC, DrivingLicenceNumber, LicenseNo, DrivingLicenceIssuedBy, DrivingLicenceExpiryDate, LegalEntity, Status, EffectiveFrom, IsActive) VALUES ('Default Driver', '0000000000', '0000000000', 'Company Driver', 'Legal Entity', 'Emirates ID', 'ID-0001', 'ID-0001', 'LIC-0001', 'LIC-0001', 'Dubai', date('now', '+1 year'), 'Default Company', 'Active', date('now'), 1);
-INSERT OR IGNORE INTO WeighbridgeMasters (WeighbridgeCode, WeighbridgeName, PlantSite, Warehouse, WeighbridgeType, ScaleType, ScaleCapacity, CapacityUnit, CommunicationType, ScaleIpAddress, TcpPort, ScaleComPort, BaudRate, Parity, DataBits, StopBits, OperatingStatus, EffectiveFrom, IsActive, CreatedAt) VALUES ('WB-001', 'Default Weighbridge', 'Default Site', 'Default Warehouse', 'Bidirectional', 'Platform Scale', 100000, 'kg', 'Mock', '192.168.1.100', 4001, 'COM1', 9600, 'None', 8, 'One', 'Active', date('now'), 1, datetime('now'));
+INSERT OR IGNORE INTO Customers (DataAreaId, CustomerAccount, Name, CreatedAt) VALUES ('DAT', 'CUST-0001', 'Default Customer', datetime('now'));
+INSERT OR IGNORE INTO Vendors (DataAreaId, VendorAccount, Name, CreatedAt) VALUES ('DAT', 'VEND-0001', 'Default Vendor', datetime('now'));
+INSERT OR IGNORE INTO ItemMasters (DataAreaId, ItemNumber, ProductName, CreatedAt) VALUES ('DAT', 'ITEM-0001', 'General Item', datetime('now'));
+INSERT OR IGNORE INTO Vehicles (DataAreaId, VehicleNo, PlateNumber, PlateEmirate, PlateCategory, VehicleType, Status, IsActive) VALUES ('DAT', 'TEST-0001', 'TEST-0001', 'Dubai', 'Commercial', 'Truck', 'Active', 1);
+INSERT OR IGNORE INTO Drivers (DataAreaId, DriverName, MobileNumber, MobileNo, DriverType, EmployerPartyType, IdentificationType, IdentificationNumber, CNIC, DrivingLicenceNumber, LicenseNo, DrivingLicenceIssuedBy, DrivingLicenceExpiryDate, LegalEntity, Status, EffectiveFrom, IsActive) VALUES ('DAT', 'Default Driver', '0000000000', '0000000000', 'Company Driver', 'Legal Entity', 'Emirates ID', 'ID-0001', 'ID-0001', 'LIC-0001', 'LIC-0001', 'Dubai', date('now', '+1 year'), 'DAT', 'Active', date('now'), 1);
+INSERT OR IGNORE INTO WeighbridgeMasters (DataAreaId, WeighbridgeCode, WeighbridgeName, PlantSite, Warehouse, WeighbridgeType, ScaleType, ScaleCapacity, CapacityUnit, CommunicationType, ScaleIpAddress, TcpPort, ScaleComPort, BaudRate, Parity, DataBits, StopBits, OperatingStatus, EffectiveFrom, IsActive, CreatedAt) VALUES ('DAT', 'WB-001', 'Default Weighbridge', 'Default Site', 'Default Warehouse', 'Bidirectional', 'Platform Scale', 100000, 'kg', 'Mock', '192.168.1.100', 4001, 'COM1', 9600, 'None', 8, 'One', 'Active', date('now'), 1, datetime('now'));
 ");
 
         SeedDefaultAdminOperator(connection);
@@ -1955,9 +2015,9 @@ INSERT OR IGNORE INTO WeighbridgeMasters (WeighbridgeCode, WeighbridgeName, Plan
         using var command = connection.CreateCommand();
         command.CommandText = @"
 INSERT INTO OperatorMasters
-(EmployeeId, OperatorName, Username, PasswordHash, PasswordSalt, Email, MobileNumber, Designation, Department, LegalEntity, DefaultLegalEntity, DefaultWeighbridge, AssignedWeighbridges, DefaultShift, Role, PermissionProfile, CanAccessWeighment, CanAccessMasters, CanAccessReports, CanAccessTransactions, CanAccessSettings, CanCaptureFirstWeight, CanCaptureSecondWeight, CanPerformManualWeightEntry, CanCorrectTransactions, CanCancelTransactions, LastLogin, Status, EffectiveFrom, Remarks, CreatedAt)
+(DataAreaId, EmployeeId, OperatorName, Username, PasswordHash, PasswordSalt, Email, MobileNumber, Designation, Department, LegalEntity, DefaultLegalEntity, DefaultWeighbridge, AssignedWeighbridges, DefaultShift, Role, PermissionProfile, CanAccessWeighment, CanAccessMasters, CanAccessReports, CanAccessTransactions, CanAccessSettings, CanCaptureFirstWeight, CanCaptureSecondWeight, CanPerformManualWeightEntry, CanCorrectTransactions, CanCancelTransactions, LastLogin, Status, EffectiveFrom, Remarks, CreatedAt)
 VALUES
-('ADMIN-001', 'Administrator', 'admin', $PasswordHash, $PasswordSalt, '', '', 'Administrator', 'IT', 'Default Company', 'Default Company', 'WB-001', 'WB-001', '', 'Administrator', 'Admin', 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, NULL, 'Active', $EffectiveFrom, 'Default administrator created automatically for a new database. Change this password after first login.', $CreatedAt);";
+('DAT', 'ADMIN-001', 'Administrator', 'admin', $PasswordHash, $PasswordSalt, '', '', 'Administrator', 'IT', 'DAT', 'DAT', 'WB-001', 'WB-001', '', 'Administrator', 'Admin', 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, NULL, 'Active', $EffectiveFrom, 'Default administrator created automatically for a new database. Change this password after first login.', $CreatedAt);";
         command.Parameters.AddWithValue("$PasswordHash", passwordData.Hash);
         command.Parameters.AddWithValue("$PasswordSalt", passwordData.Salt);
         command.Parameters.AddWithValue("$EffectiveFrom", DateTime.Today.ToString("O"));
@@ -1988,11 +2048,36 @@ VALUES
         return false;
     }
 
-    private static string ReadText(SqliteDataReader reader, string columnName) =>
-        Convert.ToString(reader[columnName]) ?? string.Empty;
+    private static string ReadText(SqliteDataReader reader, string columnName)
+    {
+        if (!HasColumn(reader, columnName))
+            return string.Empty;
+        var value = reader[columnName];
+        return value == DBNull.Value || value == null ? string.Empty : Convert.ToString(value) ?? string.Empty;
+    }
+
+    private static string ReadDataAreaId(SqliteDataReader reader)
+    {
+        var dataAreaId = ReadText(reader, "DataAreaId");
+        if (!string.IsNullOrWhiteSpace(dataAreaId))
+            return dataAreaId;
+
+        dataAreaId = ReadText(reader, "DefaultLegalEntity");
+        if (!string.IsNullOrWhiteSpace(dataAreaId))
+            return dataAreaId;
+
+        dataAreaId = ReadText(reader, "LegalEntity");
+        if (!string.IsNullOrWhiteSpace(dataAreaId))
+            return dataAreaId;
+
+        dataAreaId = ReadText(reader, "CompanyName");
+        return string.IsNullOrWhiteSpace(dataAreaId) ? "DAT" : dataAreaId;
+    }
 
     private static decimal? ReadDecimal(SqliteDataReader reader, string columnName)
     {
+        if (!HasColumn(reader, columnName))
+            return null;
         var value = reader[columnName];
         if (value == DBNull.Value || value == null)
             return null;
@@ -2001,6 +2086,8 @@ VALUES
 
     private static int? ReadInt(SqliteDataReader reader, string columnName)
     {
+        if (!HasColumn(reader, columnName))
+            return null;
         var value = reader[columnName];
         if (value == DBNull.Value || value == null)
             return null;
@@ -2015,6 +2102,8 @@ VALUES
 
     private static DateTime? ReadDate(SqliteDataReader reader, string columnName)
     {
+        if (!HasColumn(reader, columnName))
+            return null;
         var value = Convert.ToString(reader[columnName]);
         if (string.IsNullOrWhiteSpace(value))
             return null;
@@ -2030,6 +2119,7 @@ VALUES
     private static void AddVehicleParameters(SqliteCommand command, Vehicle vehicle)
     {
         var plate = vehicle.PlateNumber.Trim().ToUpperInvariant();
+        command.Parameters.AddWithValue("$DataAreaId", DbValue(vehicle.DataAreaId));
         command.Parameters.AddWithValue("$VehicleNo", plate);
         command.Parameters.AddWithValue("$PlateNumber", plate);
         command.Parameters.AddWithValue("$PlateEmirate", DbValue(vehicle.PlateEmirate));
@@ -2048,6 +2138,7 @@ VALUES
 
     private static void AddDriverParameters(SqliteCommand command, Driver driver)
     {
+        command.Parameters.AddWithValue("$DataAreaId", DbValue(driver.DataAreaId));
         command.Parameters.AddWithValue("$DriverName", DbValue(driver.DriverName));
         command.Parameters.AddWithValue("$MobileNumber", DbValue(driver.MobileNumber));
         command.Parameters.AddWithValue("$SecondaryMobile", DbValue(driver.SecondaryMobile));
@@ -2083,6 +2174,7 @@ VALUES
 
     private static void AddCustomerParameters(SqliteCommand command, Customer customer)
     {
+        command.Parameters.AddWithValue("$DataAreaId", DbValue(customer.DataAreaId));
         command.Parameters.AddWithValue("$CustomerAccount", customer.CustomerAccount.Trim());
         command.Parameters.AddWithValue("$Name", customer.Name.Trim());
         command.Parameters.AddWithValue("$MethodOfPayment", customer.MethodOfPayment.Trim());
@@ -2111,6 +2203,7 @@ VALUES
 
     private static void AddVendorParameters(SqliteCommand command, Vendor vendor)
     {
+        command.Parameters.AddWithValue("$DataAreaId", DbValue(vendor.DataAreaId));
         command.Parameters.AddWithValue("$VendorAccount", vendor.VendorAccount.Trim());
         command.Parameters.AddWithValue("$Name", vendor.Name.Trim());
         command.Parameters.AddWithValue("$MethodOfPayment", vendor.MethodOfPayment.Trim());
@@ -2139,6 +2232,7 @@ VALUES
 
     private static void AddItemMasterParameters(SqliteCommand command, ItemMaster item)
     {
+        command.Parameters.AddWithValue("$DataAreaId", DbValue(item.DataAreaId));
         command.Parameters.AddWithValue("$ItemNumber", DbValue(item.ItemNumber));
         command.Parameters.AddWithValue("$ProductName", DbValue(item.ProductName));
         command.Parameters.AddWithValue("$SearchName", DbValue(item.SearchName));
@@ -2188,6 +2282,7 @@ VALUES
 
     private static void AddWarehouseMasterParameters(SqliteCommand command, WarehouseMaster warehouse)
     {
+        command.Parameters.AddWithValue("$DataAreaId", DbValue(warehouse.DataAreaId));
         command.Parameters.AddWithValue("$Warehouse", warehouse.Warehouse.Trim());
         command.Parameters.AddWithValue("$Name", warehouse.Name.Trim());
         command.Parameters.AddWithValue("$Site", warehouse.Site.Trim());
@@ -2208,6 +2303,7 @@ VALUES
 
     private static void AddWeighbridgeMasterParameters(SqliteCommand command, WeighbridgeMaster weighbridge)
     {
+        command.Parameters.AddWithValue("$DataAreaId", DbValue(weighbridge.DataAreaId));
         command.Parameters.AddWithValue("$WeighbridgeCode", DbValue(weighbridge.WeighbridgeCode));
         command.Parameters.AddWithValue("$WeighbridgeName", DbValue(weighbridge.WeighbridgeName));
         command.Parameters.AddWithValue("$Description", DbValue(weighbridge.Description));
@@ -2253,6 +2349,7 @@ VALUES
 
     private static void AddOperatorMasterParameters(SqliteCommand command, OperatorMaster operatorMaster)
     {
+        command.Parameters.AddWithValue("$DataAreaId", DbValue(operatorMaster.DataAreaId));
         command.Parameters.AddWithValue("$EmployeeId", DbValue(operatorMaster.EmployeeId));
         command.Parameters.AddWithValue("$OperatorName", DbValue(operatorMaster.OperatorName));
         command.Parameters.AddWithValue("$Username", DbValue(operatorMaster.Username));
@@ -2288,6 +2385,7 @@ VALUES
     private static WeighbridgeMaster MapWeighbridgeMaster(SqliteDataReader reader) => new()
     {
         WeighbridgeId = Convert.ToInt32(reader["WeighbridgeId"]),
+        DataAreaId = ReadDataAreaId(reader),
         WeighbridgeCode = ReadText(reader, "WeighbridgeCode"),
         WeighbridgeName = ReadText(reader, "WeighbridgeName"),
         Description = ReadText(reader, "Description"),
@@ -2333,6 +2431,7 @@ VALUES
     private static OperatorMaster MapOperatorMaster(SqliteDataReader reader) => new()
     {
         OperatorId = Convert.ToInt32(reader["OperatorId"]),
+        DataAreaId = ReadDataAreaId(reader),
         EmployeeId = ReadText(reader, "EmployeeId"),
         OperatorName = ReadText(reader, "OperatorName"),
         Username = ReadText(reader, "Username"),
@@ -2342,8 +2441,6 @@ VALUES
         MobileNumber = ReadText(reader, "MobileNumber"),
         Designation = ReadText(reader, "Designation"),
         Department = ReadText(reader, "Department"),
-        LegalEntity = ReadText(reader, "LegalEntity"),
-        DefaultLegalEntity = ReadText(reader, "DefaultLegalEntity"),
         DefaultWeighbridge = ReadText(reader, "DefaultWeighbridge"),
         AssignedWeighbridges = ReadText(reader, "AssignedWeighbridges"),
         DefaultShift = ReadText(reader, "DefaultShift"),
@@ -2368,6 +2465,7 @@ VALUES
     private static Customer MapCustomer(SqliteDataReader reader) => new()
     {
         CustomerId = Convert.ToInt32(reader["CustomerId"]),
+        DataAreaId = ReadDataAreaId(reader),
         CustomerAccount = ReadText(reader, "CustomerAccount"),
         Name = ReadText(reader, "Name"),
         MethodOfPayment = ReadText(reader, "MethodOfPayment"),
@@ -2397,6 +2495,7 @@ VALUES
     private static Vendor MapVendor(SqliteDataReader reader) => new()
     {
         VendorId = Convert.ToInt32(reader["VendorId"]),
+        DataAreaId = ReadDataAreaId(reader),
         VendorAccount = ReadText(reader, "VendorAccount"),
         Name = ReadText(reader, "Name"),
         MethodOfPayment = ReadText(reader, "MethodOfPayment"),
@@ -2426,6 +2525,7 @@ VALUES
     private static ItemMaster MapItemMaster(SqliteDataReader reader) => new()
     {
         ItemMasterId = Convert.ToInt32(reader["ItemMasterId"]),
+        DataAreaId = ReadDataAreaId(reader),
         ItemNumber = ReadText(reader, "ItemNumber"),
         ProductName = ReadText(reader, "ProductName"),
         SearchName = ReadText(reader, "SearchName"),
@@ -2476,6 +2576,7 @@ VALUES
     private static WarehouseMaster MapWarehouseMaster(SqliteDataReader reader) => new()
     {
         WarehouseMasterId = Convert.ToInt32(reader["WarehouseMasterId"]),
+        DataAreaId = ReadDataAreaId(reader),
         Warehouse = ReadText(reader, "Warehouse"),
         Name = ReadText(reader, "Name"),
         Site = ReadText(reader, "Site"),
@@ -2549,6 +2650,7 @@ VALUES
         return new Weighment
         {
             WeighmentId = Convert.ToInt32(reader["WeighmentId"]),
+            DataAreaId = ReadDataAreaId(reader),
             TicketNo = Convert.ToString(reader["TicketNo"]) ?? string.Empty,
             CompanyName = Convert.ToString(reader["CompanyName"]) ?? string.Empty,
             VehicleNo = Convert.ToString(reader["VehicleNo"]) ?? string.Empty,

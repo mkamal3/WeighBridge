@@ -21,7 +21,8 @@ public class Vehicle
     public decimal Capacity { get; set; }
     public string DefaultDriver { get; set; } = string.Empty;
     public DateTime? RegistrationExpiryDate { get; set; }
-    public string LegalEntity { get; set; } = string.Empty;
+    public string DataAreaId { get; set; } = string.Empty;
+    public string LegalEntity { get => DataAreaId; set => DataAreaId = value; }
     public string Status { get; set; } = "Active";
     // Availability is controlled by Status. Kept only for backward compatibility with old databases.
     public bool IsActive { get => string.Equals(Status, "Active", StringComparison.OrdinalIgnoreCase); set { } }

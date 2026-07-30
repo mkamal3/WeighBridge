@@ -280,7 +280,7 @@ public class MainViewModel : BaseViewModel
     public string CurrentUserDisplay => $"{_currentUser.OperatorName} ({_currentUser.Username})";
     public string CurrentUserId => _currentUser.OperatorId.ToString();
     public string CurrentUsername => _currentUser.Username;
-    public string CurrentUserCompany => string.IsNullOrWhiteSpace(_currentUser.DefaultLegalEntity) ? _currentUser.LegalEntity : _currentUser.DefaultLegalEntity;
+    public string CurrentUserCompany => string.IsNullOrWhiteSpace(_currentUser.DataAreaId) ? "DAT" : _currentUser.DataAreaId;
     public bool CanAccessWeighment => _currentUser.CanAccessWeighment;
     public bool CanAccessSettings => _currentUser.CanAccessSettings;
     public bool CanAccessMasters => _currentUser.CanAccessMasters;
@@ -1718,19 +1718,29 @@ public class MainViewModel : BaseViewModel
         var weighbridgeMasters = await _databaseService.GetWeighbridgeMastersAsync();
         var operatorMasters = await _databaseService.GetOperatorMastersAsync();
 
+        var currentDataAreaId = CurrentUserCompany;
+        var dataAreaVehicles = vehicles.Where(x => IsSameDataArea(x.DataAreaId, currentDataAreaId)).ToList();
+        var dataAreaDrivers = drivers.Where(x => IsSameDataArea(x.DataAreaId, currentDataAreaId)).ToList();
+        var dataAreaCustomers = customers.Where(x => IsSameDataArea(x.DataAreaId, currentDataAreaId)).ToList();
+        var dataAreaVendors = vendors.Where(x => IsSameDataArea(x.DataAreaId, currentDataAreaId)).ToList();
+        var dataAreaItems = itemMasters.Where(x => IsSameDataArea(x.DataAreaId, currentDataAreaId)).ToList();
+        var dataAreaWarehouses = warehouseMasters.Where(x => IsSameDataArea(x.DataAreaId, currentDataAreaId)).ToList();
+        var dataAreaWeighbridges = weighbridgeMasters.Where(x => IsSameDataArea(x.DataAreaId, currentDataAreaId)).ToList();
+        var dataAreaOperators = operatorMasters.Where(x => IsSameDataArea(x.DataAreaId, currentDataAreaId)).ToList();
+
         ReplaceCollection(Parties, parties);
         ReplaceCollection(Materials, materials);
-        ReplaceCollection(Vehicles, vehicles);
-        ReplaceCollection(ActiveVehicles, vehicles.Where(x => IsStatusActive(x.Status)));
-        ReplaceCollection(Drivers, drivers);
-        ReplaceCollection(ActiveDrivers, drivers.Where(x => IsStatusActive(x.Status)));
-        ReplaceCollection(Customers, customers);
-        ReplaceCollection(Vendors, vendors);
-        ReplaceCollection(ItemMasters, itemMasters);
-        ReplaceCollection(WarehouseMasters, warehouseMasters);
-        ReplaceCollection(WeighbridgeMasters, weighbridgeMasters);
-        ReplaceCollection(ActiveWeighbridgeMasters, weighbridgeMasters.Where(x => IsStatusActive(x.OperatingStatus)));
-        ReplaceCollection(OperatorMasters, operatorMasters);
+        ReplaceCollection(Vehicles, dataAreaVehicles);
+        ReplaceCollection(ActiveVehicles, dataAreaVehicles.Where(x => IsStatusActive(x.Status)));
+        ReplaceCollection(Drivers, dataAreaDrivers);
+        ReplaceCollection(ActiveDrivers, dataAreaDrivers.Where(x => IsStatusActive(x.Status)));
+        ReplaceCollection(Customers, dataAreaCustomers);
+        ReplaceCollection(Vendors, dataAreaVendors);
+        ReplaceCollection(ItemMasters, dataAreaItems);
+        ReplaceCollection(WarehouseMasters, dataAreaWarehouses);
+        ReplaceCollection(WeighbridgeMasters, dataAreaWeighbridges);
+        ReplaceCollection(ActiveWeighbridgeMasters, dataAreaWeighbridges.Where(x => IsStatusActive(x.OperatingStatus)));
+        ReplaceCollection(OperatorMasters, dataAreaOperators);
         if (SelectedSettingsWeighbridge == null)
             SelectSettingsWeighbridgeFromSavedSettings();
 
@@ -1742,8 +1752,10 @@ public class MainViewModel : BaseViewModel
 
     private async Task RefreshWeighmentsAsync()
     {
-        ReplaceCollection(OpenWeighments, await _databaseService.GetOpenWeighmentsAsync());
-        ReplaceCollection(CompletedToday, await _databaseService.GetCompletedTodayAsync());
+        var openRows = (await _databaseService.GetOpenWeighmentsAsync()).Where(x => IsSameDataArea(x.DataAreaId, CurrentUserCompany));
+        var completedRows = (await _databaseService.GetCompletedTodayAsync()).Where(x => IsSameDataArea(x.DataAreaId, CurrentUserCompany));
+        ReplaceCollection(OpenWeighments, openRows);
+        ReplaceCollection(CompletedToday, completedRows);
     }
 
     private async Task AddPartyAsync()
@@ -1843,7 +1855,8 @@ public class MainViewModel : BaseViewModel
                 return;
             }
 
-            var rows = await _databaseService.SearchWeighmentsAsync(ReportFrom, ReportTo);
+            var rows = (await _databaseService.SearchWeighmentsAsync(ReportFrom, ReportTo))
+                .Where(x => IsSameDataArea(x.DataAreaId, CurrentUserCompany));
             ReplaceCollection(ReportRows, rows);
             ApplyReportFilter();
             StatusMessage = $"Report loaded. Rows: {FilteredReportRows.Count} of {ReportRows.Count}";
@@ -2022,7 +2035,8 @@ public class MainViewModel : BaseViewModel
                 return;
             }
 
-            var rows = await _databaseService.SearchWeighmentsAsync(TransactionFrom, TransactionTo);
+            var rows = (await _databaseService.SearchWeighmentsAsync(TransactionFrom, TransactionTo))
+                .Where(x => IsSameDataArea(x.DataAreaId, CurrentUserCompany));
             ReplaceCollection(TransactionRows, rows);
             ApplyTransactionFilter();
             StatusMessage = $"Transactions loaded. Rows: {FilteredTransactionRows.Count} of {TransactionRows.Count}";
@@ -2144,6 +2158,7 @@ public class MainViewModel : BaseViewModel
         return new Weighment
         {
             WeighmentId = source.WeighmentId,
+            DataAreaId = source.DataAreaId,
             TicketNo = source.TicketNo,
             CompanyName = source.CompanyName,
             VehicleNo = source.VehicleNo,
@@ -2197,7 +2212,7 @@ public class MainViewModel : BaseViewModel
     private void ClearCustomerForm()
     {
         SelectedCustomer = null;
-        CustomerForm = new Customer();
+        CustomerForm = new Customer { DataAreaId = CurrentUserCompany };
     }
 
     private void LoadSelectedCustomerToForm()
@@ -2208,6 +2223,7 @@ public class MainViewModel : BaseViewModel
         CustomerForm = new Customer
         {
             CustomerId = SelectedCustomer.CustomerId,
+            DataAreaId = SelectedCustomer.DataAreaId,
             CustomerAccount = SelectedCustomer.CustomerAccount,
             Name = SelectedCustomer.Name,
             MethodOfPayment = SelectedCustomer.MethodOfPayment,
@@ -2260,7 +2276,7 @@ public class MainViewModel : BaseViewModel
     private void ClearVendorForm()
     {
         SelectedVendor = null;
-        VendorForm = new Vendor();
+        VendorForm = new Vendor { DataAreaId = CurrentUserCompany };
     }
 
     private void LoadSelectedVendorToForm()
@@ -2271,6 +2287,7 @@ public class MainViewModel : BaseViewModel
         VendorForm = new Vendor
         {
             VendorId = SelectedVendor.VendorId,
+            DataAreaId = SelectedVendor.DataAreaId,
             VendorAccount = SelectedVendor.VendorAccount,
             Name = SelectedVendor.Name,
             MethodOfPayment = SelectedVendor.MethodOfPayment,
@@ -2323,7 +2340,7 @@ public class MainViewModel : BaseViewModel
     private void ClearItemMasterForm()
     {
         SelectedItemMaster = null;
-        ItemMasterForm = new ItemMaster();
+        ItemMasterForm = new ItemMaster { DataAreaId = CurrentUserCompany };
     }
 
     private void LoadSelectedItemMasterToForm()
@@ -2334,6 +2351,7 @@ public class MainViewModel : BaseViewModel
         ItemMasterForm = new ItemMaster
         {
             ItemMasterId = SelectedItemMaster.ItemMasterId,
+            DataAreaId = SelectedItemMaster.DataAreaId,
             ItemNumber = SelectedItemMaster.ItemNumber,
             ProductName = SelectedItemMaster.ProductName,
             SearchName = SelectedItemMaster.SearchName,
@@ -2406,7 +2424,7 @@ public class MainViewModel : BaseViewModel
     private void ClearWarehouseMasterForm()
     {
         SelectedWarehouseMaster = null;
-        WarehouseMasterForm = new WarehouseMaster();
+        WarehouseMasterForm = new WarehouseMaster { DataAreaId = CurrentUserCompany };
     }
 
     private void LoadSelectedWarehouseMasterToForm()
@@ -2417,6 +2435,7 @@ public class MainViewModel : BaseViewModel
         WarehouseMasterForm = new WarehouseMaster
         {
             WarehouseMasterId = SelectedWarehouseMaster.WarehouseMasterId,
+            DataAreaId = SelectedWarehouseMaster.DataAreaId,
             Warehouse = SelectedWarehouseMaster.Warehouse,
             Name = SelectedWarehouseMaster.Name,
             Site = SelectedWarehouseMaster.Site,
@@ -2715,7 +2734,7 @@ public class MainViewModel : BaseViewModel
     private void ClearVehicleMasterForm()
     {
         SelectedVehicleMaster = null;
-        VehicleMasterForm = new Vehicle { Status = "Active" };
+        VehicleMasterForm = new Vehicle { DataAreaId = CurrentUserCompany, Status = "Active" };
     }
 
     private void LoadSelectedVehicleMasterToForm()
@@ -2726,6 +2745,7 @@ public class MainViewModel : BaseViewModel
         VehicleMasterForm = new Vehicle
         {
             VehicleId = SelectedVehicleMaster.VehicleId,
+            DataAreaId = SelectedVehicleMaster.DataAreaId,
             PlateNumber = SelectedVehicleMaster.PlateNumber,
             PlateEmirate = SelectedVehicleMaster.PlateEmirate,
             PlateCategory = SelectedVehicleMaster.PlateCategory,
@@ -2764,7 +2784,7 @@ public class MainViewModel : BaseViewModel
     private void ClearDriverMasterForm()
     {
         SelectedDriverMaster = null;
-        DriverMasterForm = new Driver { Status = "Active", EffectiveFrom = DateTime.Today };
+        DriverMasterForm = new Driver { DataAreaId = CurrentUserCompany, Status = "Active", EffectiveFrom = DateTime.Today };
     }
 
     private void LoadSelectedDriverMasterToForm()
@@ -2775,6 +2795,7 @@ public class MainViewModel : BaseViewModel
         DriverMasterForm = new Driver
         {
             DriverId = SelectedDriverMaster.DriverId,
+            DataAreaId = SelectedDriverMaster.DataAreaId,
             DriverName = SelectedDriverMaster.DriverName,
             MobileNumber = SelectedDriverMaster.MobileNumber,
             SecondaryMobile = SelectedDriverMaster.SecondaryMobile,
@@ -2868,6 +2889,7 @@ public class MainViewModel : BaseViewModel
         SelectedWeighbridgeMaster = null;
         WeighbridgeMasterForm = new WeighbridgeMaster
         {
+            DataAreaId = CurrentUserCompany,
             CapacityUnit = "kg",
             CommunicationType = "Mock",
             ScaleIpAddress = "192.168.1.100",
@@ -2890,6 +2912,7 @@ public class MainViewModel : BaseViewModel
         WeighbridgeMasterForm = new WeighbridgeMaster
         {
             WeighbridgeId = SelectedWeighbridgeMaster.WeighbridgeId,
+            DataAreaId = SelectedWeighbridgeMaster.DataAreaId,
             WeighbridgeCode = SelectedWeighbridgeMaster.WeighbridgeCode,
             WeighbridgeName = SelectedWeighbridgeMaster.WeighbridgeName,
             Description = SelectedWeighbridgeMaster.Description,
@@ -2958,6 +2981,7 @@ public class MainViewModel : BaseViewModel
         SelectedOperatorMaster = null;
         OperatorMasterForm = new OperatorMaster
         {
+            DataAreaId = CurrentUserCompany,
             CanAccessWeighment = true,
             CanAccessReports = true,
             CanAccessTransactions = true,
@@ -2976,6 +3000,7 @@ public class MainViewModel : BaseViewModel
         OperatorMasterForm = new OperatorMaster
         {
             OperatorId = SelectedOperatorMaster.OperatorId,
+            DataAreaId = SelectedOperatorMaster.DataAreaId,
             EmployeeId = SelectedOperatorMaster.EmployeeId,
             OperatorName = SelectedOperatorMaster.OperatorName,
             Username = SelectedOperatorMaster.Username,
@@ -2987,8 +3012,6 @@ public class MainViewModel : BaseViewModel
             MobileNumber = SelectedOperatorMaster.MobileNumber,
             Designation = SelectedOperatorMaster.Designation,
             Department = SelectedOperatorMaster.Department,
-            LegalEntity = SelectedOperatorMaster.LegalEntity,
-            DefaultLegalEntity = SelectedOperatorMaster.DefaultLegalEntity,
             DefaultWeighbridge = SelectedOperatorMaster.DefaultWeighbridge,
             AssignedWeighbridges = SelectedOperatorMaster.AssignedWeighbridges,
             DefaultShift = SelectedOperatorMaster.DefaultShift,
@@ -3152,6 +3175,13 @@ public class MainViewModel : BaseViewModel
     {
         return !string.IsNullOrWhiteSpace(value) &&
                value.Contains(filter?.Trim() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsSameDataArea(string? recordDataAreaId, string? currentDataAreaId)
+    {
+        var record = string.IsNullOrWhiteSpace(recordDataAreaId) ? "DAT" : recordDataAreaId.Trim();
+        var current = string.IsNullOrWhiteSpace(currentDataAreaId) ? "DAT" : currentDataAreaId.Trim();
+        return string.Equals(record, current, StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsStatusActive(string? status) => string.Equals(status?.Trim(), "Active", StringComparison.OrdinalIgnoreCase);

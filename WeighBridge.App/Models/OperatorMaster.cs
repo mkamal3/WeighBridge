@@ -14,8 +14,9 @@ public class OperatorMaster
     public string MobileNumber { get; set; } = string.Empty;
     public string Designation { get; set; } = string.Empty;
     public string Department { get; set; } = string.Empty;
-    public string LegalEntity { get; set; } = string.Empty;
-    public string DefaultLegalEntity { get; set; } = string.Empty;
+    public string DataAreaId { get; set; } = string.Empty;
+    public string LegalEntity { get => DataAreaId; set => DataAreaId = value; }
+    public string DefaultLegalEntity { get => DataAreaId; set => DataAreaId = value; }
     public string DefaultWeighbridge { get; set; } = string.Empty;
     public string AssignedWeighbridges { get; set; } = string.Empty;
     public string DefaultShift { get; set; } = string.Empty;
@@ -41,7 +42,7 @@ public class OperatorMaster
     // Compatibility aliases for old bindings/code while User Management is removed.
     public int UserId { get => OperatorId; set => OperatorId = value; }
     public string FullName { get => OperatorName; set => OperatorName = value; }
-    public string CompanyName { get => DefaultLegalEntity; set => DefaultLegalEntity = value; }
+    public string CompanyName { get => DataAreaId; set => DataAreaId = value; }
     public bool CanAccessUserManagement { get => CanAccessMasters; set => CanAccessMasters = value; }
     public bool CanEditCompletedTransaction { get => CanCorrectTransactions; set => CanCorrectTransactions = value; }
     public bool CanDeleteCompletedTransaction { get => CanCancelTransactions; set => CanCancelTransactions = value; }
