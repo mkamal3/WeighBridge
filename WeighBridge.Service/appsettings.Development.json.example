@@ -7,7 +7,6 @@
     "SqlitePath": "app_data.db",
     "BlobServiceUri": null,
     "ConnectionString": null,
-    "UseDeltaLakeNet": false,
     "BatchSize": 500,
     "AzureRetryCount": 5
   },

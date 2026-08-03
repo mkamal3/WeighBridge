@@ -27,8 +27,8 @@ All Parquet columns (string / long / decimal / boolean / timestamp) are upserted
 | Incremental sync | Upserts by `Id`; hard-deletes rows with `IsDelete=true` |
 | Schema evolution | Creates table if missing; adds missing Parquet columns |
 | State | `sync_state` stores last Delta version + last modified watermark |
-| Auth | `DefaultAzureCredential` |
-| Delta reading | ADLS `_delta_log` + Parquet.Net; optional DeltaLake.Net probe |
+| Auth | `DefaultAzureCredential` (all ADLS reads: log + checkpoint + data files) or a connection string |
+| Delta reading | Pure C#/Parquet.Net checkpoint-aware reader: latest `_delta_log` checkpoint + trailing JSON commits |
 | Retries | Polly exponential backoff for transient Azure errors |
 
 ## Build
@@ -50,7 +50,6 @@ dotnet build DeltaToSqlitePoc/DeltaToSqlitePoc.csproj
     "DeltaTablePath": "d365/tables/mserp_vendvendoraientity",
     "TableName": "Vendor",
     "SqlitePath": "app_data.db",
-    "UseDeltaLakeNet": true,
     "BatchSize": 500,
     "AzureRetryCount": 5
   }

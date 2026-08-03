@@ -27,9 +27,39 @@ All Parquet columns (string / long / decimal / boolean / timestamp) are upserted
 | Incremental sync | Upserts by `Id`; hard-deletes rows with `IsDelete=true` |
 | Schema evolution | Creates table if missing; adds missing Parquet columns |
 | State | `sync_state` stores last Delta version + last modified watermark |
-| Auth | `DefaultAzureCredential` |
-| Delta reading | ADLS `_delta_log` + Parquet.Net; optional DeltaLake.Net probe |
+| Auth | `DefaultAzureCredential` (all ADLS reads: log + checkpoint + data files) or a connection string |
+| Delta log reading | Pure C#/Parquet.Net checkpoint-aware reader resolves the active file set from the latest checkpoint + trailing JSON commits — no native dependency |
 | Retries | Polly exponential backoff for transient Azure errors |
+
+### Delta log reading
+
+Resolving *which Parquet files are currently active* is handled by
+`AdlsDeltaTableReader.ReadSnapshotAsync`, which is checkpoint-aware:
+
+1. List `_delta_log/` and read `_last_checkpoint` (falling back to scanning file names for the
+   highest `*.checkpoint*.parquet` version if `_last_checkpoint` is missing).
+2. If a checkpoint exists, parse its Parquet part(s) via `Delta/DeltaCheckpointReader.cs`
+   (Parquet.Net) to get the base active-file set (and schema, from its `metaData` row).
+3. Replay only the trailing `.json` commits *after* the checkpoint version on top of that base
+   set, via `Delta/DeltaLogParser.cs`.
+
+This matters because Synapse Link Delta tables checkpoint and prune `_delta_log` JSON commits
+over time — reading JSON commits alone (this PoC's original bug) misses everything the
+checkpoint already consolidated, which is why full sync could resolve to "0 active files" once
+the raw commit history had been pruned past a checkpoint. An earlier iteration tried delegating
+this to [DeltaLake.Net](https://github.com/delta-incubator/delta-dotnet) (delta-rs FFI), but its
+file-listing calls (`FilesAsync`/`FileUrisAsync`) crashed with native marshalling errors
+(`DecoderFallbackException`, heap corruption) against this table — so log resolution stays pure
+C#/Parquet.Net instead, with no native dependency.
+
+Since Synapse Link doesn't emit a Delta Change Feed, incremental sync doesn't try to diff
+file lists between Delta versions (that has the same retention fragility). Instead it:
+1. Uses the Delta version only as a cheap "did anything change" gate.
+2. If changed, rescans the *current* active file set and filters rows using the sink's
+   `SinkModifiedOn` watermark (`sync_state.LastUpdatedAt`), handling `IsDelete` as a hard delete.
+
+The local demo mode reuses the same `Delta/DeltaLogParser.cs` JSON replay directly (no
+checkpoint seed needed) since its fixture data has no checkpoints/retention to worry about.
 
 ## Build
 
@@ -50,7 +80,6 @@ dotnet build DeltaToSqlitePoc/DeltaToSqlitePoc.csproj
     "DeltaTablePath": "d365/tables/mserp_vendvendoraientity",
     "TableName": "Vendor",
     "SqlitePath": "app_data.db",
-    "UseDeltaLakeNet": true,
     "BatchSize": 500,
     "AzureRetryCount": 5
   }
@@ -75,6 +104,11 @@ az login
 ```
 
 Grant the identity **Storage Blob Data Reader** on the container/account.
+
+Everything — `_delta_log` listing, checkpoint Parquet, JSON commits, and data Parquet files —
+goes through the same `Azure.Storage.Blobs` client (via `DefaultAzureCredential`), so `az login`
+covers all of it. If `Sync:ConnectionString` is set instead, that's used and AAD is skipped
+entirely.
 
 ## Run
 

@@ -66,13 +66,6 @@ public sealed class LocalDemoDeltaSource
             LoadCommits()));
     }
 
-    public Task<IReadOnlyList<DeltaDataFile>> GetFilesAddedAfterAsync(long fromVersionExclusive, CancellationToken ct)
-    {
-        ct.ThrowIfCancellationRequested();
-        IReadOnlyList<DeltaDataFile> files = DeltaLogParser.GetFilesAddedAfter(LoadCommits(), fromVersionExclusive);
-        return Task.FromResult(files);
-    }
-
     public Task<Stream> OpenParquetStreamAsync(string relativePath, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();

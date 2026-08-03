@@ -41,13 +41,6 @@ public sealed class SyncSettings
     /// </summary>
     public string? ConnectionString { get; set; }
 
-    /// <summary>
-    /// When true, attempt DeltaLake.Net (delta-rs) for metadata/version discovery.
-    /// Data rows are still read via Parquet.Net for predictable mapping.
-    /// Keep false locally unless Azure env vars for delta-rs are configured.
-    /// </summary>
-    public bool UseDeltaLakeNet { get; set; } = false;
-
     /// <summary>Batch size for SQLite inserts/upserts.</summary>
     public int BatchSize { get; set; } = 500;
 
