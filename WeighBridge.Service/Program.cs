@@ -77,7 +77,6 @@ public static class Program
                     services.AddSingleton(cli);
                     services.AddSingleton<ParquetVendorMapper>();
                     services.AddSingleton<ParquetItemMapper>();
-                    services.AddSingleton<DeltaLakeNetMetadataClient>();
 
                     services.AddSingleton(sp =>
                     {
@@ -114,7 +113,6 @@ public static class Program
                             cli.Demo ? sp.GetRequiredService<LocalDemoDeltaSource>() : null,
                             sp.GetRequiredService<ParquetVendorMapper>(),
                             sp.GetRequiredService<SqliteVendorRepository>(),
-                            sp.GetRequiredService<DeltaLakeNetMetadataClient>(),
                             sp.GetRequiredService<ILogger<VendorSyncService>>(),
                             cli.Demo);
                     });
@@ -128,7 +126,6 @@ public static class Program
                             cli.Demo ? sp.GetRequiredService<LocalDemoDeltaSource>() : null,
                             sp.GetRequiredService<ParquetItemMapper>(),
                             sp.GetRequiredService<SqliteItemRepository>(),
-                            sp.GetRequiredService<DeltaLakeNetMetadataClient>(),
                             sp.GetRequiredService<ILogger<ItemSyncService>>(),
                             cli.Demo);
                     });

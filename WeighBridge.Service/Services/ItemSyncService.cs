@@ -18,7 +18,6 @@ public sealed class ItemSyncService
     private readonly LocalDemoDeltaSource? _demoSource;
     private readonly ParquetItemMapper _mapper;
     private readonly SqliteItemRepository _sqlite;
-    private readonly DeltaLakeNetMetadataClient _deltaNet;
     private readonly ILogger<ItemSyncService> _logger;
     private readonly bool _demoMode;
 
@@ -28,7 +27,6 @@ public sealed class ItemSyncService
         LocalDemoDeltaSource? demoSource,
         ParquetItemMapper mapper,
         SqliteItemRepository sqlite,
-        DeltaLakeNetMetadataClient deltaNet,
         ILogger<ItemSyncService> logger,
         bool demoMode)
     {
@@ -37,7 +35,6 @@ public sealed class ItemSyncService
         _demoSource = demoSource;
         _mapper = mapper;
         _sqlite = sqlite;
-        _deltaNet = deltaNet;
         _logger = logger;
         _demoMode = demoMode;
     }
@@ -56,7 +53,6 @@ public sealed class ItemSyncService
         if (!_demoMode)
         {
             await _adlsReader!.EnsureContainerAccessibleAsync(ct).ConfigureAwait(false);
-            _ = await _deltaNet.TryGetVersionAsync(deltaPath, ct).ConfigureAwait(false);
         }
 
         var snapshot = _demoMode
@@ -153,40 +149,20 @@ public sealed class ItemSyncService
             };
         }
 
-        IReadOnlyList<DeltaDataFile> filesToRead;
-        if (_demoMode)
+        // No Delta Change Feed on Synapse Link source tables, and the Delta version alone
+        // doesn't tell us *which* files changed reliably once the ADLS log/checkpoints have
+        // moved on. So incremental sync rescans the current active file set (already resolved
+        // correctly by AdlsDeltaTableReader.ReadSnapshotAsync, checkpoint-aware) and filters
+        // rows by the sink's own modified-timestamp watermark — robust regardless of Delta log
+        // retention.
+        Console.WriteLine("Incremental: scanning active files with SinkModifiedOn watermark filter...");
+        var (rows, allColumns) = await ReadItemsFromFilesAsync(deltaPath, snapshot.DataFiles, ct)
+            .ConfigureAwait(false);
+        if (state.LastUpdatedAt is not null)
         {
-            filesToRead = await _demoSource!
-                .GetFilesAddedAfterAsync(state.LastDeltaVersion.Value, ct)
-                .ConfigureAwait(false);
-        }
-        else
-        {
-            filesToRead = await _adlsReader!
-                .ReadFilesAddedAfterAsync(deltaPath, state.LastDeltaVersion.Value, ct)
-                .ConfigureAwait(false);
-        }
-
-        List<ItemRow> rows;
-        IReadOnlyList<string> allColumns;
-
-        if (filesToRead.Count > 0)
-        {
-            Console.WriteLine(
-                $"Incremental: reading {filesToRead.Count} Parquet file(s) added after version {state.LastDeltaVersion}...");
-            (rows, allColumns) = await ReadItemsFromFilesAsync(deltaPath, filesToRead, ct).ConfigureAwait(false);
-        }
-        else
-        {
-            Console.WriteLine("Incremental: no new data files — scanning active files with SinkModifiedOn filter...");
-            (rows, allColumns) = await ReadItemsFromFilesAsync(deltaPath, snapshot.DataFiles, ct)
-                .ConfigureAwait(false);
-            if (state.LastUpdatedAt is not null)
-            {
-                rows = rows
-                    .Where(r => r.ModifiedOn is null || r.ModifiedOn > state.LastUpdatedAt)
-                    .ToList();
-            }
+            rows = rows
+                .Where(r => r.ModifiedOn is null || r.ModifiedOn > state.LastUpdatedAt)
+                .ToList();
         }
 
         var toDelete = rows.Where(r => r.IsDelete).Select(r => r.Id).ToList();
