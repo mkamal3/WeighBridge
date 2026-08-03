@@ -184,3 +184,58 @@ If old columns or old security behavior appears, delete the old `bridgeone.db` f
 - Existing `LegalEntity`/`DefaultLegalEntity` columns are migrated into `DataAreaId` for backward compatibility with old SQLite databases.
 - Master lookups are filtered by the current operator's `DataAreaId`/Legal Entity.
 - Weighment transactions also store `DataAreaId` together with Company/Legal Entity for reporting and identification.
+
+## Latest Change - Backend D365 Sync Fields
+
+Added backend-only D365/Dataverse sync fields to the following masters. These fields are stored in SQLite and model/database layer only; they are not shown on the WPF UI.
+
+### Customer Master
+- mserp_mk_wbcustomermasterId
+- SinkCreatedOn
+- SinkModifiedOn
+- mserp_dataareaid_id
+- mserp_dataareaid_id_entitytype
+- mserp_dataareaid
+- versionnumber
+- IsDelete
+- CreatedOn
+- createdonpartition
+
+### Vendor Master
+- mserp_mk_wbvendormasterId
+- SinkCreatedOn
+- SinkModifiedOn
+- mserp_dataareaid_id
+- mserp_dataareaid_id_entitytype
+- mserp_dataareaid
+- versionnumber
+- IsDelete
+- CreatedOn
+- createdonpartition
+
+### Item Master
+- mserp_mk_wb_ecoresreleasedproductv2entityId
+- SinkCreatedOn
+- SinkModifiedOn
+- mserp_dataareaid_id
+- mserp_dataareaid_id_entitytype
+- mserp_dataareaid
+- versionnumber
+- IsDelete
+- CreatedOn
+- createdonpartition
+
+### Warehouse Master
+- Id
+- mserp_mk_wbwarehousemasterId
+- SinkCreatedOn
+- SinkModifiedOn
+- mserp_dataareaid_id
+- mserp_dataareaid_id_entitytype
+- mserp_dataareaid
+- versionnumber
+- IsDelete
+- CreatedOn
+- createdonpartition
+
+All listed backend-only sync fields are stored as TEXT in SQLite.
