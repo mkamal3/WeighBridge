@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS Materials (
 CREATE TABLE IF NOT EXISTS Vehicles (
     VehicleId INTEGER PRIMARY KEY AUTOINCREMENT,
     DataAreaId TEXT NOT NULL DEFAULT 'DAT',
-    VehicleNo TEXT NOT NULL UNIQUE,
+    VehicleNo TEXT NOT NULL,
     PlateNumber TEXT NOT NULL DEFAULT '',
     PlateEmirate TEXT NOT NULL DEFAULT '',
     PlateCategory TEXT NOT NULL DEFAULT '',
@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS Vehicles (
 CREATE TABLE IF NOT EXISTS Drivers (
     DriverId INTEGER PRIMARY KEY AUTOINCREMENT,
     DataAreaId TEXT NOT NULL DEFAULT 'DAT',
-    DriverName TEXT NOT NULL UNIQUE,
+    DriverName TEXT NOT NULL,
     MobileNumber TEXT NOT NULL DEFAULT '',
     SecondaryMobile TEXT NOT NULL DEFAULT '',
     Email TEXT NOT NULL DEFAULT '',
@@ -149,7 +149,7 @@ CREATE TABLE IF NOT EXISTS Weighments (
 CREATE TABLE IF NOT EXISTS Customers (
     CustomerId INTEGER PRIMARY KEY AUTOINCREMENT,
     DataAreaId TEXT NOT NULL DEFAULT 'DAT',
-    CustomerAccount TEXT NOT NULL UNIQUE,
+    CustomerAccount TEXT NOT NULL,
     Name TEXT NOT NULL,
     MethodOfPayment TEXT NOT NULL DEFAULT '',
     TermsOfPayment TEXT NOT NULL DEFAULT '',
@@ -173,7 +173,7 @@ CREATE TABLE IF NOT EXISTS Customers (
     InvoiceAccount TEXT NOT NULL DEFAULT '',
     ModeOfDelivery TEXT NOT NULL DEFAULT '',
     SalesTaxGroup TEXT NOT NULL DEFAULT '',
-    mserp_mk_wbcustomermasterId TEXT NOT NULL DEFAULT '',
+    mserp_mk_wbcustomermasterId TEXT NOT NULL DEFAULT '' UNIQUE,
     SinkCreatedOn TEXT NOT NULL DEFAULT '',
     SinkModifiedOn TEXT NOT NULL DEFAULT '',
     mserp_dataareaid_id TEXT NOT NULL DEFAULT '',
@@ -189,7 +189,7 @@ CREATE TABLE IF NOT EXISTS Customers (
 CREATE TABLE IF NOT EXISTS Vendors (
     VendorId INTEGER PRIMARY KEY AUTOINCREMENT,
     DataAreaId TEXT NOT NULL DEFAULT 'DAT',
-    VendorAccount TEXT NOT NULL UNIQUE,
+    VendorAccount TEXT NOT NULL,
     Name TEXT NOT NULL,
     MethodOfPayment TEXT NOT NULL DEFAULT '',
     TermsOfPayment TEXT NOT NULL DEFAULT '',
@@ -213,7 +213,7 @@ CREATE TABLE IF NOT EXISTS Vendors (
     InvoiceAccount TEXT NOT NULL DEFAULT '',
     ModeOfDelivery TEXT NOT NULL DEFAULT '',
     SalesTaxGroup TEXT NOT NULL DEFAULT '',
-    mserp_mk_wbvendormasterId TEXT NOT NULL DEFAULT '',
+    mserp_mk_wbvendormasterId TEXT NOT NULL DEFAULT '' UNIQUE,
     SinkCreatedOn TEXT NOT NULL DEFAULT '',
     SinkModifiedOn TEXT NOT NULL DEFAULT '',
     mserp_dataareaid_id TEXT NOT NULL DEFAULT '',
@@ -229,7 +229,7 @@ CREATE TABLE IF NOT EXISTS Vendors (
 CREATE TABLE IF NOT EXISTS ItemMasters (
     ItemMasterId INTEGER PRIMARY KEY AUTOINCREMENT,
     DataAreaId TEXT NOT NULL DEFAULT 'DAT',
-    ItemNumber TEXT NOT NULL UNIQUE,
+    ItemNumber TEXT NOT NULL,
     ProductName TEXT NOT NULL,
     SearchName TEXT NOT NULL DEFAULT '',
     ProductType TEXT NOT NULL DEFAULT '',
@@ -274,7 +274,7 @@ CREATE TABLE IF NOT EXISTS ItemMasters (
     LastCostPrice REAL,
     DateOfPrice TEXT,
     UnitSequenceGroupId TEXT NOT NULL DEFAULT '',
-    mserp_mk_wb_ecoresreleasedproductv2entityId TEXT NOT NULL DEFAULT '',
+    mserp_mk_wb_ecoresreleasedproductv2entityId TEXT NOT NULL DEFAULT '' UNIQUE,
     SinkCreatedOn TEXT NOT NULL DEFAULT '',
     SinkModifiedOn TEXT NOT NULL DEFAULT '',
     mserp_dataareaid_id TEXT NOT NULL DEFAULT '',
@@ -290,7 +290,7 @@ CREATE TABLE IF NOT EXISTS ItemMasters (
 CREATE TABLE IF NOT EXISTS WarehouseMasters (
     WarehouseMasterId INTEGER PRIMARY KEY AUTOINCREMENT,
     DataAreaId TEXT NOT NULL DEFAULT 'DAT',
-    Warehouse TEXT NOT NULL UNIQUE,
+    Warehouse TEXT NOT NULL,
     Name TEXT NOT NULL,
     Site TEXT NOT NULL DEFAULT '',
     Type TEXT NOT NULL DEFAULT '',
@@ -306,7 +306,7 @@ CREATE TABLE IF NOT EXISTS WarehouseMasters (
     Address TEXT NOT NULL DEFAULT '',
     Purpose TEXT NOT NULL DEFAULT '',
     Id TEXT NOT NULL DEFAULT '',
-    mserp_mk_wbwarehousemasterId TEXT NOT NULL DEFAULT '',
+    mserp_mk_wbwarehousemasterId TEXT NOT NULL DEFAULT '' UNIQUE,
     SinkCreatedOn TEXT NOT NULL DEFAULT '',
     SinkModifiedOn TEXT NOT NULL DEFAULT '',
     mserp_dataareaid_id TEXT NOT NULL DEFAULT '',
@@ -323,7 +323,7 @@ CREATE TABLE IF NOT EXISTS WarehouseMasters (
 CREATE TABLE IF NOT EXISTS WeighbridgeMasters (
     WeighbridgeId INTEGER PRIMARY KEY AUTOINCREMENT,
     DataAreaId TEXT NOT NULL DEFAULT 'DAT',
-    WeighbridgeCode TEXT NOT NULL UNIQUE,
+    WeighbridgeCode TEXT NOT NULL,
     WeighbridgeName TEXT NOT NULL,
     Description TEXT NOT NULL DEFAULT '',
     PlantSite TEXT NOT NULL DEFAULT '',
@@ -370,7 +370,7 @@ CREATE TABLE IF NOT EXISTS WeighbridgeMasters (
 CREATE TABLE IF NOT EXISTS OperatorMasters (
     OperatorId INTEGER PRIMARY KEY AUTOINCREMENT,
     DataAreaId TEXT NOT NULL DEFAULT 'DAT',
-    EmployeeId TEXT NOT NULL UNIQUE,
+    EmployeeId TEXT NOT NULL,
     OperatorName TEXT NOT NULL,
     Username TEXT NOT NULL UNIQUE,
     PasswordHash TEXT NOT NULL DEFAULT '',
@@ -593,7 +593,7 @@ TcpPort = excluded.TcpPort;";
                 Blacklisted = ReadBool(reader, "Blacklisted"),
                 BlacklistReason = ReadText(reader, "BlacklistReason"),
                 EffectiveFrom = ReadDate(reader, "EffectiveFrom"),
-                        Remarks = ReadText(reader, "Remarks")
+                Remarks = ReadText(reader, "Remarks")
             });
         }
         return result;
@@ -648,6 +648,7 @@ TcpPort = excluded.TcpPort;";
 
         using var connection = CreateConnection();
         connection.Open();
+        EnsureCompanyWiseValueIsUnique(connection, "Vehicles", "PlateNumber", vehicle.PlateNumber, vehicle.DataAreaId, "VehicleId", vehicle.VehicleId > 0 ? vehicle.VehicleId : null, "Plate Number");
         using var command = connection.CreateCommand();
 
         if (vehicle.VehicleId > 0)
@@ -730,6 +731,7 @@ VALUES
 
         using var connection = CreateConnection();
         connection.Open();
+        EnsureCompanyWiseValueIsUnique(connection, "Drivers", "DriverName", driver.DriverName, driver.DataAreaId, "DriverId", driver.DriverId > 0 ? driver.DriverId : null, "Driver Name");
         using var command = connection.CreateCommand();
 
         if (driver.DriverId > 0)
@@ -829,6 +831,7 @@ VALUES
 
         using var connection = CreateConnection();
         connection.Open();
+        EnsureCompanyWiseValueIsUnique(connection, "WeighbridgeMasters", "WeighbridgeCode", weighbridge.WeighbridgeCode, weighbridge.DataAreaId, "WeighbridgeId", weighbridge.WeighbridgeId > 0 ? weighbridge.WeighbridgeId : null, "Weighbridge Code");
         using var command = connection.CreateCommand();
         command.CommandText = weighbridge.WeighbridgeId > 0 ? @"
 UPDATE WeighbridgeMasters SET
@@ -929,6 +932,7 @@ VALUES
         using var connection = CreateConnection();
         connection.Open();
         EnsureOperatorUsernameIsUnique(connection, operatorMaster.Username, operatorMaster.OperatorId > 0 ? operatorMaster.OperatorId : null);
+        EnsureCompanyWiseValueIsUnique(connection, "OperatorMasters", "EmployeeId", operatorMaster.EmployeeId, operatorMaster.DataAreaId, "OperatorId", operatorMaster.OperatorId > 0 ? operatorMaster.OperatorId : null, "Employee ID");
 
         if (operatorMaster.OperatorId <= 0 && string.IsNullOrWhiteSpace(operatorMaster.Password))
             throw new InvalidOperationException("Password is mandatory for new operator.");
@@ -1014,6 +1018,7 @@ VALUES
 
         using var connection = CreateConnection();
         connection.Open();
+        EnsureCompanyWiseValueIsUnique(connection, "Customers", "CustomerAccount", customer.CustomerAccount, customer.DataAreaId, "CustomerId", customer.CustomerId > 0 ? customer.CustomerId : null, "Customer Account");
         using var command = connection.CreateCommand();
         command.CommandText = customer.CustomerId > 0 ? @"
 UPDATE Customers SET
@@ -1087,6 +1092,7 @@ VALUES
 
         using var connection = CreateConnection();
         connection.Open();
+        EnsureCompanyWiseValueIsUnique(connection, "Vendors", "VendorAccount", vendor.VendorAccount, vendor.DataAreaId, "VendorId", vendor.VendorId > 0 ? vendor.VendorId : null, "Vendor Account");
         using var command = connection.CreateCommand();
         command.CommandText = vendor.VendorId > 0 ? @"
 UPDATE Vendors SET
@@ -1160,6 +1166,7 @@ VALUES
 
         using var connection = CreateConnection();
         connection.Open();
+        EnsureCompanyWiseValueIsUnique(connection, "ItemMasters", "ItemNumber", item.ItemNumber, item.DataAreaId, "ItemMasterId", item.ItemMasterId > 0 ? item.ItemMasterId : null, "Item Number");
         using var command = connection.CreateCommand();
         command.CommandText = item.ItemMasterId > 0 ? @"
 UPDATE ItemMasters SET
@@ -1254,6 +1261,7 @@ VALUES
 
         using var connection = CreateConnection();
         connection.Open();
+        EnsureCompanyWiseValueIsUnique(connection, "WarehouseMasters", "Warehouse", warehouse.Warehouse, warehouse.DataAreaId, "WarehouseMasterId", warehouse.WarehouseMasterId > 0 ? warehouse.WarehouseMasterId : null, "Warehouse");
         using var command = connection.CreateCommand();
         command.CommandText = warehouse.WarehouseMasterId > 0 ? @"
 UPDATE WarehouseMasters SET
@@ -2045,7 +2053,89 @@ WHERE UserId = $UserId;";
         ExecuteNonQuery(connection, "UPDATE Weighments SET DataAreaId = 'DAT' WHERE trim(ifnull(DataAreaId, '')) = ''; ");
         ExecuteNonQuery(connection, "UPDATE Users SET CompanyName = 'Default Company' WHERE trim(ifnull(CompanyName, '')) = ''; ");
         ExecuteNonQuery(connection, "UPDATE Weighments SET CompanyName = 'Default Company' WHERE trim(ifnull(CompanyName, '')) = ''; ");
+        RemoveLegacySingleColumnUniqueConstraints(connection);
+        CreateCompanyWiseUniqueIndexes(connection);
+
         ExecuteNonQuery(connection, "UPDATE DeviceSettings SET SelectedWeighbridgeCode = 'WB-001' WHERE trim(ifnull(SelectedWeighbridgeCode, '')) = ''; ");
+    }
+
+    private static void RemoveLegacySingleColumnUniqueConstraints(SqliteConnection connection)
+    {
+        RemoveLegacyColumnUniqueConstraint(connection, "Customers", "CustomerAccount");
+        RemoveLegacyColumnUniqueConstraint(connection, "Vendors", "VendorAccount");
+        RemoveLegacyColumnUniqueConstraint(connection, "ItemMasters", "ItemNumber");
+        RemoveLegacyColumnUniqueConstraint(connection, "WarehouseMasters", "Warehouse");
+        RemoveLegacyColumnUniqueConstraint(connection, "Vehicles", "VehicleNo");
+        RemoveLegacyColumnUniqueConstraint(connection, "Drivers", "DriverName");
+        RemoveLegacyColumnUniqueConstraint(connection, "WeighbridgeMasters", "WeighbridgeCode");
+        RemoveLegacyColumnUniqueConstraint(connection, "OperatorMasters", "EmployeeId");
+    }
+
+    private static void RemoveLegacyColumnUniqueConstraint(SqliteConnection connection, string tableName, string columnName)
+    {
+        using var sqlCommand = connection.CreateCommand();
+        sqlCommand.CommandText = "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = $TableName LIMIT 1";
+        sqlCommand.Parameters.AddWithValue("$TableName", tableName);
+        var createSql = Convert.ToString(sqlCommand.ExecuteScalar());
+
+        if (string.IsNullOrWhiteSpace(createSql) || !createSql.Contains($"{columnName} TEXT NOT NULL UNIQUE", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        var backupTableName = $"{tableName}_LegacyUniqueBackup";
+        ExecuteNonQuery(connection, "PRAGMA foreign_keys = OFF;");
+        ExecuteNonQuery(connection, $"DROP TABLE IF EXISTS {QuoteIdentifier(backupTableName)};");
+        ExecuteNonQuery(connection, $"ALTER TABLE {QuoteIdentifier(tableName)} RENAME TO {QuoteIdentifier(backupTableName)};");
+
+        var newCreateSql = createSql.Replace($"{columnName} TEXT NOT NULL UNIQUE", $"{columnName} TEXT NOT NULL", StringComparison.OrdinalIgnoreCase);
+        ExecuteNonQuery(connection, newCreateSql);
+
+        var commonColumns = GetTableColumns(connection, tableName).Intersect(GetTableColumns(connection, backupTableName), StringComparer.OrdinalIgnoreCase).ToList();
+        var columnList = string.Join(", ", commonColumns.Select(QuoteIdentifier));
+        ExecuteNonQuery(connection, $"INSERT INTO {QuoteIdentifier(tableName)} ({columnList}) SELECT {columnList} FROM {QuoteIdentifier(backupTableName)};");
+        ExecuteNonQuery(connection, $"DROP TABLE {QuoteIdentifier(backupTableName)};");
+        ExecuteNonQuery(connection, "PRAGMA foreign_keys = ON;");
+    }
+
+    private static void CreateCompanyWiseUniqueIndexes(SqliteConnection connection)
+    {
+        ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_Customers_DataArea_CustomerAccount ON Customers (DataAreaId, CustomerAccount);");
+        ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_Vendors_DataArea_VendorAccount ON Vendors (DataAreaId, VendorAccount);");
+        ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_ItemMasters_DataArea_ItemNumber ON ItemMasters (DataAreaId, ItemNumber);");
+        ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_WarehouseMasters_DataArea_Warehouse ON WarehouseMasters (DataAreaId, Warehouse);");
+        ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_Vehicles_DataArea_PlateNumber ON Vehicles (DataAreaId, PlateNumber);");
+        ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_Drivers_DataArea_DriverName ON Drivers (DataAreaId, DriverName);");
+        ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_WeighbridgeMasters_DataArea_WeighbridgeCode ON WeighbridgeMasters (DataAreaId, WeighbridgeCode);");
+        ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_OperatorMasters_DataArea_EmployeeId ON OperatorMasters (DataAreaId, EmployeeId);");
+        ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_OperatorMasters_Username ON OperatorMasters (Username);");
+    }
+
+    private static List<string> GetTableColumns(SqliteConnection connection, string tableName)
+    {
+        var result = new List<string>();
+        using var command = connection.CreateCommand();
+        command.CommandText = $"PRAGMA table_info({QuoteIdentifier(tableName)});";
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+            result.Add(Convert.ToString(reader["name"]) ?? string.Empty);
+        return result.Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
+    }
+
+    private static string QuoteIdentifier(string identifier) => $"\"{identifier.Replace("\"", "\"\"")}\"";
+
+    private static void EnsureCompanyWiseValueIsUnique(SqliteConnection connection, string tableName, string keyColumnName, string keyValue, string dataAreaId, string primaryKeyColumnName, int? excludePrimaryKey, string displayName)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = excludePrimaryKey.HasValue
+            ? $"SELECT COUNT(1) FROM {QuoteIdentifier(tableName)} WHERE lower(trim(DataAreaId)) = lower(trim($DataAreaId)) AND lower(trim({QuoteIdentifier(keyColumnName)})) = lower(trim($KeyValue)) AND {QuoteIdentifier(primaryKeyColumnName)} <> $PrimaryKey"
+            : $"SELECT COUNT(1) FROM {QuoteIdentifier(tableName)} WHERE lower(trim(DataAreaId)) = lower(trim($DataAreaId)) AND lower(trim({QuoteIdentifier(keyColumnName)})) = lower(trim($KeyValue))";
+        command.Parameters.AddWithValue("$DataAreaId", dataAreaId.Trim());
+        command.Parameters.AddWithValue("$KeyValue", keyValue.Trim());
+        if (excludePrimaryKey.HasValue)
+            command.Parameters.AddWithValue("$PrimaryKey", excludePrimaryKey.Value);
+
+        var duplicateCount = Convert.ToInt32(command.ExecuteScalar());
+        if (duplicateCount > 0)
+            throw new InvalidOperationException($"{displayName} already exists for this Legal Entity. Please enter a unique value for the selected Legal Entity.");
     }
 
     private static void EnsureColumn(SqliteConnection connection, string tableName, string columnName, string definition)

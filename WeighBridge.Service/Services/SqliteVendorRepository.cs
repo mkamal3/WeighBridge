@@ -63,19 +63,19 @@ public sealed class SqliteVendorRepository : IAsyncDisposable
             """;
         await ExecuteNonQueryAsync(createSql, ct).ConfigureAwait(false);
 
-        var existing = await GetExistingColumnsAsync(tableName, ct).ConfigureAwait(false);
-        foreach (var col in cols)
-        {
-            if (existing.Contains(col))
-            {
-                continue;
-            }
+        //var existing = await GetExistingColumnsAsync(tableName, ct).ConfigureAwait(false);
+        //foreach (var col in cols)
+        //{
+        //    if (existing.Contains(col))
+        //    {
+        //        continue;
+        //    }
 
-            var alter = $"ALTER TABLE {safeTable} ADD COLUMN {QuoteIdent(col)} TEXT NULL;";
-            _logger.LogInformation("Schema evolution: adding column {Column} to {Table}", col, tableName);
-            await ExecuteNonQueryAsync(alter, ct).ConfigureAwait(false);
-            existing.Add(col);
-        }
+        //    var alter = $"ALTER TABLE {safeTable} ADD COLUMN {QuoteIdent(col)} TEXT NULL;";
+        //    _logger.LogInformation("Schema evolution: adding column {Column} to {Table}", col, tableName);
+        //    await ExecuteNonQueryAsync(alter, ct).ConfigureAwait(false);
+        //    existing.Add(col);
+        //}
     }
 
     public async Task DropAndRecreateVendorTableAsync(
@@ -84,7 +84,7 @@ public sealed class SqliteVendorRepository : IAsyncDisposable
         CancellationToken ct)
     {
         var safeTable = QuoteIdent(tableName);
-        await ExecuteNonQueryAsync($"DROP TABLE IF EXISTS {safeTable};", ct).ConfigureAwait(false);
+        //await ExecuteNonQueryAsync($"DROP TABLE IF EXISTS {safeTable};", ct).ConfigureAwait(false);
         await EnsureVendorTableAsync(tableName, columns, ct).ConfigureAwait(false);
     }
 
@@ -110,10 +110,33 @@ public sealed class SqliteVendorRepository : IAsyncDisposable
             allCols.Where(c => !c.Equals("Id", StringComparison.OrdinalIgnoreCase))
                 .Select(c => $"{QuoteIdent(c)}=excluded.{QuoteIdent(c)}"));
 
+        //var sql = $"""
+        //    INSERT INTO {QuoteIdent(tableName)} ({colList})
+        //    VALUES ({paramList})
+        //    ON CONFLICT(ItemMasterId) DO UPDATE SET {updateList};
+        //    """;
+
+
+        var mappings = ColumnMapper.GetColumnMappings(tableName);
+
+        //var mappedColumns = columns
+        //.Select(c => mappings.TryGetValue(c, out var mapped) ? mapped : c)
+        //.ToList();
+
+        //var mappedColumns = columns
+        //.Where(c => mappings.ContainsKey())
+        //.Select(c => mappings[c])
+        //.ToList();
+
+        //if (mappings.ContainsKey("Id"))
+        //{
+            var id = mappings.ContainsKey("MasterId") ? mappings["MasterId"] : "MasterId";
+        //}
+
         var sql = $"""
             INSERT INTO {QuoteIdent(tableName)} ({colList})
             VALUES ({paramList})
-            ON CONFLICT(Id) DO UPDATE SET {updateList};
+            ON CONFLICT({id}) DO UPDATE SET {updateList};
             """;
 
         await using var tx = (SqliteTransaction)await conn.BeginTransactionAsync(ct).ConfigureAwait(false);
@@ -130,6 +153,7 @@ public sealed class SqliteVendorRepository : IAsyncDisposable
             {
                 var col = allCols[i];
                 var value = FormatValue(GetValue(vendor, col));
+                value = value == null ? "" : value;
                 cmd.Parameters.AddWithValue($"@p{i}", value ?? DBNull.Value);
             }
 
@@ -223,21 +247,48 @@ public sealed class SqliteVendorRepository : IAsyncDisposable
     private static List<string> NormalizeColumnOrder(string? tableName, IEnumerable<string> columns)
     {
         var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var ordered = new List<string> { "Id" };
-        set.Add("Id");
+        var ordered = new List<string> { };
+        if (tableName == ItemSchema.DefaultTableName)
+        {
+            ordered = new List<string> { "mserp_mk_wb_ecoresreleasedproductv2entityid" };
+            set.Add("mserp_mk_wb_ecoresreleasedproductv2entityid");
+            //ordered.Add("Id");
+            //set.Add("Id");
+        }
+        else if (tableName == VendorSchema.DefaultTableName)
+        {
+            ordered = new List<string> { "mserp_mk_wbvendormasterid" };
+            set.Add("mserp_mk_wbvendormasterid");
+        }
+        else if (tableName == CustomerSchema.DefaultTableName)
+        {
+            ordered = new List<string> { "mserp_mk_wbcustomermasterid" };
+            set.Add("mserp_mk_wbcustomermasterid");
+        }
+        else if (tableName == WarehouseSchema.DefaultTableName)
+        {
+            ordered = new List<string> { "mserp_mk_wbwarehousemasterid" };
+            set.Add("mserp_mk_wbwarehousemasterid");
+        }
 
         IEnumerable<string> seed = tableName switch
         {
             var t when string.Equals(t, VendorSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase) => VendorSchema.Columns,
             var t when string.Equals(t, CustomerSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase) => CustomerSchema.Columns,
             var t when string.Equals(t, WarehouseSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase) => WarehouseSchema.Columns,
+            var t when string.Equals(t, ItemSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase) => ItemSchema.Columns,
             _ => VendorSchema.Columns
         };
 
         var mappings = ColumnMapper.GetColumnMappings(tableName);
 
+        //var mappedColumns = columns
+        //.Select(c => mappings.TryGetValue(c, out var mapped) ? mapped : c)
+        //.ToList();
+
         var mappedColumns = columns
-        .Select(c => mappings.TryGetValue(c, out var mapped) ? mapped : c)
+        .Where(c => mappings.ContainsKey(c))
+        .Select(c => mappings[c])
         .ToList();
 
         seed = mappedColumns;

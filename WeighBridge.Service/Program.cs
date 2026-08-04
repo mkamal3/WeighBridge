@@ -84,12 +84,13 @@ public static class Program
                         var logger = sp.GetRequiredService<ILogger<SqliteVendorRepository>>();
                         return new SqliteVendorRepository(s.SqlitePath, logger);
                     });
+                    /*
                     services.AddSingleton(sp =>
                     {
                         var s = sp.GetRequiredService<SyncSettings>();
                         var logger = sp.GetRequiredService<ILogger<SqliteItemRepository>>();
                         return new SqliteItemRepository(s.SqlitePath, logger);
-                    });
+                    });*/
 
                     if (cli.Demo)
                     {
@@ -117,6 +118,7 @@ public static class Program
                             cli.Demo);
                     });
 
+                    /*
                     services.AddSingleton(sp =>
                     {
                         var s = sp.GetRequiredService<SyncSettings>();
@@ -128,7 +130,7 @@ public static class Program
                             sp.GetRequiredService<SqliteItemRepository>(),
                             sp.GetRequiredService<ILogger<ItemSyncService>>(),
                             cli.Demo);
-                    });
+                    });*/
                 })
                 .Build();
 
@@ -178,6 +180,7 @@ public static class Program
             }
 
             SyncResult result;
+            /*
             if (string.Equals(settings.TableName, ItemSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase))
             {
                 var sqliteItem = host.Services.GetRequiredService<SqliteItemRepository>();
@@ -188,12 +191,13 @@ public static class Program
             }
             else
             {
+                */
                 var sqliteVendor = host.Services.GetRequiredService<SqliteVendorRepository>();
                 await sqliteVendor.OpenAsync(CancellationToken.None).ConfigureAwait(false);
 
                 var syncVendor = host.Services.GetRequiredService<VendorSyncService>();
                 result = await syncVendor.RunAsync(cli, CancellationToken.None).ConfigureAwait(false);
-            }
+            //}
 
             Console.WriteLine();
             Console.WriteLine("--- Result ---");

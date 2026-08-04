@@ -52,11 +52,11 @@ public sealed class ParquetVendorMapper
             {
                 // Rakay - Maybe map the columns here for insertion to app fields.
                 var vendor = MapRow(columns, allColumns, row, tableName);
-                if (string.IsNullOrWhiteSpace(vendor.Id))
-                {
-                    _logger.LogWarning("Skipping parquet row {Row} with empty Id", row);
-                    continue;
-                }
+                //if (string.IsNullOrWhiteSpace(vendor.Id))
+                //{
+                //    _logger.LogWarning("Skipping parquet row {Row} with empty Id", row);
+                //    continue;
+                //}
 
                 rows.Add(vendor);
             }
@@ -90,7 +90,14 @@ public sealed class ParquetVendorMapper
                 // Maybe Rakay the value here
                 
                 //values[col] = NormalizeValue(data.GetValue(rowIndex));
-                values[mappings.TryGetValue(col, out string mapped) ? mapped : col] = NormalizeValue(data.GetValue(rowIndex));
+                //values[mappings.TryGetValue(col, out string mapped) ? mapped : col] = NormalizeValue(data.GetValue(rowIndex));
+
+                if (!mappings.TryGetValue(col, out var mapped))
+                {
+                    continue;
+                }
+                values[mapped] = NormalizeValue(data.GetValue(rowIndex));
+
             }
             else
             {
@@ -98,7 +105,8 @@ public sealed class ParquetVendorMapper
             }
         }
 
-        var id = GetString(values, "Id") ?? string.Empty;
+        //var id = GetString(values, "Id") ?? string.Empty;
+        var id = GetString(values, mappings.TryGetValue("Id", out string idMaster) ? idMaster : "Id") ?? string.Empty;
         var isDelete = GetBool(values, "IsDelete");
         var modified =
             GetDate(values, "SinkModifiedOn")

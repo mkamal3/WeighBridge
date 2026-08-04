@@ -216,6 +216,7 @@ public sealed class VendorSyncService
             var t when string.Equals(t, VendorSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase) => VendorSchema.Columns,
             var t when string.Equals(t, CustomerSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase) => CustomerSchema.Columns,
             var t when string.Equals(t, WarehouseSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase) => WarehouseSchema.Columns,
+            var t when string.Equals(t, ItemSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase) => ItemSchema.Columns,
             _ => VendorSchema.Columns
         };
 
