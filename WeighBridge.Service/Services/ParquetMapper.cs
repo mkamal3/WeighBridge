@@ -9,11 +9,11 @@ namespace DeltaToSqlitePoc.Services;
 /// <summary>
 /// Reads Synapse Link Vendor Parquet into <see cref="VendorRow"/> (all columns preserved).
 /// </summary>
-public sealed class ParquetVendorMapper
+public sealed class ParquetMapper
 {
-    private readonly ILogger<ParquetVendorMapper> _logger;
+    private readonly ILogger<ParquetMapper> _logger;
 
-    public ParquetVendorMapper(ILogger<ParquetVendorMapper> logger)
+    public ParquetMapper(ILogger<ParquetMapper> logger)
     {
         _logger = logger;
     }

@@ -9,13 +9,13 @@ namespace DeltaToSqlitePoc.Services;
 /// SQLite persistence for Vendor rows + sync_state watermarks.
 /// Creates/evolves columns dynamically from the Synapse Link Parquet schema.
 /// </summary>
-public sealed class SqliteVendorRepository : IAsyncDisposable
+public sealed class SqliteRepository : IAsyncDisposable
 {
     private readonly string _connectionString;
-    private readonly ILogger<SqliteVendorRepository> _logger;
+    private readonly ILogger<SqliteRepository> _logger;
     private SqliteConnection? _connection;
 
-    public SqliteVendorRepository(string sqlitePath, ILogger<SqliteVendorRepository> logger)
+    public SqliteRepository(string sqlitePath, ILogger<SqliteRepository> logger)
     {
         var fullPath = Path.GetFullPath(sqlitePath);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath) ?? ".");

@@ -75,14 +75,14 @@ public static class Program
 
                     services.AddSingleton(settings);
                     services.AddSingleton(cli);
-                    services.AddSingleton<ParquetVendorMapper>();
-                    services.AddSingleton<ParquetItemMapper>();
+                    services.AddSingleton<ParquetMapper>();
+                    //services.AddSingleton<ParquetItemMapper>();
 
                     services.AddSingleton(sp =>
                     {
                         var s = sp.GetRequiredService<SyncSettings>();
-                        var logger = sp.GetRequiredService<ILogger<SqliteVendorRepository>>();
-                        return new SqliteVendorRepository(s.SqlitePath, logger);
+                        var logger = sp.GetRequiredService<ILogger<SqliteRepository>>();
+                        return new SqliteRepository(s.SqlitePath, logger);
                     });
                     /*
                     services.AddSingleton(sp =>
@@ -108,13 +108,13 @@ public static class Program
                     services.AddSingleton(sp =>
                     {
                         var s = sp.GetRequiredService<SyncSettings>();
-                        return new VendorSyncService(
+                        return new SyncService(
                             s,
                             cli.Demo ? null : sp.GetRequiredService<AdlsDeltaTableReader>(),
                             cli.Demo ? sp.GetRequiredService<LocalDemoDeltaSource>() : null,
-                            sp.GetRequiredService<ParquetVendorMapper>(),
-                            sp.GetRequiredService<SqliteVendorRepository>(),
-                            sp.GetRequiredService<ILogger<VendorSyncService>>(),
+                            sp.GetRequiredService<ParquetMapper>(),
+                            sp.GetRequiredService<SqliteRepository>(),
+                            sp.GetRequiredService<ILogger<SyncService>>(),
                             cli.Demo);
                     });
 
@@ -192,10 +192,10 @@ public static class Program
             else
             {
                 */
-                var sqliteVendor = host.Services.GetRequiredService<SqliteVendorRepository>();
+                var sqliteVendor = host.Services.GetRequiredService<SqliteRepository>();
                 await sqliteVendor.OpenAsync(CancellationToken.None).ConfigureAwait(false);
 
-                var syncVendor = host.Services.GetRequiredService<VendorSyncService>();
+                var syncVendor = host.Services.GetRequiredService<SyncService>();
                 result = await syncVendor.RunAsync(cli, CancellationToken.None).ConfigureAwait(false);
             //}
 

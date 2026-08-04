@@ -8,26 +8,26 @@ using Microsoft.Extensions.Logging;
 namespace DeltaToSqlitePoc.Services;
 
 /// <summary>
-/// Orchestrates full and incremental Item sync from Delta Lake → SQLite.
+/// Orchestrates full and incremental Vendor sync from Delta Lake → SQLite.
 /// Honors Synapse Link <c>IsDelete</c> (hard-delete in SQLite on incremental).
 /// </summary>
-public sealed class ItemSyncService
+public sealed class SyncService
 {
     private readonly SyncSettings _settings;
     private readonly AdlsDeltaTableReader? _adlsReader;
     private readonly LocalDemoDeltaSource? _demoSource;
-    private readonly ParquetItemMapper _mapper;
-    private readonly SqliteItemRepository _sqlite;
-    private readonly ILogger<ItemSyncService> _logger;
+    private readonly ParquetMapper _mapper;
+    private readonly SqliteRepository _sqlite;
+    private readonly ILogger<SyncService> _logger;
     private readonly bool _demoMode;
 
-    public ItemSyncService(
+    public SyncService(
         SyncSettings settings,
         AdlsDeltaTableReader? adlsReader,
         LocalDemoDeltaSource? demoSource,
-        ParquetItemMapper mapper,
-        SqliteItemRepository sqlite,
-        ILogger<ItemSyncService> logger,
+        ParquetMapper mapper,
+        SqliteRepository sqlite,
+        ILogger<SyncService> logger,
         bool demoMode)
     {
         _settings = settings;
@@ -76,7 +76,7 @@ public sealed class ItemSyncService
         Stopwatch sw,
         CancellationToken ct)
     {
-        var (rows, allColumns) = await ReadItemsFromFilesAsync(deltaPath, snapshot.DataFiles, ct)
+        var (rows, allColumns) = await ReadVendorsFromFilesAsync(deltaPath, snapshot.DataFiles, ct)
             .ConfigureAwait(false);
 
         var active = rows.Where(r => !r.IsDelete).ToList();
@@ -86,8 +86,8 @@ public sealed class ItemSyncService
             Console.WriteLine($"Skipping {deletedSkipped} row(s) marked IsDelete=true on full sync...");
         }
 
-        Console.WriteLine($"Processed {active.Count} active Item row(s) from source...");
-        await _sqlite.DropAndRecreateItemTableAsync(entity, allColumns, ct).ConfigureAwait(false);
+        Console.WriteLine($"Processed {active.Count} active Vendor row(s) from source...");
+        await _sqlite.DropAndRecreateVendorTableAsync(entity, allColumns, ct).ConfigureAwait(false);
 
         var written = await WriteInBatchesAsync(entity, active, allColumns, ct).ConfigureAwait(false);
         var maxUpdated = active.Where(r => r.ModifiedOn.HasValue).Select(r => r.ModifiedOn!.Value).DefaultIfEmpty().Max();
@@ -112,7 +112,7 @@ public sealed class ItemSyncService
             RowsWritten = written,
             SourceDeltaVersion = snapshot.Version,
             Duration = sw.Elapsed,
-            Message = "Full sync replaced the Item table."
+            Message = "Full sync replaced the Vendor table."
         };
     }
 
@@ -156,7 +156,7 @@ public sealed class ItemSyncService
         // rows by the sink's own modified-timestamp watermark — robust regardless of Delta log
         // retention.
         Console.WriteLine("Incremental: scanning active files with SinkModifiedOn watermark filter...");
-        var (rows, allColumns) = await ReadItemsFromFilesAsync(deltaPath, snapshot.DataFiles, ct)
+        var (rows, allColumns) = await ReadVendorsFromFilesAsync(deltaPath, snapshot.DataFiles, ct)
             .ConfigureAwait(false);
         if (state.LastUpdatedAt is not null)
         {
@@ -203,13 +203,36 @@ public sealed class ItemSyncService
         };
     }
 
-    private async Task<(List<ItemRow> Rows, List<string> Columns)> ReadItemsFromFilesAsync(
+    private async Task<(List<VendorRow> Rows, List<string> Columns)> ReadVendorsFromFilesAsync(
         string deltaPath,
         IReadOnlyList<DeltaDataFile> files,
         CancellationToken ct)
     {
-        var rows = new List<ItemRow>();
-        var columns = new HashSet<string>(ItemSchema.Columns, StringComparer.OrdinalIgnoreCase);
+        var rows = new List<VendorRow>();
+        // Seed allowed columns from the configured entity schema so we don't accidentally
+        // create extra columns for WarehouseMaster when files contain additional fields.
+        var allowedColumns = _settings.TableName switch
+        {
+            var t when string.Equals(t, VendorSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase) => VendorSchema.Columns,
+            var t when string.Equals(t, CustomerSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase) => CustomerSchema.Columns,
+            var t when string.Equals(t, WarehouseSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase) => WarehouseSchema.Columns,
+            var t when string.Equals(t, ItemSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase) => ItemSchema.Columns,
+            _ => VendorSchema.Columns
+        };
+
+
+        
+        //////////////////////////////////////////////////
+        var mappings = ColumnMapper.GetColumnMappings(_settings.TableName);
+
+        var mappedColumns = allowedColumns
+        .Select(c => mappings.TryGetValue(c, out var mapped) ? mapped : c)
+        .ToList();
+
+        allowedColumns = mappedColumns;
+        //////////////////////////////////////////////////
+
+        var columns = new HashSet<string>(allowedColumns, StringComparer.OrdinalIgnoreCase);
 
         var index = 0;
         foreach (var file in files)
@@ -221,12 +244,13 @@ public sealed class ItemSyncService
                 ? await _demoSource!.OpenParquetStreamAsync(file.RelativePath, ct).ConfigureAwait(false)
                 : await _adlsReader!.OpenParquetStreamAsync(deltaPath, file.RelativePath, ct).ConfigureAwait(false);
 
-            var (batch, fileCols) = await _mapper.ReadItemsAsync(stream, ct).ConfigureAwait(false);
+            var (batch, fileCols) = await _mapper.ReadVendorsAsync(stream, ct, _settings.TableName).ConfigureAwait(false);
             rows.AddRange(batch);
-            foreach (var c in fileCols)
-            {
-                columns.Add(c);
-            }
+
+            // Only add file-discovered columns for non-warehouse entities. WarehouseMaster must
+            // remain strictly to the WarehouseSchema to avoid evolving unexpected columns.
+            //if (!string.Equals(_settings.TableName, WarehouseSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase))
+            foreach (var c in fileCols) columns.Add(c);
         }
 
         return (rows, columns.ToList());
@@ -234,7 +258,7 @@ public sealed class ItemSyncService
 
     private async Task<long> WriteInBatchesAsync(
         string entity,
-        IReadOnlyList<ItemRow> rows,
+        IReadOnlyList<VendorRow> rows,
         IReadOnlyList<string> columns,
         CancellationToken ct)
     {
