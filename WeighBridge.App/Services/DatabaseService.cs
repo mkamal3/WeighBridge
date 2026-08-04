@@ -173,6 +173,16 @@ CREATE TABLE IF NOT EXISTS Customers (
     InvoiceAccount TEXT NOT NULL DEFAULT '',
     ModeOfDelivery TEXT NOT NULL DEFAULT '',
     SalesTaxGroup TEXT NOT NULL DEFAULT '',
+    mserp_mk_wbcustomermasterId TEXT NOT NULL DEFAULT '',
+    SinkCreatedOn TEXT NOT NULL DEFAULT '',
+    SinkModifiedOn TEXT NOT NULL DEFAULT '',
+    mserp_dataareaid_id TEXT NOT NULL DEFAULT '',
+    mserp_dataareaid_id_entitytype TEXT NOT NULL DEFAULT '',
+    mserp_dataareaid TEXT NOT NULL DEFAULT '',
+    versionnumber TEXT NOT NULL DEFAULT '',
+    IsDelete TEXT NOT NULL DEFAULT '',
+    CreatedOn TEXT NOT NULL DEFAULT '',
+    createdonpartition TEXT NOT NULL DEFAULT '',
     CreatedAt TEXT NOT NULL DEFAULT ''
 );
 
@@ -203,6 +213,16 @@ CREATE TABLE IF NOT EXISTS Vendors (
     InvoiceAccount TEXT NOT NULL DEFAULT '',
     ModeOfDelivery TEXT NOT NULL DEFAULT '',
     SalesTaxGroup TEXT NOT NULL DEFAULT '',
+    mserp_mk_wbvendormasterId TEXT NOT NULL DEFAULT '',
+    SinkCreatedOn TEXT NOT NULL DEFAULT '',
+    SinkModifiedOn TEXT NOT NULL DEFAULT '',
+    mserp_dataareaid_id TEXT NOT NULL DEFAULT '',
+    mserp_dataareaid_id_entitytype TEXT NOT NULL DEFAULT '',
+    mserp_dataareaid TEXT NOT NULL DEFAULT '',
+    versionnumber TEXT NOT NULL DEFAULT '',
+    IsDelete TEXT NOT NULL DEFAULT '',
+    CreatedOn TEXT NOT NULL DEFAULT '',
+    createdonpartition TEXT NOT NULL DEFAULT '',
     CreatedAt TEXT NOT NULL DEFAULT ''
 );
 
@@ -254,6 +274,16 @@ CREATE TABLE IF NOT EXISTS ItemMasters (
     LastCostPrice REAL,
     DateOfPrice TEXT,
     UnitSequenceGroupId TEXT NOT NULL DEFAULT '',
+    mserp_mk_wb_ecoresreleasedproductv2entityId TEXT NOT NULL DEFAULT '',
+    SinkCreatedOn TEXT NOT NULL DEFAULT '',
+    SinkModifiedOn TEXT NOT NULL DEFAULT '',
+    mserp_dataareaid_id TEXT NOT NULL DEFAULT '',
+    mserp_dataareaid_id_entitytype TEXT NOT NULL DEFAULT '',
+    mserp_dataareaid TEXT NOT NULL DEFAULT '',
+    versionnumber TEXT NOT NULL DEFAULT '',
+    IsDelete TEXT NOT NULL DEFAULT '',
+    CreatedOn TEXT NOT NULL DEFAULT '',
+    createdonpartition TEXT NOT NULL DEFAULT '',
     CreatedAt TEXT NOT NULL DEFAULT ''
 );
 
@@ -275,6 +305,17 @@ CREATE TABLE IF NOT EXISTS WarehouseMasters (
     AddressNameDescription TEXT NOT NULL DEFAULT '',
     Address TEXT NOT NULL DEFAULT '',
     Purpose TEXT NOT NULL DEFAULT '',
+    Id TEXT NOT NULL DEFAULT '',
+    mserp_mk_wbwarehousemasterId TEXT NOT NULL DEFAULT '',
+    SinkCreatedOn TEXT NOT NULL DEFAULT '',
+    SinkModifiedOn TEXT NOT NULL DEFAULT '',
+    mserp_dataareaid_id TEXT NOT NULL DEFAULT '',
+    mserp_dataareaid_id_entitytype TEXT NOT NULL DEFAULT '',
+    mserp_dataareaid TEXT NOT NULL DEFAULT '',
+    versionnumber TEXT NOT NULL DEFAULT '',
+    IsDelete TEXT NOT NULL DEFAULT '',
+    CreatedOn TEXT NOT NULL DEFAULT '',
+    createdonpartition TEXT NOT NULL DEFAULT '',
     CreatedAt TEXT NOT NULL DEFAULT ''
 );
 
@@ -1000,12 +1041,22 @@ UPDATE Customers SET
     ContactExtension = $ContactExtension,
     InvoiceAccount = $InvoiceAccount,
     ModeOfDelivery = $ModeOfDelivery,
-    SalesTaxGroup = $SalesTaxGroup
+    SalesTaxGroup = $SalesTaxGroup,
+    mserp_mk_wbcustomermasterId = $mserp_mk_wbcustomermasterId,
+    SinkCreatedOn = $SinkCreatedOn,
+    SinkModifiedOn = $SinkModifiedOn,
+    mserp_dataareaid_id = $mserp_dataareaid_id,
+    mserp_dataareaid_id_entitytype = $mserp_dataareaid_id_entitytype,
+    mserp_dataareaid = $mserp_dataareaid,
+    versionnumber = $versionnumber,
+    IsDelete = $IsDelete,
+    CreatedOn = $CreatedOn,
+    createdonpartition = $createdonpartition
 WHERE CustomerId = $CustomerId;" : @"
 INSERT INTO Customers
-(DataAreaId, CustomerAccount, Name, MethodOfPayment, TermsOfPayment, DeliveryTerms, AccountStatus, AccountStatusReason, CustomerGroup, EmployeeResponsible, Currency, Telephone, OrganizationPerson, SearchName, ClassificationGroup, AddressNameDescription, Address, AddressPurpose, ContactDescription, ContactType, ContactNumberAddress, ContactExtension, InvoiceAccount, ModeOfDelivery, SalesTaxGroup, CreatedAt)
+(DataAreaId, CustomerAccount, Name, MethodOfPayment, TermsOfPayment, DeliveryTerms, AccountStatus, AccountStatusReason, CustomerGroup, EmployeeResponsible, Currency, Telephone, OrganizationPerson, SearchName, ClassificationGroup, AddressNameDescription, Address, AddressPurpose, ContactDescription, ContactType, ContactNumberAddress, ContactExtension, InvoiceAccount, ModeOfDelivery, SalesTaxGroup, mserp_mk_wbcustomermasterId, SinkCreatedOn, SinkModifiedOn, mserp_dataareaid_id, mserp_dataareaid_id_entitytype, mserp_dataareaid, versionnumber, IsDelete, CreatedOn, createdonpartition, CreatedAt)
 VALUES
-($DataAreaId, $CustomerAccount, $Name, $MethodOfPayment, $TermsOfPayment, $DeliveryTerms, $AccountStatus, $AccountStatusReason, $CustomerGroup, $EmployeeResponsible, $Currency, $Telephone, $OrganizationPerson, $SearchName, $ClassificationGroup, $AddressNameDescription, $Address, $AddressPurpose, $ContactDescription, $ContactType, $ContactNumberAddress, $ContactExtension, $InvoiceAccount, $ModeOfDelivery, $SalesTaxGroup, $CreatedAt);";
+($DataAreaId, $CustomerAccount, $Name, $MethodOfPayment, $TermsOfPayment, $DeliveryTerms, $AccountStatus, $AccountStatusReason, $CustomerGroup, $EmployeeResponsible, $Currency, $Telephone, $OrganizationPerson, $SearchName, $ClassificationGroup, $AddressNameDescription, $Address, $AddressPurpose, $ContactDescription, $ContactType, $ContactNumberAddress, $ContactExtension, $InvoiceAccount, $ModeOfDelivery, $SalesTaxGroup, $mserp_mk_wbcustomermasterId, $SinkCreatedOn, $SinkModifiedOn, $mserp_dataareaid_id, $mserp_dataareaid_id_entitytype, $mserp_dataareaid, $versionnumber, $IsDelete, $CreatedOn, $createdonpartition, $CreatedAt);";
         AddCustomerParameters(command, customer);
         command.Parameters.AddWithValue("$CustomerId", customer.CustomerId);
         command.Parameters.AddWithValue("$CreatedAt", DateTime.Now.ToString("O"));
@@ -1063,12 +1114,22 @@ UPDATE Vendors SET
     ContactExtension = $ContactExtension,
     InvoiceAccount = $InvoiceAccount,
     ModeOfDelivery = $ModeOfDelivery,
-    SalesTaxGroup = $SalesTaxGroup
+    SalesTaxGroup = $SalesTaxGroup,
+    mserp_mk_wbvendormasterId = $mserp_mk_wbvendormasterId,
+    SinkCreatedOn = $SinkCreatedOn,
+    SinkModifiedOn = $SinkModifiedOn,
+    mserp_dataareaid_id = $mserp_dataareaid_id,
+    mserp_dataareaid_id_entitytype = $mserp_dataareaid_id_entitytype,
+    mserp_dataareaid = $mserp_dataareaid,
+    versionnumber = $versionnumber,
+    IsDelete = $IsDelete,
+    CreatedOn = $CreatedOn,
+    createdonpartition = $createdonpartition
 WHERE VendorId = $VendorId;" : @"
 INSERT INTO Vendors
-(DataAreaId, VendorAccount, Name, MethodOfPayment, TermsOfPayment, DeliveryTerms, AccountStatus, AccountStatusReason, VendorGroup, EmployeeResponsible, Currency, Telephone, Type, VendorClassificationGroup, SearchName, AddressNameDescription, Address, AddressPurpose, ContactDescription, ContactType, ContactNumberAddress, ContactExtension, InvoiceAccount, ModeOfDelivery, SalesTaxGroup, CreatedAt)
+(DataAreaId, VendorAccount, Name, MethodOfPayment, TermsOfPayment, DeliveryTerms, AccountStatus, AccountStatusReason, VendorGroup, EmployeeResponsible, Currency, Telephone, Type, VendorClassificationGroup, SearchName, AddressNameDescription, Address, AddressPurpose, ContactDescription, ContactType, ContactNumberAddress, ContactExtension, InvoiceAccount, ModeOfDelivery, SalesTaxGroup, mserp_mk_wbvendormasterId, SinkCreatedOn, SinkModifiedOn, mserp_dataareaid_id, mserp_dataareaid_id_entitytype, mserp_dataareaid, versionnumber, IsDelete, CreatedOn, createdonpartition, CreatedAt)
 VALUES
-($DataAreaId, $VendorAccount, $Name, $MethodOfPayment, $TermsOfPayment, $DeliveryTerms, $AccountStatus, $AccountStatusReason, $VendorGroup, $EmployeeResponsible, $Currency, $Telephone, $Type, $VendorClassificationGroup, $SearchName, $AddressNameDescription, $Address, $AddressPurpose, $ContactDescription, $ContactType, $ContactNumberAddress, $ContactExtension, $InvoiceAccount, $ModeOfDelivery, $SalesTaxGroup, $CreatedAt);";
+($DataAreaId, $VendorAccount, $Name, $MethodOfPayment, $TermsOfPayment, $DeliveryTerms, $AccountStatus, $AccountStatusReason, $VendorGroup, $EmployeeResponsible, $Currency, $Telephone, $Type, $VendorClassificationGroup, $SearchName, $AddressNameDescription, $Address, $AddressPurpose, $ContactDescription, $ContactType, $ContactNumberAddress, $ContactExtension, $InvoiceAccount, $ModeOfDelivery, $SalesTaxGroup, $mserp_mk_wbvendormasterId, $SinkCreatedOn, $SinkModifiedOn, $mserp_dataareaid_id, $mserp_dataareaid_id_entitytype, $mserp_dataareaid, $versionnumber, $IsDelete, $CreatedOn, $createdonpartition, $CreatedAt);";
         AddVendorParameters(command, vendor);
         command.Parameters.AddWithValue("$VendorId", vendor.VendorId);
         command.Parameters.AddWithValue("$CreatedAt", DateTime.Now.ToString("O"));
@@ -1147,12 +1208,22 @@ UPDATE ItemMasters SET
     CostUnit = $CostUnit,
     LastCostPrice = $LastCostPrice,
     DateOfPrice = $DateOfPrice,
-    UnitSequenceGroupId = $UnitSequenceGroupId
+    UnitSequenceGroupId = $UnitSequenceGroupId,
+    mserp_mk_wb_ecoresreleasedproductv2entityId = $mserp_mk_wb_ecoresreleasedproductv2entityId,
+    SinkCreatedOn = $SinkCreatedOn,
+    SinkModifiedOn = $SinkModifiedOn,
+    mserp_dataareaid_id = $mserp_dataareaid_id,
+    mserp_dataareaid_id_entitytype = $mserp_dataareaid_id_entitytype,
+    mserp_dataareaid = $mserp_dataareaid,
+    versionnumber = $versionnumber,
+    IsDelete = $IsDelete,
+    CreatedOn = $CreatedOn,
+    createdonpartition = $createdonpartition
 WHERE ItemMasterId = $ItemMasterId;" : @"
 INSERT INTO ItemMasters
-(DataAreaId, ItemNumber, ProductName, SearchName, ProductType, ProductSubtype, ProductNumber, Description, StorageDimensionGroup, TrackingDimensionGroup, ItemModelGroup, ReservationHierarchy, PurchaseUnit, PurchaseOverDelivery, PurchaseUnderDelivery, BuyerGroup, ItemPriceToleranceGroup, Vendor, PurchaseItemSalesTaxGroup, SellUnit, SellOverDelivery, SellUnderDelivery, SellItemSalesTaxGroup, BatchNumberGroup, SerialNumberGroup, InventoryOverDelivery, InventoryUnderDelivery, CatchWeightItem, CWUnit, NominalQuantity, MinimumQuantity, MaximumQuantity, BOMUnit, ConstantScrap, VariableScrap, CostingLevel, PlanningLevel, CostCalculationLevel, Phantom, CalculationGroup, ProductionType, ItemGroup, CostUnit, LastCostPrice, DateOfPrice, UnitSequenceGroupId, CreatedAt)
+(DataAreaId, ItemNumber, ProductName, SearchName, ProductType, ProductSubtype, ProductNumber, Description, StorageDimensionGroup, TrackingDimensionGroup, ItemModelGroup, ReservationHierarchy, PurchaseUnit, PurchaseOverDelivery, PurchaseUnderDelivery, BuyerGroup, ItemPriceToleranceGroup, Vendor, PurchaseItemSalesTaxGroup, SellUnit, SellOverDelivery, SellUnderDelivery, SellItemSalesTaxGroup, BatchNumberGroup, SerialNumberGroup, InventoryOverDelivery, InventoryUnderDelivery, CatchWeightItem, CWUnit, NominalQuantity, MinimumQuantity, MaximumQuantity, BOMUnit, ConstantScrap, VariableScrap, CostingLevel, PlanningLevel, CostCalculationLevel, Phantom, CalculationGroup, ProductionType, ItemGroup, CostUnit, LastCostPrice, DateOfPrice, UnitSequenceGroupId, mserp_mk_wb_ecoresreleasedproductv2entityId, SinkCreatedOn, SinkModifiedOn, mserp_dataareaid_id, mserp_dataareaid_id_entitytype, mserp_dataareaid, versionnumber, IsDelete, CreatedOn, createdonpartition, CreatedAt)
 VALUES
-($DataAreaId, $ItemNumber, $ProductName, $SearchName, $ProductType, $ProductSubtype, $ProductNumber, $Description, $StorageDimensionGroup, $TrackingDimensionGroup, $ItemModelGroup, $ReservationHierarchy, $PurchaseUnit, $PurchaseOverDelivery, $PurchaseUnderDelivery, $BuyerGroup, $ItemPriceToleranceGroup, $Vendor, $PurchaseItemSalesTaxGroup, $SellUnit, $SellOverDelivery, $SellUnderDelivery, $SellItemSalesTaxGroup, $BatchNumberGroup, $SerialNumberGroup, $InventoryOverDelivery, $InventoryUnderDelivery, $CatchWeightItem, $CWUnit, $NominalQuantity, $MinimumQuantity, $MaximumQuantity, $BOMUnit, $ConstantScrap, $VariableScrap, $CostingLevel, $PlanningLevel, $CostCalculationLevel, $Phantom, $CalculationGroup, $ProductionType, $ItemGroup, $CostUnit, $LastCostPrice, $DateOfPrice, $UnitSequenceGroupId, $CreatedAt);";
+($DataAreaId, $ItemNumber, $ProductName, $SearchName, $ProductType, $ProductSubtype, $ProductNumber, $Description, $StorageDimensionGroup, $TrackingDimensionGroup, $ItemModelGroup, $ReservationHierarchy, $PurchaseUnit, $PurchaseOverDelivery, $PurchaseUnderDelivery, $BuyerGroup, $ItemPriceToleranceGroup, $Vendor, $PurchaseItemSalesTaxGroup, $SellUnit, $SellOverDelivery, $SellUnderDelivery, $SellItemSalesTaxGroup, $BatchNumberGroup, $SerialNumberGroup, $InventoryOverDelivery, $InventoryUnderDelivery, $CatchWeightItem, $CWUnit, $NominalQuantity, $MinimumQuantity, $MaximumQuantity, $BOMUnit, $ConstantScrap, $VariableScrap, $CostingLevel, $PlanningLevel, $CostCalculationLevel, $Phantom, $CalculationGroup, $ProductionType, $ItemGroup, $CostUnit, $LastCostPrice, $DateOfPrice, $UnitSequenceGroupId, $mserp_mk_wb_ecoresreleasedproductv2entityId, $SinkCreatedOn, $SinkModifiedOn, $mserp_dataareaid_id, $mserp_dataareaid_id_entitytype, $mserp_dataareaid, $versionnumber, $IsDelete, $CreatedOn, $createdonpartition, $CreatedAt);";
         AddItemMasterParameters(command, item);
         command.Parameters.AddWithValue("$ItemMasterId", item.ItemMasterId);
         command.Parameters.AddWithValue("$CreatedAt", DateTime.Now.ToString("O"));
@@ -1201,12 +1272,23 @@ UPDATE WarehouseMasters SET
     DefaultProductionFinishedGood = $DefaultProductionFinishedGood,
     AddressNameDescription = $AddressNameDescription,
     Address = $Address,
-    Purpose = $Purpose
+    Purpose = $Purpose,
+    Id = $Id,
+    mserp_mk_wbwarehousemasterId = $mserp_mk_wbwarehousemasterId,
+    SinkCreatedOn = $SinkCreatedOn,
+    SinkModifiedOn = $SinkModifiedOn,
+    mserp_dataareaid_id = $mserp_dataareaid_id,
+    mserp_dataareaid_id_entitytype = $mserp_dataareaid_id_entitytype,
+    mserp_dataareaid = $mserp_dataareaid,
+    versionnumber = $versionnumber,
+    IsDelete = $IsDelete,
+    CreatedOn = $CreatedOn,
+    createdonpartition = $createdonpartition
 WHERE WarehouseMasterId = $WarehouseMasterId;" : @"
 INSERT INTO WarehouseMasters
-(DataAreaId, Warehouse, Name, Site, Type, QuarantineWarehouse, TransitWarehouse, GoodsInTransitWarehouse, UnderDeliveryWarehouse, VendorAccount, DefaultReceiptLocation, DefaultIssueLocation, DefaultProductionFinishedGood, AddressNameDescription, Address, Purpose, CreatedAt)
+(DataAreaId, Warehouse, Name, Site, Type, QuarantineWarehouse, TransitWarehouse, GoodsInTransitWarehouse, UnderDeliveryWarehouse, VendorAccount, DefaultReceiptLocation, DefaultIssueLocation, DefaultProductionFinishedGood, AddressNameDescription, Address, Purpose, Id, mserp_mk_wbwarehousemasterId, SinkCreatedOn, SinkModifiedOn, mserp_dataareaid_id, mserp_dataareaid_id_entitytype, mserp_dataareaid, versionnumber, IsDelete, CreatedOn, createdonpartition, CreatedAt)
 VALUES
-($DataAreaId, $Warehouse, $Name, $Site, $Type, $QuarantineWarehouse, $TransitWarehouse, $GoodsInTransitWarehouse, $UnderDeliveryWarehouse, $VendorAccount, $DefaultReceiptLocation, $DefaultIssueLocation, $DefaultProductionFinishedGood, $AddressNameDescription, $Address, $Purpose, $CreatedAt);";
+($DataAreaId, $Warehouse, $Name, $Site, $Type, $QuarantineWarehouse, $TransitWarehouse, $GoodsInTransitWarehouse, $UnderDeliveryWarehouse, $VendorAccount, $DefaultReceiptLocation, $DefaultIssueLocation, $DefaultProductionFinishedGood, $AddressNameDescription, $Address, $Purpose, $Id, $mserp_mk_wbwarehousemasterId, $SinkCreatedOn, $SinkModifiedOn, $mserp_dataareaid_id, $mserp_dataareaid_id_entitytype, $mserp_dataareaid, $versionnumber, $IsDelete, $CreatedOn, $createdonpartition, $CreatedAt);";
         AddWarehouseMasterParameters(command, warehouse);
         command.Parameters.AddWithValue("$WarehouseMasterId", warehouse.WarehouseMasterId);
         command.Parameters.AddWithValue("$CreatedAt", DateTime.Now.ToString("O"));
@@ -1808,6 +1890,26 @@ WHERE UserId = $UserId;";
         EnsureColumn(connection, "WeighbridgeMasters", "DataAreaId", "TEXT NOT NULL DEFAULT 'DAT'");
         EnsureColumn(connection, "OperatorMasters", "DataAreaId", "TEXT NOT NULL DEFAULT 'DAT'");
 
+        // Backend-only D365/Dataverse sync columns for customer/vendor/item/warehouse masters.
+        EnsureColumn(connection, "Customers", "mserp_mk_wbcustomermasterId", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Vendors", "mserp_mk_wbvendormasterId", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "ItemMasters", "mserp_mk_wb_ecoresreleasedproductv2entityId", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "WarehouseMasters", "Id", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "WarehouseMasters", "mserp_mk_wbwarehousemasterId", "TEXT NOT NULL DEFAULT ''");
+
+        foreach (var tableName in new[] { "Customers", "Vendors", "ItemMasters", "WarehouseMasters" })
+        {
+            EnsureColumn(connection, tableName, "SinkCreatedOn", "TEXT NOT NULL DEFAULT ''");
+            EnsureColumn(connection, tableName, "SinkModifiedOn", "TEXT NOT NULL DEFAULT ''");
+            EnsureColumn(connection, tableName, "mserp_dataareaid_id", "TEXT NOT NULL DEFAULT ''");
+            EnsureColumn(connection, tableName, "mserp_dataareaid_id_entitytype", "TEXT NOT NULL DEFAULT ''");
+            EnsureColumn(connection, tableName, "mserp_dataareaid", "TEXT NOT NULL DEFAULT ''");
+            EnsureColumn(connection, tableName, "versionnumber", "TEXT NOT NULL DEFAULT ''");
+            EnsureColumn(connection, tableName, "IsDelete", "TEXT NOT NULL DEFAULT ''");
+            EnsureColumn(connection, tableName, "CreatedOn", "TEXT NOT NULL DEFAULT ''");
+            EnsureColumn(connection, tableName, "createdonpartition", "TEXT NOT NULL DEFAULT ''");
+        }
+
         // Vehicle master migration
         EnsureColumn(connection, "Vehicles", "PlateNumber", "TEXT NOT NULL DEFAULT ''");
         EnsureColumn(connection, "Vehicles", "PlateEmirate", "TEXT NOT NULL DEFAULT ''");
@@ -2199,6 +2301,7 @@ VALUES
         command.Parameters.AddWithValue("$InvoiceAccount", customer.InvoiceAccount.Trim());
         command.Parameters.AddWithValue("$ModeOfDelivery", customer.ModeOfDelivery.Trim());
         command.Parameters.AddWithValue("$SalesTaxGroup", customer.SalesTaxGroup.Trim());
+        AddD365SyncParameters(command, customer.mserp_mk_wbcustomermasterId, customer.SinkCreatedOn, customer.SinkModifiedOn, customer.mserp_dataareaid_id, customer.mserp_dataareaid_id_entitytype, customer.mserp_dataareaid, customer.versionnumber, customer.IsDelete, customer.CreatedOn, customer.createdonpartition, "mserp_mk_wbcustomermasterId");
     }
 
     private static void AddVendorParameters(SqliteCommand command, Vendor vendor)
@@ -2228,6 +2331,7 @@ VALUES
         command.Parameters.AddWithValue("$InvoiceAccount", vendor.InvoiceAccount.Trim());
         command.Parameters.AddWithValue("$ModeOfDelivery", vendor.ModeOfDelivery.Trim());
         command.Parameters.AddWithValue("$SalesTaxGroup", vendor.SalesTaxGroup.Trim());
+        AddD365SyncParameters(command, vendor.mserp_mk_wbvendormasterId, vendor.SinkCreatedOn, vendor.SinkModifiedOn, vendor.mserp_dataareaid_id, vendor.mserp_dataareaid_id_entitytype, vendor.mserp_dataareaid, vendor.versionnumber, vendor.IsDelete, vendor.CreatedOn, vendor.createdonpartition, "mserp_mk_wbvendormasterId");
     }
 
     private static void AddItemMasterParameters(SqliteCommand command, ItemMaster item)
@@ -2278,6 +2382,7 @@ VALUES
         command.Parameters.AddWithValue("$LastCostPrice", DbValue(item.LastCostPrice));
         command.Parameters.AddWithValue("$DateOfPrice", DbValue(item.DateOfPrice));
         command.Parameters.AddWithValue("$UnitSequenceGroupId", DbValue(item.UnitSequenceGroupId));
+        AddD365SyncParameters(command, item.mserp_mk_wb_ecoresreleasedproductv2entityId, item.SinkCreatedOn, item.SinkModifiedOn, item.mserp_dataareaid_id, item.mserp_dataareaid_id_entitytype, item.mserp_dataareaid, item.versionnumber, item.IsDelete, item.CreatedOn, item.createdonpartition, "mserp_mk_wb_ecoresreleasedproductv2entityId");
     }
 
     private static void AddWarehouseMasterParameters(SqliteCommand command, WarehouseMaster warehouse)
@@ -2298,8 +2403,37 @@ VALUES
         command.Parameters.AddWithValue("$AddressNameDescription", warehouse.AddressNameDescription.Trim());
         command.Parameters.AddWithValue("$Address", warehouse.Address.Trim());
         command.Parameters.AddWithValue("$Purpose", warehouse.Purpose.Trim());
+        command.Parameters.AddWithValue("$Id", DbValue(warehouse.Id));
+        AddD365SyncParameters(command, warehouse.mserp_mk_wbwarehousemasterId, warehouse.SinkCreatedOn, warehouse.SinkModifiedOn, warehouse.mserp_dataareaid_id, warehouse.mserp_dataareaid_id_entitytype, warehouse.mserp_dataareaid, warehouse.versionnumber, warehouse.IsDelete, warehouse.CreatedOn, warehouse.createdonpartition, "mserp_mk_wbwarehousemasterId");
     }
 
+
+
+    private static void AddD365SyncParameters(
+        SqliteCommand command,
+        string entityId,
+        string sinkCreatedOn,
+        string sinkModifiedOn,
+        string mserpDataAreaIdId,
+        string mserpDataAreaIdIdEntityType,
+        string mserpDataAreaId,
+        string versionNumber,
+        string isDelete,
+        string createdOn,
+        string createdOnPartition,
+        string entityIdParameterName)
+    {
+        command.Parameters.AddWithValue("$" + entityIdParameterName, DbValue(entityId));
+        command.Parameters.AddWithValue("$SinkCreatedOn", DbValue(sinkCreatedOn));
+        command.Parameters.AddWithValue("$SinkModifiedOn", DbValue(sinkModifiedOn));
+        command.Parameters.AddWithValue("$mserp_dataareaid_id", DbValue(mserpDataAreaIdId));
+        command.Parameters.AddWithValue("$mserp_dataareaid_id_entitytype", DbValue(mserpDataAreaIdIdEntityType));
+        command.Parameters.AddWithValue("$mserp_dataareaid", DbValue(mserpDataAreaId));
+        command.Parameters.AddWithValue("$versionnumber", DbValue(versionNumber));
+        command.Parameters.AddWithValue("$IsDelete", DbValue(isDelete));
+        command.Parameters.AddWithValue("$CreatedOn", DbValue(createdOn));
+        command.Parameters.AddWithValue("$createdonpartition", DbValue(createdOnPartition));
+    }
 
     private static void AddWeighbridgeMasterParameters(SqliteCommand command, WeighbridgeMaster weighbridge)
     {
@@ -2489,7 +2623,17 @@ VALUES
         ContactExtension = ReadText(reader, "ContactExtension"),
         InvoiceAccount = ReadText(reader, "InvoiceAccount"),
         ModeOfDelivery = ReadText(reader, "ModeOfDelivery"),
-        SalesTaxGroup = ReadText(reader, "SalesTaxGroup")
+        SalesTaxGroup = ReadText(reader, "SalesTaxGroup"),
+        mserp_mk_wbcustomermasterId = ReadText(reader, "mserp_mk_wbcustomermasterId"),
+        SinkCreatedOn = ReadText(reader, "SinkCreatedOn"),
+        SinkModifiedOn = ReadText(reader, "SinkModifiedOn"),
+        mserp_dataareaid_id = ReadText(reader, "mserp_dataareaid_id"),
+        mserp_dataareaid_id_entitytype = ReadText(reader, "mserp_dataareaid_id_entitytype"),
+        mserp_dataareaid = ReadText(reader, "mserp_dataareaid"),
+        versionnumber = ReadText(reader, "versionnumber"),
+        IsDelete = ReadText(reader, "IsDelete"),
+        CreatedOn = ReadText(reader, "CreatedOn"),
+        createdonpartition = ReadText(reader, "createdonpartition")
     };
 
     private static Vendor MapVendor(SqliteDataReader reader) => new()
@@ -2519,7 +2663,17 @@ VALUES
         ContactExtension = ReadText(reader, "ContactExtension"),
         InvoiceAccount = ReadText(reader, "InvoiceAccount"),
         ModeOfDelivery = ReadText(reader, "ModeOfDelivery"),
-        SalesTaxGroup = ReadText(reader, "SalesTaxGroup")
+        SalesTaxGroup = ReadText(reader, "SalesTaxGroup"),
+        mserp_mk_wbvendormasterId = ReadText(reader, "mserp_mk_wbvendormasterId"),
+        SinkCreatedOn = ReadText(reader, "SinkCreatedOn"),
+        SinkModifiedOn = ReadText(reader, "SinkModifiedOn"),
+        mserp_dataareaid_id = ReadText(reader, "mserp_dataareaid_id"),
+        mserp_dataareaid_id_entitytype = ReadText(reader, "mserp_dataareaid_id_entitytype"),
+        mserp_dataareaid = ReadText(reader, "mserp_dataareaid"),
+        versionnumber = ReadText(reader, "versionnumber"),
+        IsDelete = ReadText(reader, "IsDelete"),
+        CreatedOn = ReadText(reader, "CreatedOn"),
+        createdonpartition = ReadText(reader, "createdonpartition")
     };
 
     private static ItemMaster MapItemMaster(SqliteDataReader reader) => new()
@@ -2570,7 +2724,17 @@ VALUES
         CostUnit = ReadText(reader, "CostUnit"),
         LastCostPrice = ReadDecimal(reader, "LastCostPrice"),
         DateOfPrice = ReadDate(reader, "DateOfPrice"),
-        UnitSequenceGroupId = ReadText(reader, "UnitSequenceGroupId")
+        UnitSequenceGroupId = ReadText(reader, "UnitSequenceGroupId"),
+        mserp_mk_wb_ecoresreleasedproductv2entityId = ReadText(reader, "mserp_mk_wb_ecoresreleasedproductv2entityId"),
+        SinkCreatedOn = ReadText(reader, "SinkCreatedOn"),
+        SinkModifiedOn = ReadText(reader, "SinkModifiedOn"),
+        mserp_dataareaid_id = ReadText(reader, "mserp_dataareaid_id"),
+        mserp_dataareaid_id_entitytype = ReadText(reader, "mserp_dataareaid_id_entitytype"),
+        mserp_dataareaid = ReadText(reader, "mserp_dataareaid"),
+        versionnumber = ReadText(reader, "versionnumber"),
+        IsDelete = ReadText(reader, "IsDelete"),
+        CreatedOn = ReadText(reader, "CreatedOn"),
+        createdonpartition = ReadText(reader, "createdonpartition")
     };
 
     private static WarehouseMaster MapWarehouseMaster(SqliteDataReader reader) => new()
@@ -2591,7 +2755,18 @@ VALUES
         DefaultProductionFinishedGood = ReadText(reader, "DefaultProductionFinishedGood"),
         AddressNameDescription = ReadText(reader, "AddressNameDescription"),
         Address = ReadText(reader, "Address"),
-        Purpose = ReadText(reader, "Purpose")
+        Purpose = ReadText(reader, "Purpose"),
+        Id = ReadText(reader, "Id"),
+        mserp_mk_wbwarehousemasterId = ReadText(reader, "mserp_mk_wbwarehousemasterId"),
+        SinkCreatedOn = ReadText(reader, "SinkCreatedOn"),
+        SinkModifiedOn = ReadText(reader, "SinkModifiedOn"),
+        mserp_dataareaid_id = ReadText(reader, "mserp_dataareaid_id"),
+        mserp_dataareaid_id_entitytype = ReadText(reader, "mserp_dataareaid_id_entitytype"),
+        mserp_dataareaid = ReadText(reader, "mserp_dataareaid"),
+        versionnumber = ReadText(reader, "versionnumber"),
+        IsDelete = ReadText(reader, "IsDelete"),
+        CreatedOn = ReadText(reader, "CreatedOn"),
+        createdonpartition = ReadText(reader, "createdonpartition")
     };
 
     private static AppUser MapUser(SqliteDataReader reader) => new()
