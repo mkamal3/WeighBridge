@@ -41,6 +41,22 @@ public partial class MainWindow : Window
         }
     }
 
+
+    private async void LogoutButton_Click(object sender, RoutedEventArgs e)
+    {
+        await _viewModel.DisconnectAsync();
+        var loginWindow = new LoginWindow();
+        System.Windows.Application.Current.MainWindow = loginWindow;
+        loginWindow.Show();
+        Close();
+    }
+
+    private async void CloseButton_Click(object sender, RoutedEventArgs e)
+    {
+        await _viewModel.DisconnectAsync();
+        System.Windows.Application.Current.Shutdown();
+    }
+
     protected override async void OnClosed(EventArgs e)
     {
         await _viewModel.DisconnectAsync();

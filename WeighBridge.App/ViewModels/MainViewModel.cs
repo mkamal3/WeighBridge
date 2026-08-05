@@ -1697,12 +1697,15 @@ public class MainViewModel : BaseViewModel
 
     private async Task RefreshAllAsync()
     {
+        Settings = await _databaseService.GetSettingsAsync();
         await LoadMastersAsync();
+        SelectSettingsWeighbridgeFromSavedSettings();
         await RefreshWeighmentsAsync();
         if (CanAccessReports)
             await LoadReportAsync();
         if (CanAccessTransactions)
             await LoadTransactionsAsync();
+        StatusMessage = "Data refreshed successfully.";
     }
 
     private async Task LoadMastersAsync()
@@ -1726,7 +1729,8 @@ public class MainViewModel : BaseViewModel
         var dataAreaItems = itemMasters.Where(x => IsSameDataArea(x.DataAreaId, currentDataAreaId)).ToList();
         var dataAreaWarehouses = warehouseMasters.Where(x => IsSameDataArea(x.DataAreaId, currentDataAreaId)).ToList();
         var dataAreaWeighbridges = weighbridgeMasters.Where(x => IsSameDataArea(x.DataAreaId, currentDataAreaId)).ToList();
-        var dataAreaOperators = operatorMasters.Where(x => IsSameDataArea(x.DataAreaId, currentDataAreaId)).ToList();
+        // Operator Master is global for login/security, so it is not filtered by Legal Entity.
+        var globalOperators = operatorMasters.ToList();
 
         ReplaceCollection(Parties, parties);
         ReplaceCollection(Materials, materials);
@@ -1740,7 +1744,7 @@ public class MainViewModel : BaseViewModel
         ReplaceCollection(WarehouseMasters, dataAreaWarehouses);
         ReplaceCollection(WeighbridgeMasters, dataAreaWeighbridges);
         ReplaceCollection(ActiveWeighbridgeMasters, dataAreaWeighbridges.Where(x => IsStatusActive(x.OperatingStatus)));
-        ReplaceCollection(OperatorMasters, dataAreaOperators);
+        ReplaceCollection(OperatorMasters, globalOperators);
         if (SelectedSettingsWeighbridge == null)
             SelectSettingsWeighbridgeFromSavedSettings();
 
@@ -2447,10 +2451,10 @@ public class MainViewModel : BaseViewModel
             VendorAccount = SelectedWarehouseMaster.VendorAccount,
             DefaultReceiptLocation = SelectedWarehouseMaster.DefaultReceiptLocation,
             DefaultIssueLocation = SelectedWarehouseMaster.DefaultIssueLocation,
-            DefaultProductionFinishedGood = SelectedWarehouseMaster.DefaultProductionFinishedGood
-            //AddressNameDescription = SelectedWarehouseMaster.AddressNameDescription,
-            //Address = SelectedWarehouseMaster.Address,
-            //Purpose = SelectedWarehouseMaster.Purpose
+            DefaultProductionFinishedGood = SelectedWarehouseMaster.DefaultProductionFinishedGood,
+            AddressNameDescription = SelectedWarehouseMaster.AddressNameDescription,
+            Address = SelectedWarehouseMaster.Address,
+            Purpose = SelectedWarehouseMaster.Purpose
         };
         StatusMessage = $"Warehouse opened: {WarehouseMasterForm.Warehouse}";
     }
@@ -2721,6 +2725,8 @@ public class MainViewModel : BaseViewModel
                 return;
             }
 
+            if (string.IsNullOrWhiteSpace(VehicleMasterForm.DataAreaId))
+                VehicleMasterForm.DataAreaId = CurrentUserCompany;
             await _databaseService.SaveVehicleAsync(VehicleMasterForm);
             await LoadMastersAsync();
             StatusMessage = "Vehicle master saved.";
@@ -2771,6 +2777,8 @@ public class MainViewModel : BaseViewModel
                 return;
             }
 
+            if (string.IsNullOrWhiteSpace(DriverMasterForm.DataAreaId))
+                DriverMasterForm.DataAreaId = CurrentUserCompany;
             await _databaseService.SaveDriverAsync(DriverMasterForm);
             await LoadMastersAsync();
             StatusMessage = "Driver master saved.";
@@ -2874,6 +2882,8 @@ public class MainViewModel : BaseViewModel
                 return;
             }
 
+            if (string.IsNullOrWhiteSpace(WeighbridgeMasterForm.DataAreaId))
+                WeighbridgeMasterForm.DataAreaId = CurrentUserCompany;
             await _databaseService.SaveWeighbridgeMasterAsync(WeighbridgeMasterForm);
             await LoadMastersAsync();
             StatusMessage = "Weighbridge master saved.";
@@ -2966,6 +2976,8 @@ public class MainViewModel : BaseViewModel
                 return;
             }
 
+            if (string.IsNullOrWhiteSpace(OperatorMasterForm.DataAreaId))
+                OperatorMasterForm.DataAreaId = CurrentUserCompany;
             await _databaseService.SaveOperatorMasterAsync(OperatorMasterForm);
             await LoadMastersAsync();
             StatusMessage = "Operator master saved.";

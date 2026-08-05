@@ -593,7 +593,7 @@ TcpPort = excluded.TcpPort;";
                 Blacklisted = ReadBool(reader, "Blacklisted"),
                 BlacklistReason = ReadText(reader, "BlacklistReason"),
                 EffectiveFrom = ReadDate(reader, "EffectiveFrom"),
-                Remarks = ReadText(reader, "Remarks")
+                        Remarks = ReadText(reader, "Remarks")
             });
         }
         return result;
@@ -2054,7 +2054,9 @@ WHERE UserId = $UserId;";
         ExecuteNonQuery(connection, "UPDATE Users SET CompanyName = 'Default Company' WHERE trim(ifnull(CompanyName, '')) = ''; ");
         ExecuteNonQuery(connection, "UPDATE Weighments SET CompanyName = 'Default Company' WHERE trim(ifnull(CompanyName, '')) = ''; ");
         RemoveLegacySingleColumnUniqueConstraints(connection);
+        NormalizeBlankD365SyncIds(connection);
         CreateCompanyWiseUniqueIndexes(connection);
+        CreateD365SyncUniqueIndexes(connection);
 
         ExecuteNonQuery(connection, "UPDATE DeviceSettings SET SelectedWeighbridgeCode = 'WB-001' WHERE trim(ifnull(SelectedWeighbridgeCode, '')) = ''; ");
     }
@@ -2107,6 +2109,35 @@ WHERE UserId = $UserId;";
         ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_WeighbridgeMasters_DataArea_WeighbridgeCode ON WeighbridgeMasters (DataAreaId, WeighbridgeCode);");
         ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_OperatorMasters_DataArea_EmployeeId ON OperatorMasters (DataAreaId, EmployeeId);");
         ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_OperatorMasters_Username ON OperatorMasters (Username);");
+    }
+
+    private static void NormalizeBlankD365SyncIds(SqliteConnection connection)
+    {
+        // Sync IDs are unique backend identifiers. Existing local/manual seed rows may have blank sync IDs;
+        // assign stable local placeholders before creating unique indexes to avoid duplicate blank values.
+        FillBlankUniqueTextValue(connection, "Customers", "CustomerId", "mserp_mk_wbcustomermasterId", "LOCAL-CUST-");
+        FillBlankUniqueTextValue(connection, "Vendors", "VendorId", "mserp_mk_wbvendormasterId", "LOCAL-VEND-");
+        FillBlankUniqueTextValue(connection, "ItemMasters", "ItemMasterId", "mserp_mk_wb_ecoresreleasedproductv2entityId", "LOCAL-ITEM-");
+        FillBlankUniqueTextValue(connection, "WarehouseMasters", "WarehouseMasterId", "mserp_mk_wbwarehousemasterId", "LOCAL-WH-");
+    }
+
+    private static void FillBlankUniqueTextValue(SqliteConnection connection, string tableName, string primaryKeyColumnName, string syncColumnName, string prefix)
+    {
+        if (!ColumnExists(connection, tableName, syncColumnName))
+            return;
+
+        ExecuteNonQuery(connection, $@"
+UPDATE {QuoteIdentifier(tableName)}
+SET {QuoteIdentifier(syncColumnName)} = '{prefix}' || {QuoteIdentifier(primaryKeyColumnName)}
+WHERE trim(ifnull({QuoteIdentifier(syncColumnName)}, '')) = ''; ");
+    }
+
+    private static void CreateD365SyncUniqueIndexes(SqliteConnection connection)
+    {
+        ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_Customers_mserp_mk_wbcustomermasterId ON Customers (mserp_mk_wbcustomermasterId);");
+        ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_Vendors_mserp_mk_wbvendormasterId ON Vendors (mserp_mk_wbvendormasterId);");
+        ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_ItemMasters_mserp_mk_wb_ecoresreleasedproductv2entityId ON ItemMasters (mserp_mk_wb_ecoresreleasedproductv2entityId);");
+        ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_WarehouseMasters_mserp_mk_wbwarehousemasterId ON WarehouseMasters (mserp_mk_wbwarehousemasterId);");
     }
 
     private static List<string> GetTableColumns(SqliteConnection connection, string tableName)
