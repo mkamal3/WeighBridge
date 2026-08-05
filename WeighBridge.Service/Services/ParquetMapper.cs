@@ -7,29 +7,30 @@ using Parquet.Schema;
 namespace DeltaToSqlitePoc.Services;
 
 /// <summary>
-/// Reads Synapse Link Item Parquet into <see cref="ItemRow"/> (all columns preserved).
+/// Reads Synapse Link Vendor Parquet into <see cref="VendorRow"/> (all columns preserved).
 /// </summary>
-public sealed class ParquetItemMapper
+public sealed class ParquetMapper
 {
-    private readonly ILogger<ParquetItemMapper> _logger;
+    private readonly ILogger<ParquetMapper> _logger;
 
-    public ParquetItemMapper(ILogger<ParquetItemMapper> logger)
+    public ParquetMapper(ILogger<ParquetMapper> logger)
     {
         _logger = logger;
     }
 
-    public async Task<(IReadOnlyList<ItemRow> Rows, IReadOnlyList<string> AllColumnNames)> ReadItemsAsync(
+    public async Task<(IReadOnlyList<VendorRow> Rows, IReadOnlyList<string> AllColumnNames)> ReadVendorsAsync(
         Stream parquetStream,
-        CancellationToken ct)
+        CancellationToken ct,
+        string tableName)
     {
         await using var reader = await ParquetReader.CreateAsync(parquetStream, leaveStreamOpen: false, cancellationToken: ct)
             .ConfigureAwait(false);
 
         var schemaFields = reader.Schema.GetDataFields();
         var allColumns = schemaFields.Select(f => f.Name).ToList();
-        var rows = new List<ItemRow>();
+        var rows = new List<VendorRow>();
 
-        _logger.LogDebug("Item parquet columns ({Count}): {Columns}",
+        _logger.LogDebug("Vendor parquet columns ({Count}): {Columns}",
             allColumns.Count,
             string.Join(", ", allColumns.Take(12)) + (allColumns.Count > 12 ? ", ..." : string.Empty));
 
@@ -41,37 +42,62 @@ public sealed class ParquetItemMapper
 
             foreach (var field in schemaFields)
             {
+
+                // Rakay - Maybe map the columns here for insertion to app fields.
                 columns[field.Name] = await ReadFieldAsArrayAsync(group, field, ct).ConfigureAwait(false);
             }
 
             var rowCount = (int)group.RowCount;
             for (var row = 0; row < rowCount; row++)
             {
-                var item = MapRow(columns, allColumns, row);
-                if (string.IsNullOrWhiteSpace(item.Id))
-                {
-                    _logger.LogWarning("Skipping parquet row {Row} with empty Id", row);
-                    continue;
-                }
+                // Rakay - Maybe map the columns here for insertion to app fields.
+                var vendor = MapRow(columns, allColumns, row, tableName);
+                //if (string.IsNullOrWhiteSpace(vendor.Id))
+                //{
+                //    _logger.LogWarning("Skipping parquet row {Row} with empty Id", row);
+                //    continue;
+                //}
 
-                rows.Add(item);
+                rows.Add(vendor);
             }
         }
 
         return (rows, allColumns);
     }
 
-    private static ItemRow MapRow(
+    private static VendorRow MapRow(
         IReadOnlyDictionary<string, Array> columns,
         IReadOnlyList<string> allColumns,
-        int rowIndex)
+        int rowIndex,
+        String tableName)
     {
+        //////////////////////////////////////////////
+        //var mappings = ColumnMapper.GetColumnMappings("WarehouseMasters");
+        var mappings = ColumnMapper.GetColumnMappings(tableName);
+        ////var mappedColumns = allColumns
+        //.Select(c => mappings.TryGetValue(c, out var mapped) ? mapped : c)
+        //.ToList();
+
+        //var allowedColumns = mappedColumns;
+        //////////////////////////////////////////////
+
+
         var values = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
         foreach (var col in allColumns)
         {
             if (columns.TryGetValue(col, out var data) && rowIndex < data.Length)
             {
-                values[col] = NormalizeValue(data.GetValue(rowIndex));
+                // Maybe Rakay the value here
+                
+                //values[col] = NormalizeValue(data.GetValue(rowIndex));
+                //values[mappings.TryGetValue(col, out string mapped) ? mapped : col] = NormalizeValue(data.GetValue(rowIndex));
+
+                if (!mappings.TryGetValue(col, out var mapped))
+                {
+                    continue;
+                }
+                values[mapped] = NormalizeValue(data.GetValue(rowIndex));
+
             }
             else
             {
@@ -79,14 +105,15 @@ public sealed class ParquetItemMapper
             }
         }
 
-        var id = GetString(values, "Id") ?? string.Empty;
+        //var id = GetString(values, "Id") ?? string.Empty;
+        var id = GetString(values, mappings.TryGetValue("Id", out string idMaster) ? idMaster : "Id") ?? string.Empty;
         var isDelete = GetBool(values, "IsDelete");
         var modified =
             GetDate(values, "SinkModifiedOn")
             ?? GetDate(values, "CreatedOn")
             ?? GetDate(values, "SinkCreatedOn");
 
-        return new ItemRow
+        return new VendorRow
         {
             Id = id,
             IsDelete = isDelete,

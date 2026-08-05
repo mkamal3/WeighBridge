@@ -2447,10 +2447,10 @@ public class MainViewModel : BaseViewModel
             VendorAccount = SelectedWarehouseMaster.VendorAccount,
             DefaultReceiptLocation = SelectedWarehouseMaster.DefaultReceiptLocation,
             DefaultIssueLocation = SelectedWarehouseMaster.DefaultIssueLocation,
-            DefaultProductionFinishedGood = SelectedWarehouseMaster.DefaultProductionFinishedGood,
-            AddressNameDescription = SelectedWarehouseMaster.AddressNameDescription,
-            Address = SelectedWarehouseMaster.Address,
-            Purpose = SelectedWarehouseMaster.Purpose
+            DefaultProductionFinishedGood = SelectedWarehouseMaster.DefaultProductionFinishedGood
+            //AddressNameDescription = SelectedWarehouseMaster.AddressNameDescription,
+            //Address = SelectedWarehouseMaster.Address,
+            //Purpose = SelectedWarehouseMaster.Purpose
         };
         StatusMessage = $"Warehouse opened: {WarehouseMasterForm.Warehouse}";
     }

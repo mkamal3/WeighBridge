@@ -7,7 +7,7 @@ namespace DeltaToSqlitePoc.Models;
 public static class CustomerSchema
 {
     public const string DefaultDeltaPath = "deltalake/mserp_mk_wbcustomermaster_partitioned";
-    public const string DefaultTableName = "CustomerMaster";
+    public const string DefaultTableName = "Customers";
     public const string PartitionColumn = "PartitionId";
 
     /// <summary>Core identity / sync columns first, then business fields.</summary>
@@ -31,7 +31,7 @@ public static class CustomerSchema
 "mserp_mk_wbcustomermasterid",
 "mserp_name",
 "mserp_namealias",
-"mserp_partytype",
+"mserp_partytype",//
 "mserp_paymentmethod",
 "mserp_paymentterms",
 "mserp_primarycontactphone",

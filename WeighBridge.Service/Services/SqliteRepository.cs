@@ -6,16 +6,16 @@ using Microsoft.Extensions.Logging;
 namespace DeltaToSqlitePoc.Services;
 
 /// <summary>
-/// SQLite persistence for Item rows + sync_state watermarks.
+/// SQLite persistence for Vendor rows + sync_state watermarks.
 /// Creates/evolves columns dynamically from the Synapse Link Parquet schema.
 /// </summary>
-public sealed class SqliteItemRepository : IAsyncDisposable
+public sealed class SqliteRepository : IAsyncDisposable
 {
     private readonly string _connectionString;
-    private readonly ILogger<SqliteItemRepository> _logger;
+    private readonly ILogger<SqliteRepository> _logger;
     private SqliteConnection? _connection;
 
-    public SqliteItemRepository(string sqlitePath, ILogger<SqliteItemRepository> logger)
+    public SqliteRepository(string sqlitePath, ILogger<SqliteRepository> logger)
     {
         var fullPath = Path.GetFullPath(sqlitePath);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath) ?? ".");
@@ -36,12 +36,19 @@ public sealed class SqliteItemRepository : IAsyncDisposable
         await EnsureSyncStateTableAsync(ct).ConfigureAwait(false);
     }
 
-    public async Task EnsureItemTableAsync(string tableName, IEnumerable<string> columns, CancellationToken ct)
+    public async Task EnsureVendorTableAsync(string tableName, IEnumerable<string> columns, CancellationToken ct)
     {
         var safeTable = QuoteIdent(tableName);
-        //var cols = NormalizeColumnOrder(columns);
-        var cols = NormalizeColumnOrder(tableName, columns);
 
+        //var mappings = ColumnMapper.GetColumnMappings(tableName);
+
+        //var mappedColumns = columns
+        //    .Select(c => mappings.TryGetValue(c, out var mapped) ? mapped : c)
+        //    .ToList();
+
+        //var cols = NormalizeColumnOrder(tableName, mappedColumns);
+
+        var cols = NormalizeColumnOrder(tableName, columns);
 
         var columnDefs = string.Join(",\n                ",
             cols.Select(c =>
@@ -56,46 +63,46 @@ public sealed class SqliteItemRepository : IAsyncDisposable
             """;
         await ExecuteNonQueryAsync(createSql, ct).ConfigureAwait(false);
 
-        var existing = await GetExistingColumnsAsync(tableName, ct).ConfigureAwait(false);
-        foreach (var col in cols)
-        {
-            if (existing.Contains(col))
-            {
-                continue;
-            }
+        //var existing = await GetExistingColumnsAsync(tableName, ct).ConfigureAwait(false);
+        //foreach (var col in cols)
+        //{
+        //    if (existing.Contains(col))
+        //    {
+        //        continue;
+        //    }
 
-            var alter = $"ALTER TABLE {safeTable} ADD COLUMN {QuoteIdent(col)} TEXT NULL;";
-            _logger.LogInformation("Schema evolution: adding column {Column} to {Table}", col, tableName);
-            await ExecuteNonQueryAsync(alter, ct).ConfigureAwait(false);
-            existing.Add(col);
-        }
+        //    var alter = $"ALTER TABLE {safeTable} ADD COLUMN {QuoteIdent(col)} TEXT NULL;";
+        //    _logger.LogInformation("Schema evolution: adding column {Column} to {Table}", col, tableName);
+        //    await ExecuteNonQueryAsync(alter, ct).ConfigureAwait(false);
+        //    existing.Add(col);
+        //}
     }
 
-    public async Task DropAndRecreateItemTableAsync(
+    public async Task DropAndRecreateVendorTableAsync(
         string tableName,
         IEnumerable<string> columns,
         CancellationToken ct)
     {
         var safeTable = QuoteIdent(tableName);
-        await ExecuteNonQueryAsync($"DROP TABLE IF EXISTS {safeTable};", ct).ConfigureAwait(false);
-        await EnsureItemTableAsync(tableName, columns, ct).ConfigureAwait(false);
+        //await ExecuteNonQueryAsync($"DROP TABLE IF EXISTS {safeTable};", ct).ConfigureAwait(false);
+        await EnsureVendorTableAsync(tableName, columns, ct).ConfigureAwait(false);
     }
 
     public async Task<long> UpsertBatchAsync(
         string tableName,
-        IReadOnlyList<ItemRow> items,
+        IReadOnlyList<VendorRow> vendors,
         IReadOnlyList<string> columns,
         CancellationToken ct)
     {
-        var upserts = items.Where(v => !v.IsDelete).ToList();
+        var upserts = vendors.Where(v => !v.IsDelete).ToList();
         if (upserts.Count == 0)
         {
             return 0;
         }
 
         var conn = RequireConnection();
-        var allCols = NormalizeColumnOrder(columns);
-        await EnsureItemTableAsync(tableName, allCols, ct).ConfigureAwait(false);
+        var allCols = NormalizeColumnOrder(tableName, columns);
+        await EnsureVendorTableAsync(tableName, allCols, ct).ConfigureAwait(false);
 
         var colList = string.Join(", ", allCols.Select(QuoteIdent));
         var paramList = string.Join(", ", allCols.Select((_, i) => $"@p{i}"));
@@ -103,16 +110,39 @@ public sealed class SqliteItemRepository : IAsyncDisposable
             allCols.Where(c => !c.Equals("Id", StringComparison.OrdinalIgnoreCase))
                 .Select(c => $"{QuoteIdent(c)}=excluded.{QuoteIdent(c)}"));
 
+        //var sql = $"""
+        //    INSERT INTO {QuoteIdent(tableName)} ({colList})
+        //    VALUES ({paramList})
+        //    ON CONFLICT(ItemMasterId) DO UPDATE SET {updateList};
+        //    """;
+
+
+        var mappings = ColumnMapper.GetColumnMappings(tableName);
+
+        //var mappedColumns = columns
+        //.Select(c => mappings.TryGetValue(c, out var mapped) ? mapped : c)
+        //.ToList();
+
+        //var mappedColumns = columns
+        //.Where(c => mappings.ContainsKey())
+        //.Select(c => mappings[c])
+        //.ToList();
+
+        //if (mappings.ContainsKey("Id"))
+        //{
+            var id = mappings.ContainsKey("MasterId") ? mappings["MasterId"] : "MasterId";
+        //}
+
         var sql = $"""
             INSERT INTO {QuoteIdent(tableName)} ({colList})
             VALUES ({paramList})
-            ON CONFLICT(Id) DO UPDATE SET {updateList};
+            ON CONFLICT({id}) DO UPDATE SET {updateList};
             """;
 
         await using var tx = (SqliteTransaction)await conn.BeginTransactionAsync(ct).ConfigureAwait(false);
         long written = 0;
 
-        foreach (var item in upserts)
+        foreach (var vendor in upserts)
         {
             ct.ThrowIfCancellationRequested();
             await using var cmd = conn.CreateCommand();
@@ -122,7 +152,8 @@ public sealed class SqliteItemRepository : IAsyncDisposable
             for (var i = 0; i < allCols.Count; i++)
             {
                 var col = allCols[i];
-                var value = FormatValue(GetValue(item, col));
+                var value = FormatValue(GetValue(vendor, col));
+                value = value == null ? "" : value;
                 cmd.Parameters.AddWithValue($"@p{i}", value ?? DBNull.Value);
             }
 
@@ -142,7 +173,7 @@ public sealed class SqliteItemRepository : IAsyncDisposable
         }
 
         var conn = RequireConnection();
-        await EnsureItemTableAsync(tableName, ["Id"], ct).ConfigureAwait(false);
+        await EnsureVendorTableAsync(tableName, ["Id"], ct).ConfigureAwait(false);
 
         await using var tx = (SqliteTransaction)await conn.BeginTransactionAsync(ct).ConfigureAwait(false);
         long deleted = 0;
@@ -213,25 +244,51 @@ public sealed class SqliteItemRepository : IAsyncDisposable
         return NormalizeColumnOrder(null, columns);
     }
 
-
     private static List<string> NormalizeColumnOrder(string? tableName, IEnumerable<string> columns)
     {
         var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var ordered = new List<string> { "Id" };
-        set.Add("Id");
+        var ordered = new List<string> { };
+        if (tableName == ItemSchema.DefaultTableName)
+        {
+            ordered = new List<string> { "mserp_mk_wb_ecoresreleasedproductv2entityid" };
+            set.Add("mserp_mk_wb_ecoresreleasedproductv2entityid");
+            //ordered.Add("Id");
+            //set.Add("Id");
+        }
+        else if (tableName == VendorSchema.DefaultTableName)
+        {
+            ordered = new List<string> { "mserp_mk_wbvendormasterid" };
+            set.Add("mserp_mk_wbvendormasterid");
+        }
+        else if (tableName == CustomerSchema.DefaultTableName)
+        {
+            ordered = new List<string> { "mserp_mk_wbcustomermasterid" };
+            set.Add("mserp_mk_wbcustomermasterid");
+        }
+        else if (tableName == WarehouseSchema.DefaultTableName)
+        {
+            ordered = new List<string> { "mserp_mk_wbwarehousemasterid" };
+            set.Add("mserp_mk_wbwarehousemasterid");
+        }
 
         IEnumerable<string> seed = tableName switch
         {
             var t when string.Equals(t, VendorSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase) => VendorSchema.Columns,
             var t when string.Equals(t, CustomerSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase) => CustomerSchema.Columns,
             var t when string.Equals(t, WarehouseSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase) => WarehouseSchema.Columns,
+            var t when string.Equals(t, ItemSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase) => ItemSchema.Columns,
             _ => VendorSchema.Columns
         };
 
         var mappings = ColumnMapper.GetColumnMappings(tableName);
 
+        //var mappedColumns = columns
+        //.Select(c => mappings.TryGetValue(c, out var mapped) ? mapped : c)
+        //.ToList();
+
         var mappedColumns = columns
-        .Select(c => mappings.TryGetValue(c, out var mapped) ? mapped : c)
+        .Where(c => mappings.ContainsKey(c))
+        .Select(c => mappings[c])
         .ToList();
 
         seed = mappedColumns;
@@ -261,14 +318,14 @@ public sealed class SqliteItemRepository : IAsyncDisposable
         //return columns.ToList();
     }
 
-    private static object? GetValue(ItemRow item, string column)
+    private static object? GetValue(VendorRow vendor, string column)
     {
         if (column.Equals("Id", StringComparison.OrdinalIgnoreCase))
         {
-            return item.Id;
+            return vendor.Id;
         }
 
-        return item.Values.TryGetValue(column, out var v) ? v : null;
+        return vendor.Values.TryGetValue(column, out var v) ? v : null;
     }
 
     private static object? FormatValue(object? value) =>
