@@ -12,6 +12,7 @@ public class MainViewModel : BaseViewModel
     private readonly OperatorMaster _currentUser;
     private IWeightReader? _weightReader;
     private int? _loadedOpenWeighmentId;
+    private bool _isRefreshingData;
 
     private DeviceSettings _settings = new();
     private decimal _liveWeight;
@@ -123,6 +124,12 @@ public class MainViewModel : BaseViewModel
     private string _operatorDepartmentFilter = string.Empty;
     private string _operatorWeighbridgeFilter = string.Empty;
     private string _operatorStatusFilter = string.Empty;
+    private string _selectedLegalEntityDataAreaId = string.Empty;
+    private LegalEntityMaster? _selectedLegalEntityMaster;
+    private LegalEntityMaster _legalEntityMasterForm = new();
+    private string _legalEntityFilter = string.Empty;
+    private LegalEntityMaster? _selectedOperatorLegalEntityToAdd;
+    private OperatorLegalEntityAssignment? _selectedOperatorLegalEntityAssignment;
     private Customer? _selectedCustomer;
     private Customer _customerForm = new();
     private Vendor? _selectedVendor;
@@ -198,6 +205,11 @@ public class MainViewModel : BaseViewModel
         SaveOperatorMasterCommand = new RelayCommand(SaveOperatorMasterAsync);
         ClearOperatorMasterFormCommand = new RelayCommand(ClearOperatorMasterForm);
         RefreshUsersCommand = new RelayCommand(LoadUsersAsync);
+        SaveLegalEntityCommand = new RelayCommand(SaveLegalEntityAsync);
+        ClearLegalEntityFormCommand = new RelayCommand(ClearLegalEntityForm);
+        AddOperatorLegalEntityCommand = new RelayCommand(AddOperatorLegalEntityToForm);
+        RemoveOperatorLegalEntityCommand = new RelayCommand(RemoveOperatorLegalEntityFromForm);
+        SetDefaultOperatorLegalEntityCommand = new RelayCommand(SetDefaultOperatorLegalEntity);
     }
 
     public ObservableCollection<string> ConnectionTypes { get; }
@@ -226,6 +238,10 @@ public class MainViewModel : BaseViewModel
     public ObservableCollection<WeighbridgeMaster> FilteredWeighbridgeMasters { get; } = new();
     public ObservableCollection<OperatorMaster> OperatorMasters { get; } = new();
     public ObservableCollection<OperatorMaster> FilteredOperatorMasters { get; } = new();
+    public ObservableCollection<LegalEntityMaster> LegalEntities { get; } = new();
+    public ObservableCollection<LegalEntityMaster> FilteredLegalEntities { get; } = new();
+    public ObservableCollection<LegalEntityMaster> AllowedLegalEntities { get; } = new();
+    public ObservableCollection<OperatorLegalEntityAssignment> OperatorLegalEntityAssignments { get; } = new();
     public ObservableCollection<Weighment> OpenWeighments { get; } = new();
     public ObservableCollection<Weighment> CompletedToday { get; } = new();
     public ObservableCollection<Weighment> ReportRows { get; } = new();
@@ -276,11 +292,30 @@ public class MainViewModel : BaseViewModel
     public RelayCommand SaveOperatorMasterCommand { get; }
     public RelayCommand ClearOperatorMasterFormCommand { get; }
     public RelayCommand RefreshUsersCommand { get; }
+    public RelayCommand SaveLegalEntityCommand { get; }
+    public RelayCommand ClearLegalEntityFormCommand { get; }
+    public RelayCommand AddOperatorLegalEntityCommand { get; }
+    public RelayCommand RemoveOperatorLegalEntityCommand { get; }
+    public RelayCommand SetDefaultOperatorLegalEntityCommand { get; }
 
     public string CurrentUserDisplay => $"{_currentUser.OperatorName} ({_currentUser.Username})";
     public string CurrentUserId => _currentUser.OperatorId.ToString();
     public string CurrentUsername => _currentUser.Username;
-    public string CurrentUserCompany => string.IsNullOrWhiteSpace(_currentUser.DataAreaId) ? "DAT" : _currentUser.DataAreaId;
+    public string CurrentUserCompany => string.IsNullOrWhiteSpace(SelectedLegalEntityDataAreaId) ? (string.IsNullOrWhiteSpace(_currentUser.DataAreaId) ? "DAT" : _currentUser.DataAreaId) : SelectedLegalEntityDataAreaId;
+
+    public string SelectedLegalEntityDataAreaId
+    {
+        get => _selectedLegalEntityDataAreaId;
+        set
+        {
+            if (SetProperty(ref _selectedLegalEntityDataAreaId, value))
+            {
+                OnPropertyChanged(nameof(CurrentUserCompany));
+                if (!_isRefreshingData)
+                    _ = RefreshDataForSelectedLegalEntityAsync();
+            }
+        }
+    }
     public bool CanAccessWeighment => _currentUser.CanAccessWeighment;
     public bool CanAccessSettings => _currentUser.CanAccessSettings;
     public bool CanAccessMasters => _currentUser.CanAccessMasters;
@@ -297,6 +332,45 @@ public class MainViewModel : BaseViewModel
 
     public bool CanSaveFirstWeight => CanAccessWeighment && _currentUser.CanCaptureFirstWeight && _loadedOpenWeighmentId == null && !FirstWeight.HasValue;
     public bool CanSaveSecondWeight => CanAccessWeighment && _currentUser.CanCaptureSecondWeight && _loadedOpenWeighmentId.HasValue && FirstWeight.HasValue && !SecondWeight.HasValue;
+
+
+    public LegalEntityMaster? SelectedLegalEntityMaster
+    {
+        get => _selectedLegalEntityMaster;
+        set
+        {
+            if (SetProperty(ref _selectedLegalEntityMaster, value))
+                LoadSelectedLegalEntityToForm();
+        }
+    }
+
+    public LegalEntityMaster LegalEntityMasterForm
+    {
+        get => _legalEntityMasterForm;
+        set => SetProperty(ref _legalEntityMasterForm, value);
+    }
+
+    public string LegalEntityFilter
+    {
+        get => _legalEntityFilter;
+        set
+        {
+            if (SetProperty(ref _legalEntityFilter, value))
+                ApplyLegalEntityFilter();
+        }
+    }
+
+    public LegalEntityMaster? SelectedOperatorLegalEntityToAdd
+    {
+        get => _selectedOperatorLegalEntityToAdd;
+        set => SetProperty(ref _selectedOperatorLegalEntityToAdd, value);
+    }
+
+    public OperatorLegalEntityAssignment? SelectedOperatorLegalEntityAssignment
+    {
+        get => _selectedOperatorLegalEntityAssignment;
+        set => SetProperty(ref _selectedOperatorLegalEntityAssignment, value);
+    }
 
     public DeviceSettings Settings
     {
@@ -1418,6 +1492,7 @@ public class MainViewModel : BaseViewModel
             DatabaseFolderPath = BridgeOneConfigService.GetDatabaseFolderPath();
             await _databaseService.InitializeAsync();
             Settings = await _databaseService.GetSettingsAsync();
+            await LoadAllowedLegalEntitiesAsync();
             await LoadMastersAsync();
             SelectSettingsWeighbridgeFromSavedSettings();
             await RefreshWeighmentsAsync();
@@ -1697,15 +1772,87 @@ public class MainViewModel : BaseViewModel
 
     private async Task RefreshAllAsync()
     {
-        Settings = await _databaseService.GetSettingsAsync();
-        await LoadMastersAsync();
-        SelectSettingsWeighbridgeFromSavedSettings();
-        await RefreshWeighmentsAsync();
-        if (CanAccessReports)
-            await LoadReportAsync();
-        if (CanAccessTransactions)
-            await LoadTransactionsAsync();
-        StatusMessage = "Data refreshed successfully.";
+        try
+        {
+            _isRefreshingData = true;
+            Settings = await _databaseService.GetSettingsAsync();
+            await LoadAllowedLegalEntitiesAsync();
+            await LoadMastersAsync();
+            SelectSettingsWeighbridgeFromSavedSettings();
+            await RefreshWeighmentsAsync();
+            if (CanAccessReports)
+                await LoadReportAsync();
+            if (CanAccessTransactions)
+                await LoadTransactionsAsync();
+            StatusMessage = "Data refreshed successfully.";
+        }
+        finally
+        {
+            _isRefreshingData = false;
+        }
+    }
+
+    private async Task RefreshDataForSelectedLegalEntityAsync()
+    {
+        try
+        {
+            await LoadMastersAsync();
+            SelectSettingsWeighbridgeFromSavedSettings();
+            await RefreshWeighmentsAsync();
+            if (CanAccessReports)
+                await LoadReportAsync();
+            if (CanAccessTransactions)
+                await LoadTransactionsAsync();
+            StatusMessage = $"Legal Entity changed to {CurrentUserCompany}.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Legal Entity change error: " + ex.Message;
+        }
+    }
+
+    private async Task LoadAllowedLegalEntitiesAsync()
+    {
+        var allLegalEntities = await _databaseService.GetLegalEntitiesAsync();
+        ReplaceCollection(LegalEntities, allLegalEntities);
+        ApplyLegalEntityFilter();
+
+        var assignments = _currentUser.OperatorId > 0
+            ? await _databaseService.GetOperatorLegalEntitiesAsync(_currentUser.OperatorId)
+            : new List<OperatorLegalEntityAssignment>();
+
+        if (assignments.Count == 0 && !string.IsNullOrWhiteSpace(_currentUser.DataAreaId))
+        {
+            assignments.Add(new OperatorLegalEntityAssignment
+            {
+                OperatorId = _currentUser.OperatorId,
+                DataAreaId = _currentUser.DataAreaId,
+                LegalEntityName = _currentUser.DataAreaId,
+                IsDefault = true
+            });
+        }
+
+        var allowed = assignments
+            .Select(a => allLegalEntities.FirstOrDefault(le => IsSameDataArea(le.DataAreaId, a.DataAreaId))
+                ?? new LegalEntityMaster { DataAreaId = a.DataAreaId, LegalEntityName = a.LegalEntityName })
+            .Where(x => !string.IsNullOrWhiteSpace(x.DataAreaId))
+            .GroupBy(x => x.DataAreaId, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First())
+            .ToList();
+
+        if (allowed.Count == 0)
+            allowed.Add(new LegalEntityMaster { DataAreaId = "DAT", LegalEntityName = "Default Legal Entity" });
+
+        ReplaceCollection(AllowedLegalEntities, allowed);
+
+        var defaultAssignment = assignments.FirstOrDefault(x => x.IsDefault) ?? assignments.FirstOrDefault();
+        var defaultDataAreaId = defaultAssignment?.DataAreaId;
+        if (string.IsNullOrWhiteSpace(defaultDataAreaId) || !allowed.Any(x => IsSameDataArea(x.DataAreaId, defaultDataAreaId)))
+            defaultDataAreaId = allowed.First().DataAreaId;
+
+        _selectedLegalEntityDataAreaId = defaultDataAreaId ?? "DAT";
+        OnPropertyChanged(nameof(SelectedLegalEntityDataAreaId));
+        OnPropertyChanged(nameof(CurrentUserCompany));
     }
 
     private async Task LoadMastersAsync()
@@ -1720,6 +1867,10 @@ public class MainViewModel : BaseViewModel
         var warehouseMasters = await _databaseService.GetWarehouseMastersAsync();
         var weighbridgeMasters = await _databaseService.GetWeighbridgeMastersAsync();
         var operatorMasters = await _databaseService.GetOperatorMastersAsync();
+        var legalEntities = await _databaseService.GetLegalEntitiesAsync();
+
+        ReplaceCollection(LegalEntities, legalEntities);
+        ApplyLegalEntityFilter();
 
         var currentDataAreaId = CurrentUserCompany;
         var dataAreaVehicles = vehicles.Where(x => IsSameDataArea(x.DataAreaId, currentDataAreaId)).ToList();
@@ -2976,9 +3127,13 @@ public class MainViewModel : BaseViewModel
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(OperatorMasterForm.DataAreaId))
-                OperatorMasterForm.DataAreaId = CurrentUserCompany;
+            NormalizeOperatorLegalEntityAssignmentsForSave();
             await _databaseService.SaveOperatorMasterAsync(OperatorMasterForm);
+            var savedOperator = await _databaseService.GetOperatorByUsernameAsync(OperatorMasterForm.Username);
+            if (savedOperator == null)
+                throw new InvalidOperationException("Operator was saved but could not be reloaded.");
+
+            await _databaseService.SaveOperatorLegalEntitiesAsync(savedOperator.OperatorId, OperatorLegalEntityAssignments);
             await LoadMastersAsync();
             StatusMessage = "Operator master saved.";
         }
@@ -2991,6 +3146,17 @@ public class MainViewModel : BaseViewModel
     private void ClearOperatorMasterForm()
     {
         SelectedOperatorMaster = null;
+        OperatorLegalEntityAssignments.Clear();
+        var defaultLegalEntity = AllowedLegalEntities.FirstOrDefault(x => IsSameDataArea(x.DataAreaId, CurrentUserCompany));
+        if (defaultLegalEntity != null)
+        {
+            OperatorLegalEntityAssignments.Add(new OperatorLegalEntityAssignment
+            {
+                DataAreaId = defaultLegalEntity.DataAreaId,
+                LegalEntityName = defaultLegalEntity.LegalEntityName,
+                IsDefault = true
+            });
+        }
         OperatorMasterForm = new OperatorMaster
         {
             DataAreaId = CurrentUserCompany,
@@ -3044,6 +3210,163 @@ public class MainViewModel : BaseViewModel
             EffectiveFrom = SelectedOperatorMaster.EffectiveFrom,
             Remarks = SelectedOperatorMaster.Remarks
         };
+        _ = LoadOperatorLegalEntitiesForFormAsync(OperatorMasterForm.OperatorId);
+    }
+
+
+    private async Task SaveLegalEntityAsync()
+    {
+        try
+        {
+            if (!CanAccessMasters)
+            {
+                StatusMessage = "You do not have access to Masters.";
+                return;
+            }
+
+            await _databaseService.SaveLegalEntityAsync(LegalEntityMasterForm);
+            await LoadAllowedLegalEntitiesAsync();
+            await LoadMastersAsync();
+            StatusMessage = "Legal Entity saved.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Legal Entity save error: " + ex.Message;
+        }
+    }
+
+    private void ClearLegalEntityForm()
+    {
+        SelectedLegalEntityMaster = null;
+        LegalEntityMasterForm = new LegalEntityMaster();
+    }
+
+    private void LoadSelectedLegalEntityToForm()
+    {
+        if (SelectedLegalEntityMaster == null)
+            return;
+
+        LegalEntityMasterForm = new LegalEntityMaster
+        {
+            LegalEntityId = SelectedLegalEntityMaster.LegalEntityId,
+            DataAreaId = SelectedLegalEntityMaster.DataAreaId,
+            LegalEntityName = SelectedLegalEntityMaster.LegalEntityName,
+            Remarks = SelectedLegalEntityMaster.Remarks
+        };
+    }
+
+    private async Task LoadOperatorLegalEntitiesForFormAsync(int operatorId)
+    {
+        OperatorLegalEntityAssignments.Clear();
+        if (operatorId <= 0)
+            return;
+
+        var lines = await _databaseService.GetOperatorLegalEntitiesAsync(operatorId);
+        foreach (var line in lines)
+            OperatorLegalEntityAssignments.Add(line);
+    }
+
+    private void AddOperatorLegalEntityToForm()
+    {
+        var legalEntityToAdd = SelectedOperatorLegalEntityToAdd
+            ?? LegalEntities.FirstOrDefault(x => !OperatorLegalEntityAssignments.Any(a => IsSameDataArea(a.DataAreaId, x.DataAreaId)));
+
+        if (legalEntityToAdd == null)
+        {
+            StatusMessage = "No Legal Entity is available to assign.";
+            return;
+        }
+
+        if (OperatorLegalEntityAssignments.Any(x => IsSameDataArea(x.DataAreaId, legalEntityToAdd.DataAreaId)))
+        {
+            StatusMessage = "Legal Entity is already assigned to this operator.";
+            return;
+        }
+
+        var isDefault = OperatorLegalEntityAssignments.Count == 0;
+        OperatorLegalEntityAssignments.Add(new OperatorLegalEntityAssignment
+        {
+            OperatorId = OperatorMasterForm.OperatorId,
+            DataAreaId = legalEntityToAdd.DataAreaId,
+            LegalEntityName = legalEntityToAdd.LegalEntityName,
+            IsDefault = isDefault
+        });
+
+        if (isDefault)
+            OperatorMasterForm.DataAreaId = legalEntityToAdd.DataAreaId;
+
+        StatusMessage = "Legal Entity assigned to operator.";
+    }
+
+    private void NormalizeOperatorLegalEntityAssignmentsForSave()
+    {
+        if (OperatorLegalEntityAssignments.Count == 0)
+            throw new InvalidOperationException("At least one Legal Entity must be assigned to the operator.");
+
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var assignment in OperatorLegalEntityAssignments)
+        {
+            assignment.DataAreaId = assignment.DataAreaId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(assignment.DataAreaId))
+                throw new InvalidOperationException("Legal Entity is mandatory in Assigned Legal Entities grid.");
+
+            if (!seen.Add(assignment.DataAreaId))
+                throw new InvalidOperationException($"Legal Entity {assignment.DataAreaId} is assigned more than once.");
+
+            var master = LegalEntities.FirstOrDefault(x => IsSameDataArea(x.DataAreaId, assignment.DataAreaId));
+            if (master == null)
+                throw new InvalidOperationException($"Legal Entity {assignment.DataAreaId} is not available in Legal Entity Master.");
+
+            assignment.LegalEntityName = master.LegalEntityName;
+        }
+
+        if (!OperatorLegalEntityAssignments.Any(x => x.IsDefault))
+            OperatorLegalEntityAssignments[0].IsDefault = true;
+
+        var defaultLine = OperatorLegalEntityAssignments.First(x => x.IsDefault);
+        foreach (var assignment in OperatorLegalEntityAssignments.Where(x => !ReferenceEquals(x, defaultLine)))
+            assignment.IsDefault = false;
+
+        OperatorMasterForm.DataAreaId = defaultLine.DataAreaId;
+        ReplaceCollection(OperatorLegalEntityAssignments, OperatorLegalEntityAssignments.ToList());
+    }
+
+    private void RemoveOperatorLegalEntityFromForm()
+    {
+        if (SelectedOperatorLegalEntityAssignment == null)
+        {
+            StatusMessage = "Please select assigned Legal Entity to remove.";
+            return;
+        }
+
+        var removedDefault = SelectedOperatorLegalEntityAssignment.IsDefault;
+        OperatorLegalEntityAssignments.Remove(SelectedOperatorLegalEntityAssignment);
+        SelectedOperatorLegalEntityAssignment = null;
+
+        if (removedDefault && OperatorLegalEntityAssignments.Count > 0)
+        {
+            OperatorLegalEntityAssignments[0].IsDefault = true;
+            OperatorMasterForm.DataAreaId = OperatorLegalEntityAssignments[0].DataAreaId;
+        }
+
+        StatusMessage = "Assigned Legal Entity removed.";
+    }
+
+    private void SetDefaultOperatorLegalEntity()
+    {
+        if (SelectedOperatorLegalEntityAssignment == null)
+        {
+            StatusMessage = "Please select assigned Legal Entity first.";
+            return;
+        }
+
+        foreach (var line in OperatorLegalEntityAssignments)
+            line.IsDefault = false;
+
+        SelectedOperatorLegalEntityAssignment.IsDefault = true;
+        OperatorMasterForm.DataAreaId = SelectedOperatorLegalEntityAssignment.DataAreaId;
+        ReplaceCollection(OperatorLegalEntityAssignments, OperatorLegalEntityAssignments.ToList());
+        StatusMessage = "Default Legal Entity updated.";
     }
 
     private void ClearReportFilters()
@@ -3087,6 +3410,7 @@ public class MainViewModel : BaseViewModel
 
     private void ApplyMasterFilters()
     {
+        ApplyLegalEntityFilter();
         ApplyCustomerFilter();
         ApplyVendorFilter();
         ApplyItemMasterFilter();
@@ -3095,6 +3419,14 @@ public class MainViewModel : BaseViewModel
         ApplyDriverFilter();
         ApplyWeighbridgeFilter();
         ApplyOperatorFilter();
+    }
+
+    private void ApplyLegalEntityFilter()
+    {
+        ReplaceCollection(FilteredLegalEntities, LegalEntities.Where(x =>
+            MatchesFilter(x.DataAreaId, LegalEntityFilter) ||
+            MatchesFilter(x.LegalEntityName, LegalEntityFilter) ||
+            MatchesFilter(x.Remarks, LegalEntityFilter)));
     }
 
     private void ApplyCustomerFilter()

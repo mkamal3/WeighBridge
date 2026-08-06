@@ -29,6 +29,27 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <Style x:Key="GridIconButtonStyle" TargetType="{x:Type Button}">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0,3,0,3" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="Width" Value="24" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Foreground" Value="#202A44" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
     <Grid Background="#F5F6F8">
         <Grid.RowDefinitions>
@@ -45,12 +66,24 @@
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
                     <TextBlock Text="Operator: " Foreground="#D8DFEA" VerticalAlignment="Center" />
                     <TextBlock Text="{Binding CurrentUserDisplay}" Foreground="White" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,16,0" />
-                    <TextBlock Text="Legal Entity: " Foreground="#D8DFEA" VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding CurrentUserCompany}" Foreground="White" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,16,0" />
                     <TextBlock Text="Connection: " Foreground="#D8DFEA" VerticalAlignment="Center" />
                     <TextBlock Text="{Binding ConnectionStatus}" Foreground="White" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,16,0" />
+                    <TextBlock Text="Legal Entity: " Foreground="#D8DFEA" VerticalAlignment="Center" />
+                    <ComboBox ItemsSource="{Binding AllowedLegalEntities}"
+                              SelectedValuePath="DataAreaId"
+                              DisplayMemberPath="DataAreaId"
+                              SelectedValue="{Binding SelectedLegalEntityDataAreaId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                              Width="95" Height="24" Margin="0,0,16,0"
+                              ToolTip="Switch between assigned Legal Entities" />
                     <Button Content="↻" Command="{Binding RefreshCommand}" Style="{StaticResource HeaderIconButtonStyle}" ToolTip="Refresh" />
-                    <Button Content="⇥" Click="LogoutButton_Click" Style="{StaticResource HeaderIconButtonStyle}" ToolTip="Logout" />
+                    <Button Click="LogoutButton_Click" Style="{StaticResource HeaderIconButtonStyle}" ToolTip="Logout">
+                        <Viewbox Width="18" Height="18">
+                            <Canvas Width="24" Height="24">
+                                <Path Stroke="White" StrokeThickness="2.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent"
+                                      Data="M10,4 L6,4 C4.9,4 4,4.9 4,6 L4,18 C4,19.1 4.9,20 6,20 L10,20 M13,8 L17,12 L13,16 M8,12 L17,12" />
+                            </Canvas>
+                        </Viewbox>
+                    </Button>
                     <Button Content="✕" Click="CloseButton_Click" Style="{StaticResource HeaderIconButtonStyle}" ToolTip="Close" />
                 </StackPanel>
             </DockPanel>
@@ -242,6 +275,52 @@
 
             <TabItem Header="Masters" Visibility="{Binding CanAccessMasters, Converter={StaticResource BoolToVisibilityConverter}}">
                 <TabControl Margin="12">
+
+                        <TabItem Header="Legal Entity Master">
+                            <Grid Margin="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="5*" />
+                                    <ColumnDefinition Width="4*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0" Background="White" CornerRadius="8" Padding="10" Margin="4">
+                                    <DockPanel LastChildFill="True">
+                                        <TextBlock DockPanel.Dock="Top" Text="View of &quot;Legal Entity Master&quot;" FontSize="18" FontWeight="SemiBold" Margin="4" />
+                                        <WrapPanel DockPanel.Dock="Top" Margin="4,2,4,8">
+                                            <StackPanel Width="220" Margin="0,0,8,6">
+                                                <TextBlock Text="Legal Entity / Name" />
+                                                <TextBox Text="{Binding LegalEntityFilter, UpdateSourceTrigger=PropertyChanged}" />
+                                            </StackPanel>
+                                        </WrapPanel>
+                                        <DataGrid ItemsSource="{Binding FilteredLegalEntities}" SelectedItem="{Binding SelectedLegalEntityMaster}" VerticalAlignment="Stretch" AutoGenerateColumns="False" IsReadOnly="True">
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Header="Legal Entity" Binding="{Binding DataAreaId}" Width="140" />
+                                                <DataGridTextColumn Header="Legal Entity Name" Binding="{Binding LegalEntityName}" Width="220" />
+                                                <DataGridTextColumn Header="Description / Remarks" Binding="{Binding Remarks}" Width="*" />
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+                                    </DockPanel>
+                                </Border>
+                                <Border Grid.Column="1" Background="White" CornerRadius="8" Padding="10" Margin="4">
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Top" Text="Open / Edit Legal Entity" FontSize="18" FontWeight="SemiBold" Margin="4" />
+                                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="4">
+                                            <Button Content="Save" Command="{Binding SaveLegalEntityCommand}" />
+                                            <Button Content="New / Clear" Command="{Binding ClearLegalEntityFormCommand}" />
+                                        </StackPanel>
+                                        <StackPanel>
+                                            <GroupBox Header="General" Margin="4" Padding="8">
+                                                <StackPanel>
+                                                    <DockPanel Margin="0,2"><Label Content="Legal Entity *" Width="170" /><TextBox Text="{Binding LegalEntityMasterForm.DataAreaId, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                    <DockPanel Margin="0,2"><Label Content="Legal Entity Name *" Width="170" /><TextBox Text="{Binding LegalEntityMasterForm.LegalEntityName, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                    <DockPanel Margin="0,2"><Label Content="Description / Remarks" Width="170" /><TextBox Text="{Binding LegalEntityMasterForm.Remarks, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="80" TextWrapping="Wrap" /></DockPanel>
+                                                </StackPanel>
+                                            </GroupBox>
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Border>
+                            </Grid>
+                        </TabItem>
+
                         <TabItem Header="Customer Master">
                             <Grid Margin="8">
                                 <Grid.ColumnDefinitions>
@@ -1517,8 +1596,40 @@
                                                     <StackPanel>
                                                         <DockPanel Margin="0,2"><Label Content="Designation *" Width="205" /><ComboBox IsEditable="True" Text="{Binding OperatorMasterForm.Designation, UpdateSourceTrigger=PropertyChanged}"><ComboBoxItem Content="Weighbridge Operator" /><ComboBoxItem Content="Supervisor" /><ComboBoxItem Content="QC Inspector" /><ComboBoxItem Content="Administrator" /><ComboBoxItem Content="Cashier" /><ComboBoxItem Content="Manager" /></ComboBox></DockPanel>
                                                         <DockPanel Margin="0,2"><Label Content="Department *" Width="205" /><ComboBox IsEditable="True" Text="{Binding OperatorMasterForm.Department, UpdateSourceTrigger=PropertyChanged}"><ComboBoxItem Content="Operations" /><ComboBoxItem Content="Production" /><ComboBoxItem Content="Warehouse" /><ComboBoxItem Content="Quality" /><ComboBoxItem Content="Finance" /><ComboBoxItem Content="IT" /><ComboBoxItem Content="Administration" /></ComboBox></DockPanel>
-                                                        <DockPanel Margin="0,2"><Label Content="Legal Entity *" Width="205" /><TextBox Text="{Binding OperatorMasterForm.DataAreaId, UpdateSourceTrigger=PropertyChanged}" ToolTip="Global operator assignment. This Legal Entity filters master lookups and transactions after login." /></DockPanel>
                                                     </StackPanel>
+                                                </GroupBox>
+
+                                                <GroupBox Header="Assigned Legal Entities" Margin="4" Padding="8">
+                                                    <DockPanel>
+                                                        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                                            <DockPanel Margin="0,0,0,6" LastChildFill="True">
+                                                                <Label DockPanel.Dock="Left" Content="Legal Entity" Width="120" VerticalAlignment="Center" />
+                                                                <Button DockPanel.Dock="Right" Content="＋" Command="{Binding AddOperatorLegalEntityCommand}" Style="{StaticResource GridIconButtonStyle}" ToolTip="Add Legal Entity" Margin="8,0,0,0" />
+                                                                <ComboBox ItemsSource="{Binding LegalEntities}"
+                                                                          SelectedItem="{Binding SelectedOperatorLegalEntityToAdd, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                          DisplayMemberPath="DataAreaId"
+                                                                          IsEditable="False"
+                                                                          Height="24" />
+                                                            </DockPanel>
+                                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="120,0,0,0">
+                                                                <Button Content="🗑" Command="{Binding RemoveOperatorLegalEntityCommand}" Style="{StaticResource GridIconButtonStyle}" ToolTip="Delete Selected" />
+                                                                <Button Content="★" Command="{Binding SetDefaultOperatorLegalEntityCommand}" Style="{StaticResource GridIconButtonStyle}" ToolTip="Set Selected as Default" />
+                                                            </StackPanel>
+                                                        </StackPanel>
+                                                        <DataGrid ItemsSource="{Binding OperatorLegalEntityAssignments}"
+                                                                  SelectedItem="{Binding SelectedOperatorLegalEntityAssignment}"
+                                                                  AutoGenerateColumns="False"
+                                                                  Height="155"
+                                                                  CanUserAddRows="False"
+                                                                  CanUserDeleteRows="False"
+                                                                  IsReadOnly="True">
+                                                            <DataGrid.Columns>
+                                                                <DataGridTextColumn Header="Legal Entity" Binding="{Binding DataAreaId}" Width="150" />
+                                                                <DataGridTextColumn Header="Legal Entity Name" Binding="{Binding LegalEntityName}" Width="220" />
+                                                                <DataGridCheckBoxColumn Header="Default" Binding="{Binding IsDefault}" Width="80" />
+                                                            </DataGrid.Columns>
+                                                        </DataGrid>
+                                                    </DockPanel>
                                                 </GroupBox>
                                                 <GroupBox Header="Weighbridge Assignment" Margin="4" Padding="8">
                                                     <StackPanel>

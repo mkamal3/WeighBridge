@@ -286,3 +286,47 @@ Database migration also removes legacy single-column unique constraints from old
 - Replaced large header buttons with minimal borderless clickable icons only.
 - Refresh, Logout, and Close still have tooltips.
 - Sync ID fields remain unique in the database and migration indexes.
+
+## Latest Update - Nullable Unique Sync IDs
+
+- D365/Dataverse sync ID columns now use `TEXT UNIQUE` instead of `TEXT NOT NULL DEFAULT '' UNIQUE`.
+- Blank sync IDs are saved as `NULL`, not empty string, so SQLite can allow multiple unsynced local records while still enforcing uniqueness when a sync ID exists.
+- Removed the placeholder sync ID generation logic:
+  - `NormalizeBlankD365SyncIds`
+  - `FillBlankUniqueTextValue`
+- Sync ID uniqueness is still preserved for non-null values.
+
+## Latest update - Multiple Legal Entities
+
+- Added Legal Entity Master under Masters.
+- Legal Entity Master fields: Legal Entity/DataAreaId, Legal Entity Name, Description/Remarks.
+- Operator Master now supports multiple assigned legal entities through an assigned legal entities grid.
+- One assigned legal entity can be marked as default.
+- Header now includes a Legal Entity selector; users can switch only between legal entities assigned to their operator.
+- Master data, lookups, reports, transactions, and settings are refreshed based on the selected legal entity.
+- Transaction DataAreaId is saved from the selected legal entity.
+- Customer, Vendor, Item, and Warehouse remain read-only synced masters.
+
+## Latest update - Header and Operator Legal Entity UI
+
+- Header order changed to: Operator, Connection, Legal Entity selector, Refresh, Logout, Close.
+- Logout icon changed to a minimal door/arrow style icon.
+- Operator Master Assigned Legal Entities section now uses minimal icons only:
+  - + Add row
+  - 🗑 Remove selected
+  - ★ Set selected as default
+- Removed the separate Legal Entity dropdown above the Assigned Legal Entities grid.
+- Legal Entity selection is now done directly inside the Assigned Legal Entities grid.
+
+## Latest UI Update
+- Header sequence arranged as Operator, Connection, Legal Entity selector, Refresh, Logout, Close.
+- Logout icon updated to a minimal door/arrow style.
+- Operator Master Assigned Legal Entities icons moved to the top-left above the grid.
+- Assigned Legal Entities grid now has an always-visible Legal Entity dropdown column.
+- Selecting a Legal Entity in the grid updates the Legal Entity Name automatically.
+
+### Latest Operator Legal Entity UI Update
+- Removed the duplicate Default Legal Entity field from Operator Master organization section.
+- Assigned Legal Entities grid is now read-only.
+- Legal Entity is selected from a dropdown above the grid, then added using the plus icon.
+- Delete and Set as Default remain as icon actions below the selection line.
