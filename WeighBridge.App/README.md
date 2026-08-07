@@ -330,3 +330,20 @@ Database migration also removes legacy single-column unique constraints from old
 - Assigned Legal Entities grid is now read-only.
 - Legal Entity is selected from a dropdown above the grid, then added using the plus icon.
 - Delete and Set as Default remain as icon actions below the selection line.
+
+## Latest Legal Entity Backend Sync Update
+
+- Added backend-only D365/Dataverse sync fields to Legal Entity Master.
+- UI still shows only Legal Entity/DataAreaId, Legal Entity Name, and Remarks.
+- Backend-only fields added to `LegalEntities` table/model:
+  - ID
+  - SinkCreatedOn
+  - SinkModifiedOn
+  - mserp_dataareaid_id
+  - mserp_dataareaid_id_entitytype
+  - mserp_dataareaid
+  - versionnumber
+  - IsDelete
+  - CreatedOn
+  - createdonpartition
+- `ID` is nullable and has a unique index for synced records.

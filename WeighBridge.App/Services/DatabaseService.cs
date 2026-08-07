@@ -64,6 +64,16 @@ CREATE TABLE IF NOT EXISTS LegalEntities (
     DataAreaId TEXT NOT NULL UNIQUE,
     LegalEntityName TEXT NOT NULL DEFAULT '',
     Remarks TEXT NOT NULL DEFAULT '',
+    ID TEXT UNIQUE,
+    SinkCreatedOn TEXT NOT NULL DEFAULT '',
+    SinkModifiedOn TEXT NOT NULL DEFAULT '',
+    mserp_dataareaid_id TEXT NOT NULL DEFAULT '',
+    mserp_dataareaid_id_entitytype TEXT NOT NULL DEFAULT '',
+    mserp_dataareaid TEXT NOT NULL DEFAULT '',
+    versionnumber TEXT NOT NULL DEFAULT '',
+    IsDelete TEXT NOT NULL DEFAULT '',
+    CreatedOn TEXT NOT NULL DEFAULT '',
+    createdonpartition TEXT NOT NULL DEFAULT '',
     CreatedAt TEXT NOT NULL DEFAULT ''
 );
 
@@ -1347,16 +1357,24 @@ VALUES
 UPDATE LegalEntities SET
     DataAreaId = $DataAreaId,
     LegalEntityName = $LegalEntityName,
-    Remarks = $Remarks
+    Remarks = $Remarks,
+    ID = $ID,
+    SinkCreatedOn = $SinkCreatedOn,
+    SinkModifiedOn = $SinkModifiedOn,
+    mserp_dataareaid_id = $mserp_dataareaid_id,
+    mserp_dataareaid_id_entitytype = $mserp_dataareaid_id_entitytype,
+    mserp_dataareaid = $mserp_dataareaid,
+    versionnumber = $versionnumber,
+    IsDelete = $IsDelete,
+    CreatedOn = $CreatedOn,
+    createdonpartition = $createdonpartition
 WHERE LegalEntityId = $LegalEntityId;" : @"
 INSERT INTO LegalEntities
-(DataAreaId, LegalEntityName, Remarks, CreatedAt)
+(DataAreaId, LegalEntityName, Remarks, ID, SinkCreatedOn, SinkModifiedOn, mserp_dataareaid_id, mserp_dataareaid_id_entitytype, mserp_dataareaid, versionnumber, IsDelete, CreatedOn, createdonpartition, CreatedAt)
 VALUES
-($DataAreaId, $LegalEntityName, $Remarks, $CreatedAt);";
+($DataAreaId, $LegalEntityName, $Remarks, $ID, $SinkCreatedOn, $SinkModifiedOn, $mserp_dataareaid_id, $mserp_dataareaid_id_entitytype, $mserp_dataareaid, $versionnumber, $IsDelete, $CreatedOn, $createdonpartition, $CreatedAt);";
+        AddLegalEntityParameters(command, legalEntity);
         command.Parameters.AddWithValue("$LegalEntityId", legalEntity.LegalEntityId);
-        command.Parameters.AddWithValue("$DataAreaId", legalEntity.DataAreaId.Trim());
-        command.Parameters.AddWithValue("$LegalEntityName", legalEntity.LegalEntityName.Trim());
-        command.Parameters.AddWithValue("$Remarks", legalEntity.Remarks?.Trim() ?? string.Empty);
         command.Parameters.AddWithValue("$CreatedAt", DateTime.Now.ToString("O"));
         command.ExecuteNonQuery();
     });
@@ -2055,6 +2073,16 @@ WHERE UserId = $UserId;";
         EnsureColumn(connection, "OperatorMasters", "DataAreaId", "TEXT NOT NULL DEFAULT 'DAT'");
         EnsureColumn(connection, "LegalEntities", "LegalEntityName", "TEXT NOT NULL DEFAULT ''");
         EnsureColumn(connection, "LegalEntities", "Remarks", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "LegalEntities", "ID", "TEXT");
+        EnsureColumn(connection, "LegalEntities", "SinkCreatedOn", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "LegalEntities", "SinkModifiedOn", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "LegalEntities", "mserp_dataareaid_id", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "LegalEntities", "mserp_dataareaid_id_entitytype", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "LegalEntities", "mserp_dataareaid", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "LegalEntities", "versionnumber", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "LegalEntities", "IsDelete", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "LegalEntities", "CreatedOn", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "LegalEntities", "createdonpartition", "TEXT NOT NULL DEFAULT ''");
 
         // Backend-only D365/Dataverse sync columns for customer/vendor/item/warehouse masters.
         EnsureColumn(connection, "Customers", "mserp_mk_wbcustomermasterId", "TEXT");
@@ -2308,6 +2336,7 @@ WHERE trim(ifnull(DataAreaId, '')) <> ''; ");
         ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_Vendors_mserp_mk_wbvendormasterId ON Vendors (mserp_mk_wbvendormasterId);");
         ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_ItemMasters_mserp_mk_wb_ecoresreleasedproductv2entityId ON ItemMasters (mserp_mk_wb_ecoresreleasedproductv2entityId);");
         ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_WarehouseMasters_mserp_mk_wbwarehousemasterId ON WarehouseMasters (mserp_mk_wbwarehousemasterId);");
+        ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_LegalEntities_ID ON LegalEntities (ID);");
     }
 
     private static List<string> GetTableColumns(SqliteConnection connection, string tableName)
@@ -2722,6 +2751,24 @@ ON CONFLICT(OperatorId, DataAreaId) DO UPDATE SET IsDefault = excluded.IsDefault
     }
 
 
+    private static void AddLegalEntityParameters(SqliteCommand command, LegalEntityMaster legalEntity)
+    {
+        command.Parameters.AddWithValue("$DataAreaId", DbValue(legalEntity.DataAreaId));
+        command.Parameters.AddWithValue("$LegalEntityName", DbValue(legalEntity.LegalEntityName));
+        command.Parameters.AddWithValue("$Remarks", DbValue(legalEntity.Remarks));
+        command.Parameters.AddWithValue("$ID", string.IsNullOrWhiteSpace(legalEntity.ID) ? DBNull.Value : legalEntity.ID.Trim());
+        command.Parameters.AddWithValue("$SinkCreatedOn", DbValue(legalEntity.SinkCreatedOn));
+        command.Parameters.AddWithValue("$SinkModifiedOn", DbValue(legalEntity.SinkModifiedOn));
+        command.Parameters.AddWithValue("$mserp_dataareaid_id", DbValue(legalEntity.mserp_dataareaid_id));
+        command.Parameters.AddWithValue("$mserp_dataareaid_id_entitytype", DbValue(legalEntity.mserp_dataareaid_id_entitytype));
+        command.Parameters.AddWithValue("$mserp_dataareaid", DbValue(legalEntity.mserp_dataareaid));
+        command.Parameters.AddWithValue("$versionnumber", DbValue(legalEntity.versionnumber));
+        command.Parameters.AddWithValue("$IsDelete", DbValue(legalEntity.IsDelete));
+        command.Parameters.AddWithValue("$CreatedOn", DbValue(legalEntity.CreatedOn));
+        command.Parameters.AddWithValue("$createdonpartition", DbValue(legalEntity.createdonpartition));
+    }
+
+
 
     private static void AddD365SyncParameters(
         SqliteCommand command,
@@ -3089,7 +3136,17 @@ ON CONFLICT(OperatorId, DataAreaId) DO UPDATE SET IsDefault = excluded.IsDefault
         LegalEntityId = Convert.ToInt32(reader["LegalEntityId"]),
         DataAreaId = ReadText(reader, "DataAreaId"),
         LegalEntityName = ReadText(reader, "LegalEntityName"),
-        Remarks = ReadText(reader, "Remarks")
+        Remarks = ReadText(reader, "Remarks"),
+        ID = ReadText(reader, "ID"),
+        SinkCreatedOn = ReadText(reader, "SinkCreatedOn"),
+        SinkModifiedOn = ReadText(reader, "SinkModifiedOn"),
+        mserp_dataareaid_id = ReadText(reader, "mserp_dataareaid_id"),
+        mserp_dataareaid_id_entitytype = ReadText(reader, "mserp_dataareaid_id_entitytype"),
+        mserp_dataareaid = ReadText(reader, "mserp_dataareaid"),
+        versionnumber = ReadText(reader, "versionnumber"),
+        IsDelete = ReadText(reader, "IsDelete"),
+        CreatedOn = ReadText(reader, "CreatedOn"),
+        createdonpartition = ReadText(reader, "createdonpartition")
     };
 
     private static OperatorLegalEntityAssignment MapOperatorLegalEntityAssignment(SqliteDataReader reader) => new()
