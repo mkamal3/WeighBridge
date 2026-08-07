@@ -13,6 +13,15 @@ public class MainViewModel : BaseViewModel
     private IWeightReader? _weightReader;
     private int? _loadedOpenWeighmentId;
     private bool _isRefreshingData;
+    private const int MasterPageSize = 200;
+    private int _customerPageIndex;
+    private int _vendorPageIndex;
+    private int _itemMasterPageIndex;
+    private int _warehousePageIndex;
+    private bool _isLoadingCustomerPage;
+    private bool _isLoadingVendorPage;
+    private bool _isLoadingItemMasterPage;
+    private bool _isLoadingWarehousePage;
 
     private DeviceSettings _settings = new();
     private decimal _liveWeight;
@@ -171,6 +180,10 @@ public class MainViewModel : BaseViewModel
         LoadOpenTicketCommand = new RelayCommand(LoadSelectedOpenTicket); // kept for compatibility; open ticket loads automatically on row selection
         RefreshCommand = new RelayCommand(RefreshAllAsync);
         ClearCommand = new RelayCommand(ClearEntry);
+        OpenVehicleLookupCommand = new RelayCommand(OpenVehicleLookupAsync);
+        OpenDriverLookupCommand = new RelayCommand(OpenDriverLookupAsync);
+        OpenPartyLookupCommand = new RelayCommand(OpenPartyLookupAsync);
+        OpenItemLookupCommand = new RelayCommand(OpenItemLookupAsync);
         AddPartyCommand = new RelayCommand(AddPartyAsync);
         AddMaterialCommand = new RelayCommand(AddMaterialAsync);
         AddVehicleCommand = new RelayCommand(AddVehicleAsync);
@@ -196,6 +209,14 @@ public class MainViewModel : BaseViewModel
         ClearItemMasterFormCommand = new RelayCommand(ClearItemMasterForm);
         SaveWarehouseMasterCommand = new RelayCommand(SaveWarehouseMasterAsync);
         ClearWarehouseMasterFormCommand = new RelayCommand(ClearWarehouseMasterForm);
+        CustomerPreviousPageCommand = new RelayCommand(async () => { if (_customerPageIndex > 0) _customerPageIndex--; await LoadCustomerPageAsync(); }, () => _customerPageIndex > 0 && !_isLoadingCustomerPage);
+        CustomerNextPageCommand = new RelayCommand(async () => { _customerPageIndex++; await LoadCustomerPageAsync(); }, () => !_isLoadingCustomerPage);
+        VendorPreviousPageCommand = new RelayCommand(async () => { if (_vendorPageIndex > 0) _vendorPageIndex--; await LoadVendorPageAsync(); }, () => _vendorPageIndex > 0 && !_isLoadingVendorPage);
+        VendorNextPageCommand = new RelayCommand(async () => { _vendorPageIndex++; await LoadVendorPageAsync(); }, () => !_isLoadingVendorPage);
+        ItemMasterPreviousPageCommand = new RelayCommand(async () => { if (_itemMasterPageIndex > 0) _itemMasterPageIndex--; await LoadItemMasterPageAsync(); }, () => _itemMasterPageIndex > 0 && !_isLoadingItemMasterPage);
+        ItemMasterNextPageCommand = new RelayCommand(async () => { _itemMasterPageIndex++; await LoadItemMasterPageAsync(); }, () => !_isLoadingItemMasterPage);
+        WarehousePreviousPageCommand = new RelayCommand(async () => { if (_warehousePageIndex > 0) _warehousePageIndex--; await LoadWarehousePageAsync(); }, () => _warehousePageIndex > 0 && !_isLoadingWarehousePage);
+        WarehouseNextPageCommand = new RelayCommand(async () => { _warehousePageIndex++; await LoadWarehousePageAsync(); }, () => !_isLoadingWarehousePage);
         SaveVehicleMasterCommand = new RelayCommand(SaveVehicleMasterAsync);
         ClearVehicleMasterFormCommand = new RelayCommand(ClearVehicleMasterForm);
         SaveDriverMasterCommand = new RelayCommand(SaveDriverMasterAsync);
@@ -258,6 +279,10 @@ public class MainViewModel : BaseViewModel
     public RelayCommand LoadOpenTicketCommand { get; }
     public RelayCommand RefreshCommand { get; }
     public RelayCommand ClearCommand { get; }
+    public RelayCommand OpenVehicleLookupCommand { get; }
+    public RelayCommand OpenDriverLookupCommand { get; }
+    public RelayCommand OpenPartyLookupCommand { get; }
+    public RelayCommand OpenItemLookupCommand { get; }
     public RelayCommand AddPartyCommand { get; }
     public RelayCommand AddMaterialCommand { get; }
     public RelayCommand AddVehicleCommand { get; }
@@ -283,6 +308,14 @@ public class MainViewModel : BaseViewModel
     public RelayCommand ClearItemMasterFormCommand { get; }
     public RelayCommand SaveWarehouseMasterCommand { get; }
     public RelayCommand ClearWarehouseMasterFormCommand { get; }
+    public RelayCommand CustomerPreviousPageCommand { get; }
+    public RelayCommand CustomerNextPageCommand { get; }
+    public RelayCommand VendorPreviousPageCommand { get; }
+    public RelayCommand VendorNextPageCommand { get; }
+    public RelayCommand ItemMasterPreviousPageCommand { get; }
+    public RelayCommand ItemMasterNextPageCommand { get; }
+    public RelayCommand WarehousePreviousPageCommand { get; }
+    public RelayCommand WarehouseNextPageCommand { get; }
     public RelayCommand SaveVehicleMasterCommand { get; }
     public RelayCommand ClearVehicleMasterFormCommand { get; }
     public RelayCommand SaveDriverMasterCommand { get; }
@@ -302,6 +335,10 @@ public class MainViewModel : BaseViewModel
     public string CurrentUserId => _currentUser.OperatorId.ToString();
     public string CurrentUsername => _currentUser.Username;
     public string CurrentUserCompany => string.IsNullOrWhiteSpace(SelectedLegalEntityDataAreaId) ? (string.IsNullOrWhiteSpace(_currentUser.DataAreaId) ? "DAT" : _currentUser.DataAreaId) : SelectedLegalEntityDataAreaId;
+    public string CustomerPageText => $"Page {_customerPageIndex + 1} | Loaded {FilteredCustomers.Count:N0} rows | Page size {MasterPageSize:N0}";
+    public string VendorPageText => $"Page {_vendorPageIndex + 1} | Loaded {FilteredVendors.Count:N0} rows | Page size {MasterPageSize:N0}";
+    public string ItemMasterPageText => $"Page {_itemMasterPageIndex + 1} | Loaded {FilteredItemMasters.Count:N0} rows | Page size {MasterPageSize:N0}";
+    public string WarehousePageText => $"Page {_warehousePageIndex + 1} | Loaded {FilteredWarehouseMasters.Count:N0} rows | Page size {MasterPageSize:N0}";
 
     public string SelectedLegalEntityDataAreaId
     {
@@ -467,26 +504,46 @@ public class MainViewModel : BaseViewModel
     public string PartyAccount
     {
         get => _partyAccount;
-        set => SetProperty(ref _partyAccount, value);
+        set
+        {
+            if (SetProperty(ref _partyAccount, value))
+                OnPropertyChanged(nameof(PartyDisplay));
+        }
     }
 
     public string PartyName
     {
         get => _partyName;
-        set => SetProperty(ref _partyName, value);
+        set
+        {
+            if (SetProperty(ref _partyName, value))
+                OnPropertyChanged(nameof(PartyDisplay));
+        }
     }
+
+    public string PartyDisplay => BuildMergedDisplay(PartyAccount, PartyName);
 
     public string ItemNumber
     {
         get => _itemNumber;
-        set => SetProperty(ref _itemNumber, value);
+        set
+        {
+            if (SetProperty(ref _itemNumber, value))
+                OnPropertyChanged(nameof(ItemDisplay));
+        }
     }
 
     public string ItemName
     {
         get => _itemName;
-        set => SetProperty(ref _itemName, value);
+        set
+        {
+            if (SetProperty(ref _itemName, value))
+                OnPropertyChanged(nameof(ItemDisplay));
+        }
     }
+
+    public string ItemDisplay => BuildMergedDisplay(ItemNumber, ItemName);
 
     public string Remarks
     {
@@ -799,7 +856,7 @@ public class MainViewModel : BaseViewModel
         set
         {
             if (SetProperty(ref _customerFilter, value))
-                ApplyCustomerFilter();
+                _ = LoadCustomerPageAsync(resetPage: true);
         }
     }
 
@@ -809,7 +866,7 @@ public class MainViewModel : BaseViewModel
         set
         {
             if (SetProperty(ref _vendorFilter, value))
-                ApplyVendorFilter();
+                _ = LoadVendorPageAsync(resetPage: true);
         }
     }
 
@@ -819,7 +876,7 @@ public class MainViewModel : BaseViewModel
         set
         {
             if (SetProperty(ref _itemMasterFilter, value))
-                ApplyItemMasterFilter();
+                _ = LoadItemMasterPageAsync(resetPage: true);
         }
     }
 
@@ -829,7 +886,7 @@ public class MainViewModel : BaseViewModel
         set
         {
             if (SetProperty(ref _warehouseFilter, value))
-                ApplyWarehouseFilter();
+                _ = LoadWarehousePageAsync(resetPage: true);
         }
     }
 
@@ -859,7 +916,7 @@ public class MainViewModel : BaseViewModel
         set
         {
             if (SetProperty(ref _customerAccountFilter, value))
-                ApplyCustomerFilter();
+                _ = LoadCustomerPageAsync(resetPage: true);
         }
     }
 
@@ -869,7 +926,7 @@ public class MainViewModel : BaseViewModel
         set
         {
             if (SetProperty(ref _customerNameFilter, value))
-                ApplyCustomerFilter();
+                _ = LoadCustomerPageAsync(resetPage: true);
         }
     }
 
@@ -879,7 +936,7 @@ public class MainViewModel : BaseViewModel
         set
         {
             if (SetProperty(ref _customerGroupFilter, value))
-                ApplyCustomerFilter();
+                _ = LoadCustomerPageAsync(resetPage: true);
         }
     }
 
@@ -889,7 +946,7 @@ public class MainViewModel : BaseViewModel
         set
         {
             if (SetProperty(ref _customerStatusFilter, value))
-                ApplyCustomerFilter();
+                _ = LoadCustomerPageAsync(resetPage: true);
         }
     }
 
@@ -899,7 +956,7 @@ public class MainViewModel : BaseViewModel
         set
         {
             if (SetProperty(ref _vendorAccountFilter, value))
-                ApplyVendorFilter();
+                _ = LoadVendorPageAsync(resetPage: true);
         }
     }
 
@@ -909,7 +966,7 @@ public class MainViewModel : BaseViewModel
         set
         {
             if (SetProperty(ref _vendorNameFilter, value))
-                ApplyVendorFilter();
+                _ = LoadVendorPageAsync(resetPage: true);
         }
     }
 
@@ -919,7 +976,7 @@ public class MainViewModel : BaseViewModel
         set
         {
             if (SetProperty(ref _vendorGroupFilter, value))
-                ApplyVendorFilter();
+                _ = LoadVendorPageAsync(resetPage: true);
         }
     }
 
@@ -929,7 +986,7 @@ public class MainViewModel : BaseViewModel
         set
         {
             if (SetProperty(ref _vendorStatusFilter, value))
-                ApplyVendorFilter();
+                _ = LoadVendorPageAsync(resetPage: true);
         }
     }
 
@@ -939,7 +996,7 @@ public class MainViewModel : BaseViewModel
         set
         {
             if (SetProperty(ref _itemNumberFilter, value))
-                ApplyItemMasterFilter();
+                _ = LoadItemMasterPageAsync(resetPage: true);
         }
     }
 
@@ -949,7 +1006,7 @@ public class MainViewModel : BaseViewModel
         set
         {
             if (SetProperty(ref _itemProductNameFilter, value))
-                ApplyItemMasterFilter();
+                _ = LoadItemMasterPageAsync(resetPage: true);
         }
     }
 
@@ -959,7 +1016,7 @@ public class MainViewModel : BaseViewModel
         set
         {
             if (SetProperty(ref _itemSearchNameFilter, value))
-                ApplyItemMasterFilter();
+                _ = LoadItemMasterPageAsync(resetPage: true);
         }
     }
 
@@ -969,7 +1026,7 @@ public class MainViewModel : BaseViewModel
         set
         {
             if (SetProperty(ref _itemProductTypeFilter, value))
-                ApplyItemMasterFilter();
+                _ = LoadItemMasterPageAsync(resetPage: true);
         }
     }
 
@@ -979,7 +1036,7 @@ public class MainViewModel : BaseViewModel
         set
         {
             if (SetProperty(ref _warehouseCodeFilter, value))
-                ApplyWarehouseFilter();
+                _ = LoadWarehousePageAsync(resetPage: true);
         }
     }
 
@@ -989,7 +1046,7 @@ public class MainViewModel : BaseViewModel
         set
         {
             if (SetProperty(ref _warehouseNameFilter, value))
-                ApplyWarehouseFilter();
+                _ = LoadWarehousePageAsync(resetPage: true);
         }
     }
 
@@ -999,7 +1056,7 @@ public class MainViewModel : BaseViewModel
         set
         {
             if (SetProperty(ref _warehouseSiteFilter, value))
-                ApplyWarehouseFilter();
+                _ = LoadWarehousePageAsync(resetPage: true);
         }
     }
 
@@ -1009,7 +1066,7 @@ public class MainViewModel : BaseViewModel
         set
         {
             if (SetProperty(ref _warehouseTypeFilter, value))
-                ApplyWarehouseFilter();
+                _ = LoadWarehousePageAsync(resetPage: true);
         }
     }
 
@@ -1772,11 +1829,13 @@ public class MainViewModel : BaseViewModel
 
     private async Task RefreshAllAsync()
     {
+        var legalEntityBeforeRefresh = SelectedLegalEntityDataAreaId;
+
         try
         {
             _isRefreshingData = true;
             Settings = await _databaseService.GetSettingsAsync();
-            await LoadAllowedLegalEntitiesAsync();
+            await LoadAllowedLegalEntitiesAsync(legalEntityBeforeRefresh);
             await LoadMastersAsync();
             SelectSettingsWeighbridgeFromSavedSettings();
             await RefreshWeighmentsAsync();
@@ -1784,7 +1843,7 @@ public class MainViewModel : BaseViewModel
                 await LoadReportAsync();
             if (CanAccessTransactions)
                 await LoadTransactionsAsync();
-            StatusMessage = "Data refreshed successfully.";
+            StatusMessage = $"Data refreshed successfully for Legal Entity {CurrentUserCompany}.";
         }
         finally
         {
@@ -1796,6 +1855,9 @@ public class MainViewModel : BaseViewModel
     {
         try
         {
+            ResetLargeMasterPageIndexes();
+            ClearCompanyScopedFormsForCurrentLegalEntity();
+            ClearEntry();
             await LoadMastersAsync();
             SelectSettingsWeighbridgeFromSavedSettings();
             await RefreshWeighmentsAsync();
@@ -1811,7 +1873,7 @@ public class MainViewModel : BaseViewModel
         }
     }
 
-    private async Task LoadAllowedLegalEntitiesAsync()
+    private async Task LoadAllowedLegalEntitiesAsync(string? preferredDataAreaId = null)
     {
         var allLegalEntities = await _databaseService.GetLegalEntitiesAsync();
         ReplaceCollection(LegalEntities, allLegalEntities);
@@ -1850,21 +1912,56 @@ public class MainViewModel : BaseViewModel
         if (string.IsNullOrWhiteSpace(defaultDataAreaId) || !allowed.Any(x => IsSameDataArea(x.DataAreaId, defaultDataAreaId)))
             defaultDataAreaId = allowed.First().DataAreaId;
 
-        _selectedLegalEntityDataAreaId = defaultDataAreaId ?? "DAT";
+        var legalEntityToSelect = preferredDataAreaId;
+        if (string.IsNullOrWhiteSpace(legalEntityToSelect))
+            legalEntityToSelect = _selectedLegalEntityDataAreaId;
+
+        if (string.IsNullOrWhiteSpace(legalEntityToSelect) || !allowed.Any(x => IsSameDataArea(x.DataAreaId, legalEntityToSelect)))
+            legalEntityToSelect = defaultDataAreaId ?? allowed.First().DataAreaId;
+
+        _selectedLegalEntityDataAreaId = legalEntityToSelect ?? "DAT";
         OnPropertyChanged(nameof(SelectedLegalEntityDataAreaId));
         OnPropertyChanged(nameof(CurrentUserCompany));
     }
 
+    private void ClearCompanyScopedFormsForCurrentLegalEntity()
+    {
+        SelectedVehicleMaster = null;
+        VehicleMasterForm = new Vehicle { DataAreaId = CurrentUserCompany, Status = "Active" };
+
+        SelectedDriverMaster = null;
+        DriverMasterForm = new Driver
+        {
+            DataAreaId = CurrentUserCompany,
+            Status = "Active",
+            EffectiveFrom = DateTime.Today
+        };
+
+        SelectedWeighbridgeMaster = null;
+        WeighbridgeMasterForm = new WeighbridgeMaster
+        {
+            DataAreaId = CurrentUserCompany,
+            CapacityUnit = "kg",
+            CommunicationType = "Mock",
+            ScaleIpAddress = "192.168.1.100",
+            TcpPort = 4001,
+            ScaleComPort = "COM1",
+            BaudRate = 9600,
+            Parity = "None",
+            DataBits = 8,
+            StopBits = "One",
+            OperatingStatus = "Active",
+            EffectiveFrom = DateTime.Today
+        };
+    }
+
     private async Task LoadMastersAsync()
     {
+        var currentDataAreaId = CurrentUserCompany;
         var parties = await _databaseService.GetPartiesAsync();
         var materials = await _databaseService.GetMaterialsAsync();
         var vehicles = await _databaseService.GetVehiclesAsync();
         var drivers = await _databaseService.GetDriversAsync();
-        var customers = await _databaseService.GetCustomersAsync();
-        var vendors = await _databaseService.GetVendorsAsync();
-        var itemMasters = await _databaseService.GetItemMastersAsync();
-        var warehouseMasters = await _databaseService.GetWarehouseMastersAsync();
         var weighbridgeMasters = await _databaseService.GetWeighbridgeMastersAsync();
         var operatorMasters = await _databaseService.GetOperatorMastersAsync();
         var legalEntities = await _databaseService.GetLegalEntitiesAsync();
@@ -1872,13 +1969,8 @@ public class MainViewModel : BaseViewModel
         ReplaceCollection(LegalEntities, legalEntities);
         ApplyLegalEntityFilter();
 
-        var currentDataAreaId = CurrentUserCompany;
         var dataAreaVehicles = vehicles.Where(x => IsSameDataArea(x.DataAreaId, currentDataAreaId)).ToList();
         var dataAreaDrivers = drivers.Where(x => IsSameDataArea(x.DataAreaId, currentDataAreaId)).ToList();
-        var dataAreaCustomers = customers.Where(x => IsSameDataArea(x.DataAreaId, currentDataAreaId)).ToList();
-        var dataAreaVendors = vendors.Where(x => IsSameDataArea(x.DataAreaId, currentDataAreaId)).ToList();
-        var dataAreaItems = itemMasters.Where(x => IsSameDataArea(x.DataAreaId, currentDataAreaId)).ToList();
-        var dataAreaWarehouses = warehouseMasters.Where(x => IsSameDataArea(x.DataAreaId, currentDataAreaId)).ToList();
         var dataAreaWeighbridges = weighbridgeMasters.Where(x => IsSameDataArea(x.DataAreaId, currentDataAreaId)).ToList();
         // Operator Master is global for login/security, so it is not filtered by Legal Entity.
         var globalOperators = operatorMasters.ToList();
@@ -1889,20 +1981,128 @@ public class MainViewModel : BaseViewModel
         ReplaceCollection(ActiveVehicles, dataAreaVehicles.Where(x => IsStatusActive(x.Status)));
         ReplaceCollection(Drivers, dataAreaDrivers);
         ReplaceCollection(ActiveDrivers, dataAreaDrivers.Where(x => IsStatusActive(x.Status)));
-        ReplaceCollection(Customers, dataAreaCustomers);
-        ReplaceCollection(Vendors, dataAreaVendors);
-        ReplaceCollection(ItemMasters, dataAreaItems);
-        ReplaceCollection(WarehouseMasters, dataAreaWarehouses);
         ReplaceCollection(WeighbridgeMasters, dataAreaWeighbridges);
         ReplaceCollection(ActiveWeighbridgeMasters, dataAreaWeighbridges.Where(x => IsStatusActive(x.OperatingStatus)));
         ReplaceCollection(OperatorMasters, globalOperators);
         if (SelectedSettingsWeighbridge == null)
             SelectSettingsWeighbridgeFromSavedSettings();
 
-        ApplyMasterFilters();
+        await LoadLargeMasterPagesAsync(resetPages: false);
+        ApplyVehicleFilter();
+        ApplyDriverFilter();
+        ApplyWeighbridgeFilter();
+        ApplyOperatorFilter();
         RefreshPartyLookup();
-        SelectedWeighmentItem ??= ItemMasters.FirstOrDefault();
+        SelectedWeighmentItem ??= null;
         SelectedMaterial ??= Materials.FirstOrDefault();
+    }
+
+    private void ResetLargeMasterPageIndexes()
+    {
+        _customerPageIndex = 0;
+        _vendorPageIndex = 0;
+        _itemMasterPageIndex = 0;
+        _warehousePageIndex = 0;
+    }
+
+    private async Task LoadLargeMasterPagesAsync(bool resetPages)
+    {
+        await LoadCustomerPageAsync(resetPages);
+        await LoadVendorPageAsync(resetPages);
+        await LoadItemMasterPageAsync(resetPages);
+        await LoadWarehousePageAsync(resetPages);
+    }
+
+    private async Task LoadCustomerPageAsync(bool resetPage = false)
+    {
+        if (_isLoadingCustomerPage)
+            return;
+
+        try
+        {
+            _isLoadingCustomerPage = true;
+            if (resetPage)
+                _customerPageIndex = 0;
+
+            var rows = await _databaseService.GetCustomersPageAsync(CurrentUserCompany, CustomerAccountFilter, CustomerNameFilter, CustomerGroupFilter, CustomerStatusFilter, MasterPageSize, _customerPageIndex * MasterPageSize);
+            ReplaceCollection(Customers, rows);
+            ReplaceCollection(FilteredCustomers, rows);
+            OnPropertyChanged(nameof(CustomerPageText));
+        }
+        finally
+        {
+            _isLoadingCustomerPage = false;
+            System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+        }
+    }
+
+    private async Task LoadVendorPageAsync(bool resetPage = false)
+    {
+        if (_isLoadingVendorPage)
+            return;
+
+        try
+        {
+            _isLoadingVendorPage = true;
+            if (resetPage)
+                _vendorPageIndex = 0;
+
+            var rows = await _databaseService.GetVendorsPageAsync(CurrentUserCompany, VendorAccountFilter, VendorNameFilter, VendorGroupFilter, VendorStatusFilter, MasterPageSize, _vendorPageIndex * MasterPageSize);
+            ReplaceCollection(Vendors, rows);
+            ReplaceCollection(FilteredVendors, rows);
+            OnPropertyChanged(nameof(VendorPageText));
+        }
+        finally
+        {
+            _isLoadingVendorPage = false;
+            System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+        }
+    }
+
+    private async Task LoadItemMasterPageAsync(bool resetPage = false)
+    {
+        if (_isLoadingItemMasterPage)
+            return;
+
+        try
+        {
+            _isLoadingItemMasterPage = true;
+            if (resetPage)
+                _itemMasterPageIndex = 0;
+
+            var rows = await _databaseService.GetItemMastersPageAsync(CurrentUserCompany, ItemNumberFilter, ItemProductNameFilter, ItemSearchNameFilter, ItemProductTypeFilter, MasterPageSize, _itemMasterPageIndex * MasterPageSize);
+            ReplaceCollection(ItemMasters, rows);
+            ReplaceCollection(FilteredItemMasters, rows);
+            OnPropertyChanged(nameof(ItemMasterPageText));
+        }
+        finally
+        {
+            _isLoadingItemMasterPage = false;
+            System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+        }
+    }
+
+    private async Task LoadWarehousePageAsync(bool resetPage = false)
+    {
+        if (_isLoadingWarehousePage)
+            return;
+
+        try
+        {
+            _isLoadingWarehousePage = true;
+            if (resetPage)
+                _warehousePageIndex = 0;
+
+            var rows = await _databaseService.GetWarehouseMastersPageAsync(CurrentUserCompany, WarehouseCodeFilter, WarehouseNameFilter, WarehouseSiteFilter, WarehouseTypeFilter, MasterPageSize, _warehousePageIndex * MasterPageSize);
+            ReplaceCollection(WarehouseMasters, rows);
+            ReplaceCollection(FilteredWarehouseMasters, rows);
+            OnPropertyChanged(nameof(WarehousePageText));
+        }
+        finally
+        {
+            _isLoadingWarehousePage = false;
+            System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+        }
     }
 
     private async Task RefreshWeighmentsAsync()
@@ -2795,8 +2995,8 @@ public class MainViewModel : BaseViewModel
         SecondWeight = null;
         NetWeight = null;
         SelectedOpenWeighment = null;
-        SelectedWeighmentParty = FilteredParties.FirstOrDefault();
-        SelectedWeighmentItem = ItemMasters.FirstOrDefault();
+        SelectedWeighmentParty = null;
+        SelectedWeighmentItem = null;
     }
 
     private bool ValidateEntryBeforeFirstWeight()
@@ -2853,17 +3053,100 @@ public class MainViewModel : BaseViewModel
 
     private void RefreshPartyLookup()
     {
-        var previousId = SelectedWeighmentParty?.PartyId;
+        // Party selection is handled through the search lookup window. Do not pre-load
+        // Customers/Vendors into an editable ComboBox because those masters can be very large.
         FilteredParties.Clear();
+        SelectedWeighmentParty = null;
+        PartyAccount = string.Empty;
+        PartyName = string.Empty;
+    }
 
-        IEnumerable<Party> lookup = SelectedPartyType == "Vendor"
-            ? Vendors.Select(v => new Party { PartyId = v.VendorId, PartyAccount = v.VendorAccount, PartyName = v.Name, PartyType = "Vendor" })
-            : Customers.Select(c => new Party { PartyId = c.CustomerId, PartyAccount = c.CustomerAccount, PartyName = c.Name, PartyType = "Customer" });
+    private static string BuildMergedDisplay(string code, string name)
+    {
+        var cleanCode = code?.Trim() ?? string.Empty;
+        var cleanName = name?.Trim() ?? string.Empty;
 
-        foreach (var item in lookup)
-            FilteredParties.Add(item);
+        if (string.IsNullOrWhiteSpace(cleanCode))
+            return cleanName;
 
-        SelectedWeighmentParty = FilteredParties.FirstOrDefault(x => x.PartyId == previousId) ?? FilteredParties.FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(cleanName))
+            return cleanCode;
+
+        return cleanCode + " - " + cleanName;
+    }
+
+    private Task OpenVehicleLookupAsync()
+    {
+        var lookupWindow = new WeightBridgeApp.VehicleLookupWindow(_databaseService, CurrentUserCompany)
+        {
+            Owner = System.Windows.Application.Current.MainWindow
+        };
+
+        if (lookupWindow.ShowDialog() == true && lookupWindow.SelectedVehicle != null)
+        {
+            VehicleNo = lookupWindow.SelectedVehicle.VehicleNo;
+            StatusMessage = $"Selected Vehicle: {VehicleNo}";
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task OpenDriverLookupAsync()
+    {
+        var lookupWindow = new WeightBridgeApp.DriverLookupWindow(_databaseService, CurrentUserCompany)
+        {
+            Owner = System.Windows.Application.Current.MainWindow
+        };
+
+        if (lookupWindow.ShowDialog() == true && lookupWindow.SelectedDriver != null)
+        {
+            DriverName = lookupWindow.SelectedDriver.DriverName;
+            StatusMessage = $"Selected Driver: {DriverName}";
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task OpenPartyLookupAsync()
+    {
+        if (string.IsNullOrWhiteSpace(SelectedPartyType))
+        {
+            StatusMessage = "Please select Party Type first.";
+            return Task.CompletedTask;
+        }
+
+        var lookupWindow = new WeightBridgeApp.PartyLookupWindow(_databaseService, CurrentUserCompany, SelectedPartyType)
+        {
+            Owner = System.Windows.Application.Current.MainWindow
+        };
+
+        if (lookupWindow.ShowDialog() == true && lookupWindow.SelectedParty != null)
+        {
+            SelectedWeighmentParty = lookupWindow.SelectedParty;
+            PartyAccount = lookupWindow.SelectedParty.PartyAccount;
+            PartyName = lookupWindow.SelectedParty.PartyName;
+            StatusMessage = $"Selected {SelectedPartyType}: {PartyAccount} - {PartyName}";
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task OpenItemLookupAsync()
+    {
+        var lookupWindow = new WeightBridgeApp.ItemLookupWindow(_databaseService, CurrentUserCompany)
+        {
+            Owner = System.Windows.Application.Current.MainWindow
+        };
+
+        if (lookupWindow.ShowDialog() == true && lookupWindow.SelectedItemMaster != null)
+        {
+            SelectedWeighmentItem = lookupWindow.SelectedItemMaster;
+            ItemNumber = lookupWindow.SelectedItemMaster.ItemNumber;
+            ItemName = lookupWindow.SelectedItemMaster.ProductName;
+            StatusMessage = $"Selected Item: {ItemNumber} - {ItemName}";
+        }
+
+        return Task.CompletedTask;
     }
 
     private async Task SaveVehicleMasterAsync()
@@ -2876,8 +3159,8 @@ public class MainViewModel : BaseViewModel
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(VehicleMasterForm.DataAreaId))
-                VehicleMasterForm.DataAreaId = CurrentUserCompany;
+            VehicleMasterForm.DataAreaId = CurrentUserCompany;
+            VehicleMasterForm.LegalEntity = CurrentUserCompany;
             await _databaseService.SaveVehicleAsync(VehicleMasterForm);
             await LoadMastersAsync();
             StatusMessage = "Vehicle master saved.";
@@ -2928,8 +3211,8 @@ public class MainViewModel : BaseViewModel
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(DriverMasterForm.DataAreaId))
-                DriverMasterForm.DataAreaId = CurrentUserCompany;
+            DriverMasterForm.DataAreaId = CurrentUserCompany;
+            DriverMasterForm.LegalEntity = CurrentUserCompany;
             await _databaseService.SaveDriverAsync(DriverMasterForm);
             await LoadMastersAsync();
             StatusMessage = "Driver master saved.";
@@ -3033,8 +3316,7 @@ public class MainViewModel : BaseViewModel
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(WeighbridgeMasterForm.DataAreaId))
-                WeighbridgeMasterForm.DataAreaId = CurrentUserCompany;
+            WeighbridgeMasterForm.DataAreaId = CurrentUserCompany;
             await _databaseService.SaveWeighbridgeMasterAsync(WeighbridgeMasterForm);
             await LoadMastersAsync();
             StatusMessage = "Weighbridge master saved.";

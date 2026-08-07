@@ -1,0 +1,51 @@
+<Window x:Class="WeightBridgeApp.VehicleLookupWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Vehicle Lookup" Height="420" Width="620"
+        WindowStartupLocation="CenterOwner"
+        Loaded="Window_Loaded">
+    <Window.Resources>
+        <Style TargetType="{x:Type DataGrid}">
+            <Setter Property="AutoGenerateColumns" Value="False" />
+            <Setter Property="IsReadOnly" Value="True" />
+            <Setter Property="CanUserAddRows" Value="False" />
+            <Setter Property="CanUserDeleteRows" Value="False" />
+            <Setter Property="EnableRowVirtualization" Value="True" />
+            <Setter Property="EnableColumnVirtualization" Value="True" />
+            <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
+            <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
+            <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
+        </Style>
+    </Window.Resources>
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Vehicle Lookup" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10" />
+
+        <StackPanel Grid.Row="1" Margin="0,0,0,10">
+            <TextBlock Text="Vehicle No" FontWeight="SemiBold" />
+            <TextBox x:Name="VehicleFilterTextBox" TextChanged="FilterTextBox_TextChanged" Height="28" />
+        </StackPanel>
+
+        <DataGrid x:Name="LookupDataGrid" Grid.Row="2" ItemsSource="{Binding LookupRows}" SelectedItem="{Binding SelectedVehicle, Mode=TwoWay}" MouseDoubleClick="LookupDataGrid_MouseDoubleClick">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Vehicle No" Binding="{Binding VehicleNo}" Width="160" />
+                <DataGridTextColumn Header="Vehicle Type" Binding="{Binding VehicleType}" Width="160" />
+                <DataGridTextColumn Header="Default Driver" Binding="{Binding DefaultDriver}" Width="*" />
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <DockPanel Grid.Row="3" Margin="0,10,0,0" LastChildFill="False">
+            <TextBlock x:Name="StatusTextBlock" DockPanel.Dock="Left" VerticalAlignment="Center" Foreground="#202A44" />
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <Button Content="Select" Width="90" Margin="0,0,8,0" Click="SelectButton_Click" />
+                <Button Content="Cancel" Width="90" Click="CancelButton_Click" />
+            </StackPanel>
+        </DockPanel>
+    </Grid>
+</Window>
