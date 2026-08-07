@@ -1,5 +1,6 @@
 using DeltaToSqlitePoc.Models;
 using System.Text.RegularExpressions;
+using System.Xml;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace DeltaToSqlitePoc.Services;
@@ -480,7 +481,25 @@ public static class ColumnMapper
                 //{"CreatedAt", "CreatedAt" },
             };
         }
-
+        if (string.Equals(tableName, LegalEntitySchema.DefaultTableName, StringComparison.OrdinalIgnoreCase))
+        {
+            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                // Warehouse
+                {"Id",                          "Id"},
+                {"dataarea",                    "DataAreaId"},
+                //{"mserp_dataareaid_idname",              "LegalEntityName"},
+                //{"mserp_remarks",              "Remarks"},
+                //{"createdon",                   "CreatedAt" },
+                {"SinkCreatedOn",               "SinkCreatedOn"},
+                {"SinkModifiedOn",              "SinkModifiedOn"},
+                {"versionnumber",               "versionnumber"},
+                {"IsDelete",                    "IsDelete"},
+                {"createdon",                   "CreatedOn"},
+                {"createdonpartition",          "createdonpartition"}
+                //{"", "CreatedAt "}
+            };
+        }
         return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
     }
 }

@@ -59,6 +59,30 @@ CREATE TABLE IF NOT EXISTS Materials (
     MaterialName TEXT NOT NULL UNIQUE
 );
 
+CREATE TABLE IF NOT EXISTS LegalEntities (
+    LegalEntityId INTEGER PRIMARY KEY AUTOINCREMENT,
+    Id TEXT NOT NULL UNIQUE DEFAULT '',
+    DataAreaId TEXT NOT NULL UNIQUE,
+    LegalEntityName TEXT NOT NULL DEFAULT '',
+    Remarks TEXT NOT NULL DEFAULT '',
+    CreatedAt TEXT NOT NULL DEFAULT '',
+    SinkCreatedOn TEXT NOT NULL DEFAULT '',
+    SinkModifiedOn TEXT NOT NULL DEFAULT '',
+    versionnumber TEXT NOT NULL DEFAULT '',
+    IsDelete TEXT NOT NULL DEFAULT '',
+    CreatedOn TEXT NOT NULL DEFAULT '',
+    ModifiedOn TEXT NOT NULL DEFAULT '',
+    createdonpartition TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS OperatorLegalEntities (
+    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+    OperatorId INTEGER NOT NULL,
+    DataAreaId TEXT NOT NULL,
+    IsDefault INTEGER NOT NULL DEFAULT 0,
+    UNIQUE(OperatorId, DataAreaId)
+);
+
 CREATE TABLE IF NOT EXISTS Vehicles (
     VehicleId INTEGER PRIMARY KEY AUTOINCREMENT,
     DataAreaId TEXT NOT NULL DEFAULT 'DAT',
@@ -312,6 +336,8 @@ CREATE TABLE IF NOT EXISTS WarehouseMasters (
     mserp_dataareaid_id TEXT NOT NULL DEFAULT '',
     mserp_dataareaid_id_entitytype TEXT NOT NULL DEFAULT '',
     mserp_dataareaid TEXT NOT NULL DEFAULT '',
+    SinkCreatedOn TEXT NOT NULL DEFAULT '',
+    SinkModifiedOn TEXT NOT NULL DEFAULT '',
     versionnumber TEXT NOT NULL DEFAULT '',
     IsDelete TEXT NOT NULL DEFAULT '',
     CreatedOn TEXT NOT NULL DEFAULT '',
