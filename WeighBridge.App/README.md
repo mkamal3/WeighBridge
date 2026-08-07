@@ -239,3 +239,94 @@ Added backend-only D365/Dataverse sync fields to the following masters. These fi
 - createdonpartition
 
 All listed backend-only sync fields are stored as TEXT in SQLite.
+
+
+## Latest Change - Company-wise Unique Keys
+
+Updated master uniqueness so records are unique within Legal Entity/DataAreaId instead of globally.
+
+- Customer Master: `DataAreaId + CustomerAccount`
+- Vendor Master: `DataAreaId + VendorAccount`
+- Item Master: `DataAreaId + ItemNumber`
+- Warehouse Master: `DataAreaId + Warehouse`
+- Vehicle Master: `DataAreaId + PlateNumber`
+- Driver Master: `DataAreaId + DriverName`
+- Weighbridge Master: `DataAreaId + WeighbridgeCode`
+- Operator Master: `DataAreaId + EmployeeId`
+
+Operator `Username` remains globally unique because it is used for application login.
+
+Database migration also removes legacy single-column unique constraints from old databases where possible and creates the new composite unique indexes.
+
+## Latest Update - Synced Masters and Legal Entity Handling
+
+- Customer Master, Vendor Master, Item Master and Warehouse Master are read-only in the UI because these records are expected to sync from backend/D365.
+- Save/New/Clear actions were removed from those synced master screens.
+- Legal Entity is displayed as read-only on all master forms and is stored in the backend as `DataAreaId`.
+- New manual masters use the current logged-in operator's Legal Entity/DataAreaId by default.
+- Operator Master remains global and is not filtered by Legal Entity because operator username is used for login.
+- Operator Master still keeps Legal Entity/DataAreaId because it controls filtering for operational masters, lookups and transactions.
+
+## Latest update - Global Refresh, Logout, Operator Legal Entity
+
+- Operator Master Legal Entity is editable because operators are global and their assigned Legal Entity controls operational data filtering after login.
+- Added a top-right Refresh button. It reloads masters, lookups, open tickets, completed transactions, reports, transactions, saved settings, and selected weighbridge information from SQLite.
+- Refresh does not disconnect or reconnect the live weighbridge connection.
+- Added Logout button to return to the login screen.
+- Added Close button to close BridgeOne.
+
+## Latest Update
+
+- Header action buttons now use icon-only buttons: Refresh, Logout, and Close.
+- D365/Dataverse sync ID fields remain unique in the backend database.
+- Added unique indexes for Customer, Vendor, Item, and Warehouse sync ID fields during migration.
+
+## Latest Update - Minimal Header Icons
+
+- Replaced large header buttons with minimal borderless clickable icons only.
+- Refresh, Logout, and Close still have tooltips.
+- Sync ID fields remain unique in the database and migration indexes.
+
+## Latest Update - Nullable Unique Sync IDs
+
+- D365/Dataverse sync ID columns now use `TEXT UNIQUE` instead of `TEXT NOT NULL DEFAULT '' UNIQUE`.
+- Blank sync IDs are saved as `NULL`, not empty string, so SQLite can allow multiple unsynced local records while still enforcing uniqueness when a sync ID exists.
+- Removed the placeholder sync ID generation logic:
+  - `NormalizeBlankD365SyncIds`
+  - `FillBlankUniqueTextValue`
+- Sync ID uniqueness is still preserved for non-null values.
+
+## Latest update - Multiple Legal Entities
+
+- Added Legal Entity Master under Masters.
+- Legal Entity Master fields: Legal Entity/DataAreaId, Legal Entity Name, Description/Remarks.
+- Operator Master now supports multiple assigned legal entities through an assigned legal entities grid.
+- One assigned legal entity can be marked as default.
+- Header now includes a Legal Entity selector; users can switch only between legal entities assigned to their operator.
+- Master data, lookups, reports, transactions, and settings are refreshed based on the selected legal entity.
+- Transaction DataAreaId is saved from the selected legal entity.
+- Customer, Vendor, Item, and Warehouse remain read-only synced masters.
+
+## Latest update - Header and Operator Legal Entity UI
+
+- Header order changed to: Operator, Connection, Legal Entity selector, Refresh, Logout, Close.
+- Logout icon changed to a minimal door/arrow style icon.
+- Operator Master Assigned Legal Entities section now uses minimal icons only:
+  - + Add row
+  - 🗑 Remove selected
+  - ★ Set selected as default
+- Removed the separate Legal Entity dropdown above the Assigned Legal Entities grid.
+- Legal Entity selection is now done directly inside the Assigned Legal Entities grid.
+
+## Latest UI Update
+- Header sequence arranged as Operator, Connection, Legal Entity selector, Refresh, Logout, Close.
+- Logout icon updated to a minimal door/arrow style.
+- Operator Master Assigned Legal Entities icons moved to the top-left above the grid.
+- Assigned Legal Entities grid now has an always-visible Legal Entity dropdown column.
+- Selecting a Legal Entity in the grid updates the Legal Entity Name automatically.
+
+### Latest Operator Legal Entity UI Update
+- Removed the duplicate Default Legal Entity field from Operator Master organization section.
+- Assigned Legal Entities grid is now read-only.
+- Legal Entity is selected from a dropdown above the grid, then added using the plus icon.
+- Delete and Set as Default remain as icon actions below the selection line.
