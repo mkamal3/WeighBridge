@@ -24,7 +24,13 @@ LEFT JOIN OperatorMasters o2 ON lower(w.SecondWeightBy) = lower(o2.Username)";
         _dbPath = string.IsNullOrWhiteSpace(databaseFilePath)
             ? BridgeOneConfigService.GetDatabaseFilePath()
             : System.IO.Path.GetFullPath(databaseFilePath);
-        _connectionString = $"Data Source={_dbPath}";
+        var builder = new SqliteConnectionStringBuilder
+        {
+            DataSource = _dbPath,
+            Cache = SqliteCacheMode.Shared,
+            DefaultTimeout = 5
+        };
+        _connectionString = builder.ToString();
     }
 
     public Task InitializeAsync() => Task.Run(() =>
@@ -33,6 +39,7 @@ LEFT JOIN OperatorMasters o2 ON lower(w.SecondWeightBy) = lower(o2.Username)";
 
         using var connection = CreateConnection();
         connection.Open();
+        ApplyPerformancePragmas(connection);
 
         ExecuteNonQuery(connection, @"
 CREATE TABLE IF NOT EXISTS DeviceSettings (
@@ -61,18 +68,20 @@ CREATE TABLE IF NOT EXISTS Materials (
 
 CREATE TABLE IF NOT EXISTS LegalEntities (
     LegalEntityId INTEGER PRIMARY KEY AUTOINCREMENT,
-    Id TEXT NOT NULL UNIQUE DEFAULT '',
     DataAreaId TEXT NOT NULL UNIQUE,
     LegalEntityName TEXT NOT NULL DEFAULT '',
     Remarks TEXT NOT NULL DEFAULT '',
-    CreatedAt TEXT NOT NULL DEFAULT '',
+    ID TEXT UNIQUE,
     SinkCreatedOn TEXT NOT NULL DEFAULT '',
     SinkModifiedOn TEXT NOT NULL DEFAULT '',
+    mserp_dataareaid_id TEXT NOT NULL DEFAULT '',
+    mserp_dataareaid_id_entitytype TEXT NOT NULL DEFAULT '',
+    mserp_dataareaid TEXT NOT NULL DEFAULT '',
     versionnumber TEXT NOT NULL DEFAULT '',
     IsDelete TEXT NOT NULL DEFAULT '',
     CreatedOn TEXT NOT NULL DEFAULT '',
-    ModifiedOn TEXT NOT NULL DEFAULT '',
-    createdonpartition TEXT NOT NULL DEFAULT ''
+    createdonpartition TEXT NOT NULL DEFAULT '',
+    CreatedAt TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS OperatorLegalEntities (
@@ -197,7 +206,7 @@ CREATE TABLE IF NOT EXISTS Customers (
     InvoiceAccount TEXT NOT NULL DEFAULT '',
     ModeOfDelivery TEXT NOT NULL DEFAULT '',
     SalesTaxGroup TEXT NOT NULL DEFAULT '',
-    mserp_mk_wbcustomermasterId TEXT NOT NULL DEFAULT '' UNIQUE,
+    mserp_mk_wbcustomermasterId TEXT UNIQUE,
     SinkCreatedOn TEXT NOT NULL DEFAULT '',
     SinkModifiedOn TEXT NOT NULL DEFAULT '',
     mserp_dataareaid_id TEXT NOT NULL DEFAULT '',
@@ -237,7 +246,7 @@ CREATE TABLE IF NOT EXISTS Vendors (
     InvoiceAccount TEXT NOT NULL DEFAULT '',
     ModeOfDelivery TEXT NOT NULL DEFAULT '',
     SalesTaxGroup TEXT NOT NULL DEFAULT '',
-    mserp_mk_wbvendormasterId TEXT NOT NULL DEFAULT '' UNIQUE,
+    mserp_mk_wbvendormasterId TEXT UNIQUE,
     SinkCreatedOn TEXT NOT NULL DEFAULT '',
     SinkModifiedOn TEXT NOT NULL DEFAULT '',
     mserp_dataareaid_id TEXT NOT NULL DEFAULT '',
@@ -298,7 +307,7 @@ CREATE TABLE IF NOT EXISTS ItemMasters (
     LastCostPrice REAL,
     DateOfPrice TEXT,
     UnitSequenceGroupId TEXT NOT NULL DEFAULT '',
-    mserp_mk_wb_ecoresreleasedproductv2entityId TEXT NOT NULL DEFAULT '' UNIQUE,
+    mserp_mk_wb_ecoresreleasedproductv2entityId TEXT UNIQUE,
     SinkCreatedOn TEXT NOT NULL DEFAULT '',
     SinkModifiedOn TEXT NOT NULL DEFAULT '',
     mserp_dataareaid_id TEXT NOT NULL DEFAULT '',
@@ -330,7 +339,7 @@ CREATE TABLE IF NOT EXISTS WarehouseMasters (
     Address TEXT NOT NULL DEFAULT '',
     Purpose TEXT NOT NULL DEFAULT '',
     Id TEXT NOT NULL DEFAULT '',
-    mserp_mk_wbwarehousemasterId TEXT NOT NULL DEFAULT '' UNIQUE,
+    mserp_mk_wbwarehousemasterId TEXT UNIQUE,
     SinkCreatedOn TEXT NOT NULL DEFAULT '',
     SinkModifiedOn TEXT NOT NULL DEFAULT '',
     mserp_dataareaid_id TEXT NOT NULL DEFAULT '',
@@ -576,6 +585,53 @@ TcpPort = excluded.TcpPort;";
         return result;
     });
 
+    public Task<List<Vehicle>> SearchVehicleLookupAsync(string dataAreaId, string vehicleFilter, int limit = 100) => Task.Run(() =>
+    {
+        var result = new List<Vehicle>();
+        using var connection = CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        var where = new List<string> { "DataAreaId = $DataAreaId" };
+        command.Parameters.AddWithValue("$DataAreaId", DbValue(dataAreaId));
+
+        if (!string.IsNullOrWhiteSpace(vehicleFilter))
+        {
+            where.Add("(lower(PlateNumber) LIKE lower($VehicleFilter) OR lower(VehicleNo) LIKE lower($VehicleFilter) OR lower(VehicleType) LIKE lower($VehicleFilter))");
+            command.Parameters.AddWithValue("$VehicleFilter", "%" + vehicleFilter.Trim() + "%");
+        }
+
+        where.Add("(Status IS NULL OR trim(Status) = '' OR lower(Status) = 'active')");
+        command.Parameters.AddWithValue("$Limit", Math.Max(1, Math.Min(limit, 200)));
+        command.CommandText = "SELECT * FROM Vehicles WHERE " + string.Join(" AND ", where) + " ORDER BY PlateNumber, VehicleNo LIMIT $Limit";
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            var plateNumber = ReadText(reader, "PlateNumber");
+            if (string.IsNullOrWhiteSpace(plateNumber))
+                plateNumber = ReadText(reader, "VehicleNo");
+
+            result.Add(new Vehicle
+            {
+                VehicleId = Convert.ToInt32(reader["VehicleId"]),
+                DataAreaId = ReadDataAreaId(reader),
+                PlateNumber = plateNumber,
+                PlateEmirate = ReadText(reader, "PlateEmirate"),
+                PlateCategory = ReadText(reader, "PlateCategory"),
+                VehicleType = ReadText(reader, "VehicleType"),
+                OwnershipType = ReadText(reader, "OwnershipType"),
+                OwnerPartyAccount = ReadText(reader, "OwnerPartyAccount"),
+                Transporter = ReadText(reader, "Transporter"),
+                Capacity = ReadDecimal(reader, "Capacity") ?? 0m,
+                DefaultDriver = ReadText(reader, "DefaultDriver"),
+                RegistrationExpiryDate = ReadDate(reader, "RegistrationExpiryDate"),
+                LegalEntity = ReadText(reader, "LegalEntity"),
+                Status = string.IsNullOrWhiteSpace(ReadText(reader, "Status")) ? "Active" : ReadText(reader, "Status"),
+                IsActive = ReadBool(reader, "IsActive")
+            });
+        }
+        return result;
+    });
+
     public Task<List<Driver>> GetDriversAsync() => Task.Run(() =>
     {
         var result = new List<Driver>();
@@ -583,6 +639,68 @@ TcpPort = excluded.TcpPort;";
         connection.Open();
         using var command = connection.CreateCommand();
         command.CommandText = "SELECT * FROM Drivers ORDER BY DriverName";
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            result.Add(new Driver
+            {
+                DriverId = Convert.ToInt32(reader["DriverId"]),
+                DataAreaId = ReadDataAreaId(reader),
+                DriverName = ReadText(reader, "DriverName"),
+                MobileNumber = string.IsNullOrWhiteSpace(ReadText(reader, "MobileNumber")) ? ReadText(reader, "MobileNo") : ReadText(reader, "MobileNumber"),
+                SecondaryMobile = ReadText(reader, "SecondaryMobile"),
+                Email = ReadText(reader, "Email"),
+                Nationality = ReadText(reader, "Nationality"),
+                DriverType = ReadText(reader, "DriverType"),
+                EmployerPartyType = ReadText(reader, "EmployerPartyType"),
+                EmployerAccount = ReadText(reader, "EmployerAccount"),
+                IdentificationType = ReadText(reader, "IdentificationType"),
+                IdentificationNumber = string.IsNullOrWhiteSpace(ReadText(reader, "IdentificationNumber")) ? ReadText(reader, "CNIC") : ReadText(reader, "IdentificationNumber"),
+                IdentificationExpiryDate = ReadDate(reader, "IdentificationExpiryDate"),
+                EmiratesIdExpiryDate = ReadDate(reader, "EmiratesIdExpiryDate"),
+                PassportNumber = ReadText(reader, "PassportNumber"),
+                PassportExpiryDate = ReadDate(reader, "PassportExpiryDate"),
+                DrivingLicenceNumber = string.IsNullOrWhiteSpace(ReadText(reader, "DrivingLicenceNumber")) ? ReadText(reader, "LicenseNo") : ReadText(reader, "DrivingLicenceNumber"),
+                DrivingLicenceIssuedBy = ReadText(reader, "DrivingLicenceIssuedBy"),
+                DrivingLicenceExpiryDate = ReadDate(reader, "DrivingLicenceExpiryDate"),
+                LicenceCategories = ReadText(reader, "LicenceCategories"),
+                DefaultVehicle = ReadText(reader, "DefaultVehicle"),
+                Address = ReadText(reader, "Address"),
+                DriverPhoto = ReadText(reader, "DriverPhoto"),
+                EmiratesIdAttachment = ReadText(reader, "EmiratesIdAttachment"),
+                PassportAttachment = ReadText(reader, "PassportAttachment"),
+                DrivingLicenceAttachment = ReadText(reader, "DrivingLicenceAttachment"),
+                LegalEntity = ReadText(reader, "LegalEntity"),
+                Status = string.IsNullOrWhiteSpace(ReadText(reader, "Status")) ? "Active" : ReadText(reader, "Status"),
+                Blacklisted = ReadBool(reader, "Blacklisted"),
+                BlacklistReason = ReadText(reader, "BlacklistReason"),
+                EffectiveFrom = ReadDate(reader, "EffectiveFrom"),
+                        Remarks = ReadText(reader, "Remarks")
+            });
+        }
+        return result;
+    });
+
+    public Task<List<Driver>> SearchDriverLookupAsync(string dataAreaId, string driverNameFilter, string mobileFilter, int limit = 100) => Task.Run(() =>
+    {
+        var result = new List<Driver>();
+        using var connection = CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        var where = new List<string> { "DataAreaId = $DataAreaId" };
+        command.Parameters.AddWithValue("$DataAreaId", DbValue(dataAreaId));
+        AddLikeFilter(command, where, "DriverName", "$DriverName", driverNameFilter);
+
+        if (!string.IsNullOrWhiteSpace(mobileFilter))
+        {
+            where.Add("(lower(MobileNumber) LIKE lower($MobileFilter) OR lower(MobileNo) LIKE lower($MobileFilter))");
+            command.Parameters.AddWithValue("$MobileFilter", "%" + mobileFilter.Trim() + "%");
+        }
+
+        where.Add("(Status IS NULL OR trim(Status) = '' OR lower(Status) = 'active')");
+        where.Add("(Blacklisted IS NULL OR Blacklisted = 0)");
+        command.Parameters.AddWithValue("$Limit", Math.Max(1, Math.Min(limit, 200)));
+        command.CommandText = "SELECT * FROM Drivers WHERE " + string.Join(" AND ", where) + " ORDER BY DriverName LIMIT $Limit";
         using var reader = command.ExecuteReader();
         while (reader.Read())
         {
@@ -1033,6 +1151,58 @@ VALUES
         return result;
     });
 
+    public Task<List<Customer>> GetCustomersPageAsync(string dataAreaId, string accountFilter, string nameFilter, string groupFilter, string statusFilter, int limit, int offset) => Task.Run(() =>
+    {
+        var result = new List<Customer>();
+        using var connection = CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        var where = new List<string> { "DataAreaId = $DataAreaId" };
+        command.Parameters.AddWithValue("$DataAreaId", DbValue(dataAreaId));
+        AddLikeFilter(command, where, "CustomerAccount", "$CustomerAccount", accountFilter);
+        AddLikeFilter(command, where, "Name", "$Name", nameFilter);
+        AddLikeFilter(command, where, "CustomerGroup", "$CustomerGroup", groupFilter);
+        if (!string.IsNullOrWhiteSpace(statusFilter))
+        {
+            where.Add("(lower(AccountStatus) LIKE lower($Status) OR lower(AccountStatusReason) LIKE lower($Status))");
+            command.Parameters.AddWithValue("$Status", "%" + statusFilter.Trim() + "%");
+        }
+        command.Parameters.AddWithValue("$Limit", Math.Max(1, limit));
+        command.Parameters.AddWithValue("$Offset", Math.Max(0, offset));
+        command.CommandText = "SELECT * FROM Customers WHERE " + string.Join(" AND ", where) + " ORDER BY CustomerAccount LIMIT $Limit OFFSET $Offset";
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+            result.Add(MapCustomer(reader));
+        return result;
+    });
+
+    public Task<List<Party>> SearchCustomerPartiesAsync(string dataAreaId, string accountFilter, string nameFilter, int limit = 100) => Task.Run(() =>
+    {
+        var result = new List<Party>();
+        using var connection = CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        var where = new List<string> { "DataAreaId = $DataAreaId" };
+        command.Parameters.AddWithValue("$DataAreaId", DbValue(dataAreaId));
+        AddLikeFilter(command, where, "CustomerAccount", "$CustomerAccount", accountFilter);
+        AddLikeFilter(command, where, "Name", "$Name", nameFilter);
+        command.Parameters.AddWithValue("$Limit", Math.Max(1, Math.Min(limit, 200)));
+        command.CommandText = "SELECT CustomerId, CustomerAccount, Name FROM Customers WHERE " + string.Join(" AND ", where) + " ORDER BY CustomerAccount LIMIT $Limit";
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            result.Add(new Party
+            {
+                PartyId = Convert.ToInt32(reader["CustomerId"]),
+                PartyAccount = ReadText(reader, "CustomerAccount"),
+                PartyName = ReadText(reader, "Name"),
+                PartyType = "Customer"
+            });
+        }
+        return result;
+    });
+
+
     public Task SaveCustomerAsync(Customer customer) => Task.Run(() =>
     {
         if (string.IsNullOrWhiteSpace(customer.DataAreaId))
@@ -1107,6 +1277,58 @@ VALUES
         return result;
     });
 
+    public Task<List<Vendor>> GetVendorsPageAsync(string dataAreaId, string accountFilter, string nameFilter, string groupFilter, string statusFilter, int limit, int offset) => Task.Run(() =>
+    {
+        var result = new List<Vendor>();
+        using var connection = CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        var where = new List<string> { "DataAreaId = $DataAreaId" };
+        command.Parameters.AddWithValue("$DataAreaId", DbValue(dataAreaId));
+        AddLikeFilter(command, where, "VendorAccount", "$VendorAccount", accountFilter);
+        AddLikeFilter(command, where, "Name", "$Name", nameFilter);
+        AddLikeFilter(command, where, "VendorGroup", "$VendorGroup", groupFilter);
+        if (!string.IsNullOrWhiteSpace(statusFilter))
+        {
+            where.Add("(lower(AccountStatus) LIKE lower($Status) OR lower(AccountStatusReason) LIKE lower($Status))");
+            command.Parameters.AddWithValue("$Status", "%" + statusFilter.Trim() + "%");
+        }
+        command.Parameters.AddWithValue("$Limit", Math.Max(1, limit));
+        command.Parameters.AddWithValue("$Offset", Math.Max(0, offset));
+        command.CommandText = "SELECT * FROM Vendors WHERE " + string.Join(" AND ", where) + " ORDER BY VendorAccount LIMIT $Limit OFFSET $Offset";
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+            result.Add(MapVendor(reader));
+        return result;
+    });
+
+    public Task<List<Party>> SearchVendorPartiesAsync(string dataAreaId, string accountFilter, string nameFilter, int limit = 100) => Task.Run(() =>
+    {
+        var result = new List<Party>();
+        using var connection = CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        var where = new List<string> { "DataAreaId = $DataAreaId" };
+        command.Parameters.AddWithValue("$DataAreaId", DbValue(dataAreaId));
+        AddLikeFilter(command, where, "VendorAccount", "$VendorAccount", accountFilter);
+        AddLikeFilter(command, where, "Name", "$Name", nameFilter);
+        command.Parameters.AddWithValue("$Limit", Math.Max(1, Math.Min(limit, 200)));
+        command.CommandText = "SELECT VendorId, VendorAccount, Name FROM Vendors WHERE " + string.Join(" AND ", where) + " ORDER BY VendorAccount LIMIT $Limit";
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            result.Add(new Party
+            {
+                PartyId = Convert.ToInt32(reader["VendorId"]),
+                PartyAccount = ReadText(reader, "VendorAccount"),
+                PartyName = ReadText(reader, "Name"),
+                PartyType = "Vendor"
+            });
+        }
+        return result;
+    });
+
+
     public Task SaveVendorAsync(Vendor vendor) => Task.Run(() =>
     {
         if (string.IsNullOrWhiteSpace(vendor.DataAreaId))
@@ -1180,6 +1402,50 @@ VALUES
             result.Add(MapItemMaster(reader));
         return result;
     });
+
+    public Task<List<ItemMaster>> GetItemMastersPageAsync(string dataAreaId, string itemNumberFilter, string productNameFilter, string searchNameFilter, string productTypeFilter, int limit, int offset) => Task.Run(() =>
+    {
+        var result = new List<ItemMaster>();
+        using var connection = CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        var where = new List<string> { "DataAreaId = $DataAreaId" };
+        command.Parameters.AddWithValue("$DataAreaId", DbValue(dataAreaId));
+        AddLikeFilter(command, where, "ItemNumber", "$ItemNumber", itemNumberFilter);
+        AddLikeFilter(command, where, "ProductName", "$ProductName", productNameFilter);
+        AddLikeFilter(command, where, "SearchName", "$SearchName", searchNameFilter);
+        if (!string.IsNullOrWhiteSpace(productTypeFilter))
+        {
+            where.Add("(lower(ProductType) LIKE lower($ProductType) OR lower(ProductSubtype) LIKE lower($ProductType))");
+            command.Parameters.AddWithValue("$ProductType", "%" + productTypeFilter.Trim() + "%");
+        }
+        command.Parameters.AddWithValue("$Limit", Math.Max(1, limit));
+        command.Parameters.AddWithValue("$Offset", Math.Max(0, offset));
+        command.CommandText = "SELECT * FROM ItemMasters WHERE " + string.Join(" AND ", where) + " ORDER BY ItemNumber LIMIT $Limit OFFSET $Offset";
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+            result.Add(MapItemMaster(reader));
+        return result;
+    });
+
+    public Task<List<ItemMaster>> SearchItemLookupAsync(string dataAreaId, string itemNumberFilter, string itemNameFilter, int limit = 100) => Task.Run(() =>
+    {
+        var result = new List<ItemMaster>();
+        using var connection = CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        var where = new List<string> { "DataAreaId = $DataAreaId" };
+        command.Parameters.AddWithValue("$DataAreaId", DbValue(dataAreaId));
+        AddLikeFilter(command, where, "ItemNumber", "$ItemNumber", itemNumberFilter);
+        AddLikeFilter(command, where, "ProductName", "$ProductName", itemNameFilter);
+        command.Parameters.AddWithValue("$Limit", Math.Max(1, Math.Min(limit, 200)));
+        command.CommandText = "SELECT * FROM ItemMasters WHERE " + string.Join(" AND ", where) + " ORDER BY ItemNumber LIMIT $Limit";
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+            result.Add(MapItemMaster(reader));
+        return result;
+    });
+
 
     public Task SaveItemMasterAsync(ItemMaster item) => Task.Run(() =>
     {
@@ -1276,6 +1542,27 @@ VALUES
         return result;
     });
 
+    public Task<List<WarehouseMaster>> GetWarehouseMastersPageAsync(string dataAreaId, string warehouseFilter, string nameFilter, string siteFilter, string typeFilter, int limit, int offset) => Task.Run(() =>
+    {
+        var result = new List<WarehouseMaster>();
+        using var connection = CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        var where = new List<string> { "DataAreaId = $DataAreaId" };
+        command.Parameters.AddWithValue("$DataAreaId", DbValue(dataAreaId));
+        AddLikeFilter(command, where, "Warehouse", "$Warehouse", warehouseFilter);
+        AddLikeFilter(command, where, "Name", "$Name", nameFilter);
+        AddLikeFilter(command, where, "Site", "$Site", siteFilter);
+        AddLikeFilter(command, where, "Type", "$Type", typeFilter);
+        command.Parameters.AddWithValue("$Limit", Math.Max(1, limit));
+        command.Parameters.AddWithValue("$Offset", Math.Max(0, offset));
+        command.CommandText = "SELECT * FROM WarehouseMasters WHERE " + string.Join(" AND ", where) + " ORDER BY Warehouse LIMIT $Limit OFFSET $Offset";
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+            result.Add(MapWarehouseMaster(reader));
+        return result;
+    });
+
     public Task SaveWarehouseMasterAsync(WarehouseMaster warehouse) => Task.Run(() =>
     {
         if (string.IsNullOrWhiteSpace(warehouse.DataAreaId))
@@ -1327,6 +1614,139 @@ VALUES
         command.Parameters.AddWithValue("$WarehouseMasterId", warehouse.WarehouseMasterId);
         command.Parameters.AddWithValue("$CreatedAt", DateTime.Now.ToString("O"));
         command.ExecuteNonQuery();
+    });
+
+
+    public Task<List<LegalEntityMaster>> GetLegalEntitiesAsync() => Task.Run(() =>
+    {
+        var result = new List<LegalEntityMaster>();
+        using var connection = CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT * FROM LegalEntities ORDER BY DataAreaId";
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+            result.Add(MapLegalEntityMaster(reader));
+        return result;
+    });
+
+    public Task SaveLegalEntityAsync(LegalEntityMaster legalEntity) => Task.Run(() =>
+    {
+        if (string.IsNullOrWhiteSpace(legalEntity.DataAreaId))
+            throw new InvalidOperationException("Legal Entity is mandatory.");
+        if (string.IsNullOrWhiteSpace(legalEntity.LegalEntityName))
+            throw new InvalidOperationException("Legal Entity Name is mandatory.");
+
+        using var connection = CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = legalEntity.LegalEntityId > 0 ? @"
+UPDATE LegalEntities SET
+    DataAreaId = $DataAreaId,
+    LegalEntityName = $LegalEntityName,
+    Remarks = $Remarks,
+    ID = $ID,
+    SinkCreatedOn = $SinkCreatedOn,
+    SinkModifiedOn = $SinkModifiedOn,
+    mserp_dataareaid_id = $mserp_dataareaid_id,
+    mserp_dataareaid_id_entitytype = $mserp_dataareaid_id_entitytype,
+    mserp_dataareaid = $mserp_dataareaid,
+    versionnumber = $versionnumber,
+    IsDelete = $IsDelete,
+    CreatedOn = $CreatedOn,
+    createdonpartition = $createdonpartition
+WHERE LegalEntityId = $LegalEntityId;" : @"
+INSERT INTO LegalEntities
+(DataAreaId, LegalEntityName, Remarks, ID, SinkCreatedOn, SinkModifiedOn, mserp_dataareaid_id, mserp_dataareaid_id_entitytype, mserp_dataareaid, versionnumber, IsDelete, CreatedOn, createdonpartition, CreatedAt)
+VALUES
+($DataAreaId, $LegalEntityName, $Remarks, $ID, $SinkCreatedOn, $SinkModifiedOn, $mserp_dataareaid_id, $mserp_dataareaid_id_entitytype, $mserp_dataareaid, $versionnumber, $IsDelete, $CreatedOn, $createdonpartition, $CreatedAt);";
+        AddLegalEntityParameters(command, legalEntity);
+        command.Parameters.AddWithValue("$LegalEntityId", legalEntity.LegalEntityId);
+        command.Parameters.AddWithValue("$CreatedAt", DateTime.Now.ToString("O"));
+        command.ExecuteNonQuery();
+    });
+
+    public Task<List<OperatorLegalEntityAssignment>> GetOperatorLegalEntitiesAsync(int operatorId) => Task.Run(() =>
+    {
+        var result = new List<OperatorLegalEntityAssignment>();
+        using var connection = CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = @"
+SELECT ole.Id, ole.OperatorId, ole.DataAreaId, le.LegalEntityName, ole.IsDefault
+FROM OperatorLegalEntities ole
+LEFT JOIN LegalEntities le ON lower(trim(ole.DataAreaId)) = lower(trim(le.DataAreaId))
+WHERE ole.OperatorId = $OperatorId
+ORDER BY ole.IsDefault DESC, ole.DataAreaId";
+        command.Parameters.AddWithValue("$OperatorId", operatorId);
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+            result.Add(MapOperatorLegalEntityAssignment(reader));
+        return result;
+    });
+
+    public Task SaveOperatorLegalEntitiesAsync(int operatorId, IEnumerable<OperatorLegalEntityAssignment> assignments) => Task.Run(() =>
+    {
+        if (operatorId <= 0)
+            throw new InvalidOperationException("Operator must be saved before assigning Legal Entities.");
+
+        var clean = assignments
+            .Where(x => !string.IsNullOrWhiteSpace(x.DataAreaId))
+            .GroupBy(x => x.DataAreaId.Trim(), StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First())
+            .ToList();
+
+        if (clean.Count == 0)
+            throw new InvalidOperationException("At least one Legal Entity must be assigned to the operator.");
+
+        if (!clean.Any(x => x.IsDefault))
+            clean[0].IsDefault = true;
+
+        var defaultDataAreaId = clean.First(x => x.IsDefault).DataAreaId.Trim();
+
+        using var connection = CreateConnection();
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
+        using (var delete = connection.CreateCommand())
+        {
+            delete.Transaction = transaction;
+            delete.CommandText = "DELETE FROM OperatorLegalEntities WHERE OperatorId = $OperatorId";
+            delete.Parameters.AddWithValue("$OperatorId", operatorId);
+            delete.ExecuteNonQuery();
+        }
+
+        foreach (var line in clean)
+        {
+            using var insert = connection.CreateCommand();
+            insert.Transaction = transaction;
+            insert.CommandText = "INSERT INTO OperatorLegalEntities (OperatorId, DataAreaId, IsDefault) VALUES ($OperatorId, $DataAreaId, $IsDefault)";
+            insert.Parameters.AddWithValue("$OperatorId", operatorId);
+            insert.Parameters.AddWithValue("$DataAreaId", line.DataAreaId.Trim());
+            insert.Parameters.AddWithValue("$IsDefault", string.Equals(line.DataAreaId.Trim(), defaultDataAreaId, StringComparison.OrdinalIgnoreCase) ? 1 : 0);
+            insert.ExecuteNonQuery();
+        }
+
+        using (var update = connection.CreateCommand())
+        {
+            update.Transaction = transaction;
+            update.CommandText = "UPDATE OperatorMasters SET DataAreaId = $DataAreaId, LegalEntity = $DataAreaId, DefaultLegalEntity = $DataAreaId WHERE OperatorId = $OperatorId";
+            update.Parameters.AddWithValue("$DataAreaId", defaultDataAreaId);
+            update.Parameters.AddWithValue("$OperatorId", operatorId);
+            update.ExecuteNonQuery();
+        }
+
+        transaction.Commit();
+    });
+
+    public Task<OperatorMaster?> GetOperatorByUsernameAsync(string username) => Task.Run(() =>
+    {
+        using var connection = CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT * FROM OperatorMasters WHERE lower(trim(Username)) = lower(trim($Username)) LIMIT 1";
+        command.Parameters.AddWithValue("$Username", username.Trim());
+        using var reader = command.ExecuteReader();
+        return reader.Read() ? MapOperatorMaster(reader) : null;
     });
 
     public Task<string> GenerateTicketNoAsync() => Task.Run(() =>
@@ -1690,6 +2110,18 @@ VALUES
         command.Parameters.AddWithValue("$CreatedAt", DateTime.Now.ToString("O"));
         command.ExecuteNonQuery();
 
+        using (var leCommand = connection.CreateCommand())
+        {
+            leCommand.CommandText = @"
+INSERT INTO LegalEntities (DataAreaId, LegalEntityName, Remarks, CreatedAt)
+VALUES ($DataAreaId, $LegalEntityName, 'Created during initial admin setup.', $CreatedAt)
+ON CONFLICT(DataAreaId) DO UPDATE SET LegalEntityName = excluded.LegalEntityName;";
+            leCommand.Parameters.AddWithValue("$DataAreaId", legalEntity);
+            leCommand.Parameters.AddWithValue("$LegalEntityName", legalEntity);
+            leCommand.Parameters.AddWithValue("$CreatedAt", DateTime.Now.ToString("O"));
+            leCommand.ExecuteNonQuery();
+        }
+
         using var readCommand = connection.CreateCommand();
         readCommand.CommandText = "SELECT * FROM OperatorMasters WHERE lower(trim(Username)) = lower(trim($Username)) LIMIT 1";
         readCommand.Parameters.AddWithValue("$Username", username);
@@ -1697,7 +2129,10 @@ VALUES
         if (!reader.Read())
             throw new InvalidOperationException("Initial administrator was not created correctly.");
 
-        return MapOperatorMaster(reader);
+        var initialOperator = MapOperatorMaster(reader);
+        reader.Dispose();
+        EnsureOperatorLegalEntityAssignment(connection, initialOperator.OperatorId, legalEntity, true);
+        return initialOperator;
     });
 
     public Task<OperatorMaster?> AuthenticateOperatorAsync(string username, string password) => Task.Run(() =>
@@ -1923,13 +2358,25 @@ WHERE UserId = $UserId;";
         EnsureColumn(connection, "Drivers", "DataAreaId", "TEXT NOT NULL DEFAULT 'DAT'");
         EnsureColumn(connection, "WeighbridgeMasters", "DataAreaId", "TEXT NOT NULL DEFAULT 'DAT'");
         EnsureColumn(connection, "OperatorMasters", "DataAreaId", "TEXT NOT NULL DEFAULT 'DAT'");
+        EnsureColumn(connection, "LegalEntities", "LegalEntityName", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "LegalEntities", "Remarks", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "LegalEntities", "ID", "TEXT");
+        EnsureColumn(connection, "LegalEntities", "SinkCreatedOn", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "LegalEntities", "SinkModifiedOn", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "LegalEntities", "mserp_dataareaid_id", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "LegalEntities", "mserp_dataareaid_id_entitytype", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "LegalEntities", "mserp_dataareaid", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "LegalEntities", "versionnumber", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "LegalEntities", "IsDelete", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "LegalEntities", "CreatedOn", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "LegalEntities", "createdonpartition", "TEXT NOT NULL DEFAULT ''");
 
         // Backend-only D365/Dataverse sync columns for customer/vendor/item/warehouse masters.
-        EnsureColumn(connection, "Customers", "mserp_mk_wbcustomermasterId", "TEXT NOT NULL DEFAULT ''");
-        EnsureColumn(connection, "Vendors", "mserp_mk_wbvendormasterId", "TEXT NOT NULL DEFAULT ''");
-        EnsureColumn(connection, "ItemMasters", "mserp_mk_wb_ecoresreleasedproductv2entityId", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Customers", "mserp_mk_wbcustomermasterId", "TEXT");
+        EnsureColumn(connection, "Vendors", "mserp_mk_wbvendormasterId", "TEXT");
+        EnsureColumn(connection, "ItemMasters", "mserp_mk_wb_ecoresreleasedproductv2entityId", "TEXT");
         EnsureColumn(connection, "WarehouseMasters", "Id", "TEXT NOT NULL DEFAULT ''");
-        EnsureColumn(connection, "WarehouseMasters", "mserp_mk_wbwarehousemasterId", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "WarehouseMasters", "mserp_mk_wbwarehousemasterId", "TEXT");
 
         foreach (var tableName in new[] { "Customers", "Vendors", "ItemMasters", "WarehouseMasters" })
         {
@@ -2080,9 +2527,43 @@ WHERE UserId = $UserId;";
         ExecuteNonQuery(connection, "UPDATE Users SET CompanyName = 'Default Company' WHERE trim(ifnull(CompanyName, '')) = ''; ");
         ExecuteNonQuery(connection, "UPDATE Weighments SET CompanyName = 'Default Company' WHERE trim(ifnull(CompanyName, '')) = ''; ");
         RemoveLegacySingleColumnUniqueConstraints(connection);
+        ExecuteNonQuery(connection, "UPDATE Customers SET mserp_mk_wbcustomermasterId = NULL WHERE trim(ifnull(mserp_mk_wbcustomermasterId, '')) = ''; ");
+        ExecuteNonQuery(connection, "UPDATE Vendors SET mserp_mk_wbvendormasterId = NULL WHERE trim(ifnull(mserp_mk_wbvendormasterId, '')) = ''; ");
+        ExecuteNonQuery(connection, "UPDATE ItemMasters SET mserp_mk_wb_ecoresreleasedproductv2entityId = NULL WHERE trim(ifnull(mserp_mk_wb_ecoresreleasedproductv2entityId, '')) = ''; ");
+        ExecuteNonQuery(connection, "UPDATE WarehouseMasters SET mserp_mk_wbwarehousemasterId = NULL WHERE trim(ifnull(mserp_mk_wbwarehousemasterId, '')) = ''; ");
         CreateCompanyWiseUniqueIndexes(connection);
+        CreateD365SyncUniqueIndexes(connection);
+        CreatePerformanceIndexes(connection);
 
         ExecuteNonQuery(connection, "UPDATE DeviceSettings SET SelectedWeighbridgeCode = 'WB-001' WHERE trim(ifnull(SelectedWeighbridgeCode, '')) = ''; ");
+        EnsureExistingOperatorLegalEntityAssignments(connection);
+    }
+
+
+    private static void EnsureExistingOperatorLegalEntityAssignments(SqliteConnection connection)
+    {
+        ExecuteNonQuery(connection, @"
+INSERT OR IGNORE INTO LegalEntities (DataAreaId, LegalEntityName, Remarks, CreatedAt)
+SELECT DISTINCT DataAreaId, DataAreaId, 'Auto-created from existing operator/master data.', datetime('now')
+FROM OperatorMasters
+WHERE trim(ifnull(DataAreaId, '')) <> ''; ");
+
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT OperatorId, DataAreaId FROM OperatorMasters WHERE trim(ifnull(DataAreaId, '')) <> ''";
+        using var reader = command.ExecuteReader();
+        var rows = new List<(int OperatorId, string DataAreaId)>();
+        while (reader.Read())
+            rows.Add((Convert.ToInt32(reader["OperatorId"]), Convert.ToString(reader["DataAreaId"]) ?? "DAT"));
+        reader.Dispose();
+
+        foreach (var row in rows)
+        {
+            using var count = connection.CreateCommand();
+            count.CommandText = "SELECT COUNT(1) FROM OperatorLegalEntities WHERE OperatorId = $OperatorId";
+            count.Parameters.AddWithValue("$OperatorId", row.OperatorId);
+            if (Convert.ToInt32(count.ExecuteScalar()) == 0)
+                EnsureOperatorLegalEntityAssignment(connection, row.OperatorId, row.DataAreaId, true);
+        }
     }
 
     private static void RemoveLegacySingleColumnUniqueConstraints(SqliteConnection connection)
@@ -2133,6 +2614,50 @@ WHERE UserId = $UserId;";
         ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_WeighbridgeMasters_DataArea_WeighbridgeCode ON WeighbridgeMasters (DataAreaId, WeighbridgeCode);");
         ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_OperatorMasters_DataArea_EmployeeId ON OperatorMasters (DataAreaId, EmployeeId);");
         ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_OperatorMasters_Username ON OperatorMasters (Username);");
+        ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_LegalEntities_DataAreaId ON LegalEntities (DataAreaId);");
+        ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_OperatorLegalEntities_Operator_DataArea ON OperatorLegalEntities (OperatorId, DataAreaId);");
+    }
+
+    private static void CreateD365SyncUniqueIndexes(SqliteConnection connection)
+    {
+        ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_Customers_mserp_mk_wbcustomermasterId ON Customers (mserp_mk_wbcustomermasterId);");
+        ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_Vendors_mserp_mk_wbvendormasterId ON Vendors (mserp_mk_wbvendormasterId);");
+        ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_ItemMasters_mserp_mk_wb_ecoresreleasedproductv2entityId ON ItemMasters (mserp_mk_wb_ecoresreleasedproductv2entityId);");
+        ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_WarehouseMasters_mserp_mk_wbwarehousemasterId ON WarehouseMasters (mserp_mk_wbwarehousemasterId);");
+        ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_LegalEntities_ID ON LegalEntities (ID);");
+    }
+
+    private static void CreatePerformanceIndexes(SqliteConnection connection)
+    {
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_Customers_DataArea_Name ON Customers (DataAreaId, Name);");
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_Customers_DataArea_Group_Status ON Customers (DataAreaId, CustomerGroup, AccountStatus);");
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_Vendors_DataArea_Name ON Vendors (DataAreaId, Name);");
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_Vendors_DataArea_Group_Status ON Vendors (DataAreaId, VendorGroup, AccountStatus);");
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_ItemMasters_DataArea_ProductName ON ItemMasters (DataAreaId, ProductName);");
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_ItemMasters_DataArea_SearchName ON ItemMasters (DataAreaId, SearchName);");
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_ItemMasters_DataArea_ProductType ON ItemMasters (DataAreaId, ProductType, ProductSubtype);");
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_WarehouseMasters_DataArea_Name ON WarehouseMasters (DataAreaId, Name);");
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_WarehouseMasters_DataArea_Site_Type ON WarehouseMasters (DataAreaId, Site, Type);");
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_Vehicles_DataArea_Status ON Vehicles (DataAreaId, Status);");
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_Drivers_DataArea_Status ON Drivers (DataAreaId, Status);");
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_Weighments_DataArea_Status_CreatedAt ON Weighments (DataAreaId, Status, CreatedAt);");
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_Weighments_DataArea_TicketNo ON Weighments (DataAreaId, TicketNo);");
+    }
+
+    private static void ApplyPerformancePragmas(SqliteConnection connection)
+    {
+        ExecuteNonQuery(connection, "PRAGMA journal_mode=WAL;");
+        ExecuteNonQuery(connection, "PRAGMA synchronous=NORMAL;");
+        ExecuteNonQuery(connection, "PRAGMA busy_timeout=5000;");
+    }
+
+    private static void AddLikeFilter(SqliteCommand command, List<string> where, string columnName, string parameterName, string filterValue)
+    {
+        if (string.IsNullOrWhiteSpace(filterValue))
+            return;
+
+        where.Add($"lower({QuoteIdentifier(columnName)}) LIKE lower({parameterName})");
+        command.Parameters.AddWithValue(parameterName, "%" + filterValue.Trim() + "%");
     }
 
     private static List<string> GetTableColumns(SqliteConnection connection, string tableName)
@@ -2207,6 +2732,7 @@ VALUES
     private static void SeedMasterData(SqliteConnection connection)
     {
         ExecuteNonQuery(connection, @"
+INSERT OR IGNORE INTO LegalEntities (DataAreaId, LegalEntityName, Remarks, CreatedAt) VALUES ('DAT', 'Default Legal Entity', 'Seed legal entity.', datetime('now'));
 INSERT OR IGNORE INTO Parties (PartyName, PartyType) VALUES ('Default Customer', 'Customer');
 INSERT OR IGNORE INTO Parties (PartyName, PartyType) VALUES ('Default Vendor', 'Vendor');
 INSERT OR IGNORE INTO Materials (MaterialName) VALUES ('General Material');
@@ -2240,6 +2766,28 @@ VALUES
         command.Parameters.AddWithValue("$PasswordSalt", passwordData.Salt);
         command.Parameters.AddWithValue("$EffectiveFrom", DateTime.Today.ToString("O"));
         command.Parameters.AddWithValue("$CreatedAt", DateTime.Now.ToString("O"));
+        command.ExecuteNonQuery();
+
+        using var operatorCommand = connection.CreateCommand();
+        operatorCommand.CommandText = "SELECT OperatorId FROM OperatorMasters WHERE lower(trim(Username)) = 'admin' LIMIT 1";
+        var operatorId = Convert.ToInt32(operatorCommand.ExecuteScalar());
+        EnsureOperatorLegalEntityAssignment(connection, operatorId, "DAT", true);
+    }
+
+
+    private static void EnsureOperatorLegalEntityAssignment(SqliteConnection connection, int operatorId, string dataAreaId, bool isDefault)
+    {
+        if (operatorId <= 0 || string.IsNullOrWhiteSpace(dataAreaId))
+            return;
+
+        using var command = connection.CreateCommand();
+        command.CommandText = @"
+INSERT INTO OperatorLegalEntities (OperatorId, DataAreaId, IsDefault)
+VALUES ($OperatorId, $DataAreaId, $IsDefault)
+ON CONFLICT(OperatorId, DataAreaId) DO UPDATE SET IsDefault = excluded.IsDefault;";
+        command.Parameters.AddWithValue("$OperatorId", operatorId);
+        command.Parameters.AddWithValue("$DataAreaId", dataAreaId.Trim());
+        command.Parameters.AddWithValue("$IsDefault", isDefault ? 1 : 0);
         command.ExecuteNonQuery();
     }
 
@@ -2524,6 +3072,24 @@ VALUES
     }
 
 
+    private static void AddLegalEntityParameters(SqliteCommand command, LegalEntityMaster legalEntity)
+    {
+        command.Parameters.AddWithValue("$DataAreaId", DbValue(legalEntity.DataAreaId));
+        command.Parameters.AddWithValue("$LegalEntityName", DbValue(legalEntity.LegalEntityName));
+        command.Parameters.AddWithValue("$Remarks", DbValue(legalEntity.Remarks));
+        command.Parameters.AddWithValue("$ID", string.IsNullOrWhiteSpace(legalEntity.ID) ? DBNull.Value : legalEntity.ID.Trim());
+        command.Parameters.AddWithValue("$SinkCreatedOn", DbValue(legalEntity.SinkCreatedOn));
+        command.Parameters.AddWithValue("$SinkModifiedOn", DbValue(legalEntity.SinkModifiedOn));
+        command.Parameters.AddWithValue("$mserp_dataareaid_id", DbValue(legalEntity.mserp_dataareaid_id));
+        command.Parameters.AddWithValue("$mserp_dataareaid_id_entitytype", DbValue(legalEntity.mserp_dataareaid_id_entitytype));
+        command.Parameters.AddWithValue("$mserp_dataareaid", DbValue(legalEntity.mserp_dataareaid));
+        command.Parameters.AddWithValue("$versionnumber", DbValue(legalEntity.versionnumber));
+        command.Parameters.AddWithValue("$IsDelete", DbValue(legalEntity.IsDelete));
+        command.Parameters.AddWithValue("$CreatedOn", DbValue(legalEntity.CreatedOn));
+        command.Parameters.AddWithValue("$createdonpartition", DbValue(legalEntity.createdonpartition));
+    }
+
+
 
     private static void AddD365SyncParameters(
         SqliteCommand command,
@@ -2539,7 +3105,7 @@ VALUES
         string createdOnPartition,
         string entityIdParameterName)
     {
-        command.Parameters.AddWithValue("$" + entityIdParameterName, DbValue(entityId));
+        command.Parameters.AddWithValue("$" + entityIdParameterName, string.IsNullOrWhiteSpace(entityId) ? DBNull.Value : entityId.Trim());
         command.Parameters.AddWithValue("$SinkCreatedOn", DbValue(sinkCreatedOn));
         command.Parameters.AddWithValue("$SinkModifiedOn", DbValue(sinkModifiedOn));
         command.Parameters.AddWithValue("$mserp_dataareaid_id", DbValue(mserpDataAreaIdId));
@@ -2883,6 +3449,34 @@ VALUES
         IsDelete = ReadText(reader, "IsDelete"),
         CreatedOn = ReadText(reader, "CreatedOn"),
         createdonpartition = ReadText(reader, "createdonpartition")
+    };
+
+
+    private static LegalEntityMaster MapLegalEntityMaster(SqliteDataReader reader) => new()
+    {
+        LegalEntityId = Convert.ToInt32(reader["LegalEntityId"]),
+        DataAreaId = ReadText(reader, "DataAreaId"),
+        LegalEntityName = ReadText(reader, "LegalEntityName"),
+        Remarks = ReadText(reader, "Remarks"),
+        ID = ReadText(reader, "ID"),
+        SinkCreatedOn = ReadText(reader, "SinkCreatedOn"),
+        SinkModifiedOn = ReadText(reader, "SinkModifiedOn"),
+        mserp_dataareaid_id = ReadText(reader, "mserp_dataareaid_id"),
+        mserp_dataareaid_id_entitytype = ReadText(reader, "mserp_dataareaid_id_entitytype"),
+        mserp_dataareaid = ReadText(reader, "mserp_dataareaid"),
+        versionnumber = ReadText(reader, "versionnumber"),
+        IsDelete = ReadText(reader, "IsDelete"),
+        CreatedOn = ReadText(reader, "CreatedOn"),
+        createdonpartition = ReadText(reader, "createdonpartition")
+    };
+
+    private static OperatorLegalEntityAssignment MapOperatorLegalEntityAssignment(SqliteDataReader reader) => new()
+    {
+        Id = Convert.ToInt32(reader["Id"]),
+        OperatorId = Convert.ToInt32(reader["OperatorId"]),
+        DataAreaId = ReadText(reader, "DataAreaId"),
+        LegalEntityName = ReadText(reader, "LegalEntityName"),
+        IsDefault = ReadBool(reader, "IsDefault")
     };
 
     private static AppUser MapUser(SqliteDataReader reader) => new()
