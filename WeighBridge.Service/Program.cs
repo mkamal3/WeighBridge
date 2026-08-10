@@ -158,6 +158,11 @@ public static class Program
                 settings.DeltaTablePath = WarehouseSchema.DefaultDeltaPath;
                 settings.TableName = WarehouseSchema.DefaultTableName;
             }
+            else if (string.Equals(settings.TableName, LegalEntitySchema.DefaultTableName, StringComparison.OrdinalIgnoreCase))
+            {
+                settings.DeltaTablePath = LegalEntitySchema.DefaultDeltaPath;
+                settings.TableName = LegalEntitySchema.DefaultTableName;
+            }
 
             ValidateSettings(settings, cli.Demo);
 

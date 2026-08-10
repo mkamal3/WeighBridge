@@ -345,6 +345,8 @@ CREATE TABLE IF NOT EXISTS WarehouseMasters (
     mserp_dataareaid_id TEXT NOT NULL DEFAULT '',
     mserp_dataareaid_id_entitytype TEXT NOT NULL DEFAULT '',
     mserp_dataareaid TEXT NOT NULL DEFAULT '',
+    SinkCreatedOn TEXT NOT NULL DEFAULT '',
+    SinkModifiedOn TEXT NOT NULL DEFAULT '',
     versionnumber TEXT NOT NULL DEFAULT '',
     IsDelete TEXT NOT NULL DEFAULT '',
     CreatedOn TEXT NOT NULL DEFAULT '',

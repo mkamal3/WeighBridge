@@ -270,6 +270,11 @@ public sealed class SqliteRepository : IAsyncDisposable
             ordered = new List<string> { "mserp_mk_wbwarehousemasterid" };
             set.Add("mserp_mk_wbwarehousemasterid");
         }
+        else if (tableName == LegalEntitySchema.DefaultTableName)
+        {
+            ordered = new List<string> { "Id" };
+            set.Add("Id");
+        }
 
         IEnumerable<string> seed = tableName switch
         {
@@ -277,6 +282,7 @@ public sealed class SqliteRepository : IAsyncDisposable
             var t when string.Equals(t, CustomerSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase) => CustomerSchema.Columns,
             var t when string.Equals(t, WarehouseSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase) => WarehouseSchema.Columns,
             var t when string.Equals(t, ItemSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase) => ItemSchema.Columns,
+            var t when string.Equals(t, LegalEntitySchema.DefaultTableName, StringComparison.OrdinalIgnoreCase) => LegalEntitySchema.Columns,
             _ => VendorSchema.Columns
         };
 
