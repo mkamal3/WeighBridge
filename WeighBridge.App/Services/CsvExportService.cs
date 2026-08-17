@@ -14,18 +14,15 @@ public static class CsvExportService
 
         var filePath = System.IO.Path.Combine(folder, $"BridgeOneReport-{DateTime.Now:yyyyMMdd-HHmmss}.csv");
         var sb = new StringBuilder();
-        sb.AppendLine("TicketNo,CompanyName,VehicleNo,DriverName,PartyAccount,PartyName,PartyType,ItemNumber,ItemName,FirstWeight,FirstWeightTime,FirstWeightBy,SecondWeight,SecondWeightTime,SecondWeightBy,NetWeight,Status,Remarks");
+        sb.AppendLine("SlipNumber,CompanyName,VehicleNo,DriverName,ItemNumber,ItemName,FirstWeight,FirstWeightTime,FirstWeightBy,SecondWeight,SecondWeightTime,SecondWeightBy,NetWeight,Status,Remarks");
 
         foreach (var row in rows)
         {
             sb.AppendLine(string.Join(",",
-                Escape(row.TicketNo),
+                Escape(row.SlipNumber),
                 Escape(row.CompanyName),
                 Escape(row.VehicleNo),
                 Escape(row.DriverName),
-                Escape(row.PartyAccount),
-                Escape(row.PartyName),
-                Escape(row.PartyType),
                 Escape(row.ItemNumber),
                 Escape(string.IsNullOrWhiteSpace(row.ItemName) ? row.MaterialName : row.ItemName),
                 row.FirstWeight.ToString(CultureInfo.InvariantCulture),

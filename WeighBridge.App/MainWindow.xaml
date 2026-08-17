@@ -131,178 +131,321 @@
 
         <TabControl Grid.Row="2" Margin="10,6,10,10">
             <TabItem Header="Weighment" Visibility="{Binding CanAccessWeighment, Converter={StaticResource BoolToVisibilityConverter}}">
-                <Grid Margin="8">
+                <Grid Margin="10">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="400" />
-                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="2*" />
+                        <ColumnDefinition Width="2*" />
+                        <ColumnDefinition Width="360" />
                     </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
 
-                    <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
-                        <StackPanel>
-                            <Border Background="White" CornerRadius="8" Padding="14" Margin="4">
-                                <StackPanel>
-                                    <TextBlock Text="Live Weight" FontSize="18" FontWeight="SemiBold" />
-                                    <TextBlock Text="{Binding LiveWeightText}" FontSize="48" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,12" />
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                        <TextBlock Text="Stable: " FontWeight="SemiBold" />
-                                        <TextBlock Text="{Binding StableText}" />
-                                    </StackPanel>
-                                    <TextBlock Text="{Binding LiveRaw}" FontSize="11" Foreground="Gray" TextWrapping="Wrap" Margin="0,8,0,0" />
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0">
-                                        <Button Content="Connect" Command="{Binding ConnectCommand}" />
-                                        <Button Content="Disconnect" Command="{Binding DisconnectCommand}" />
-                                    </StackPanel>
+                    <Border Grid.Row="0" Grid.Column="0" Background="White" CornerRadius="8" Padding="14" Margin="4" MinHeight="350">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="145" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="30" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.ColumnSpan="3" Text="Weighment Header Details" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12" />
+
+                            <Label Grid.Row="1" Grid.Column="0" Content="Slip Number" />
+                            <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding SlipNumber}" IsReadOnly="True" Background="#EFEFEF" />
+
+                            <Label Grid.Row="2" Grid.Column="0" Content="Legal Entity *" />
+                            <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding CurrentUserCompany, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" />
+
+                            <Label Grid.Row="3" Grid.Column="0" Content="Transaction Type *" />
+                            <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding TransactionTypeDisplay, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" />
+                            <Button Grid.Row="3" Grid.Column="2" Content="🔍" Command="{Binding OpenTransactionTypeLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" IsEnabled="{Binding IsHeaderAndLinesEditable}" ToolTip="Select Transaction Type" />
+
+                            <Label Grid.Row="4" Grid.Column="0" Content="Scenario *" />
+                            <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding ScenarioDisplay, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" />
+                            <Button Grid.Row="4" Grid.Column="2" Content="🔍" Command="{Binding OpenScenarioLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" IsEnabled="{Binding IsHeaderAndLinesEditable}" ToolTip="Select Scenario" />
+
+                            <Label Grid.Row="5" Grid.Column="0" Content="Gate Pass No" />
+                            <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding GatePassNumber, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" />
+                            <Button Grid.Row="5" Grid.Column="2" Content="🔍" Command="{Binding OpenWeighmentGatePassLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" IsEnabled="{Binding IsHeaderAndLinesEditable}" ToolTip="Select Open Gate Pass" />
+
+                            <Label Grid.Row="6" Grid.Column="0" Content="Vehicle No *" />
+                            <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding VehicleNo, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" />
+                            <Button Grid.Row="6" Grid.Column="2" Content="🔍" Command="{Binding OpenVehicleLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" IsEnabled="{Binding IsHeaderAndLinesEditable}" ToolTip="Select Vehicle" />
+
+                            <Label Grid.Row="7" Grid.Column="0" Content="Driver Name *" />
+                            <TextBox Grid.Row="7" Grid.Column="1" Text="{Binding DriverName, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" />
+                            <Button Grid.Row="7" Grid.Column="2" Content="🔍" Command="{Binding OpenDriverLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" IsEnabled="{Binding IsHeaderAndLinesEditable}" ToolTip="Select Driver" />
+
+
+                            <Label Grid.Row="8" Grid.Column="0" Content="External Ref" />
+                            <TextBox Grid.Row="8" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding ExternalReference, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsHeaderAndLinesEditable}" />
+
+                            <Label Grid.Row="9" Grid.Column="0" Content="Operator Remarks" />
+                            <TextBox Grid.Row="9" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding OperatorRemarks, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="48" TextWrapping="Wrap" IsEnabled="{Binding IsHeaderAndLinesEditable}" />
+                        </Grid>
+                    </Border>
+
+                    <Border Grid.Row="0" Grid.Column="1" Background="White" CornerRadius="8" Padding="14" Margin="4" MinHeight="350" Visibility="{Binding IsPurchaseReceiptCollectionForm, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="155" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="30" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.ColumnSpan="3" Text="Purchase / Receipt / Collection Details" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12" />
+
+                            <Label Grid.Row="1" Grid.Column="0" Content="Purchase Subtype *" />
+                            <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding PurchaseDetailsForm.PurchaseSubtype, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsPurchaseDetailsEditable}" />
+
+                            <Label Grid.Row="2" Grid.Column="0" Content="Vendor" />
+                            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding PurchaseVendorDisplay, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" />
+                            <Button Grid.Row="2" Grid.Column="2" Content="🔍" Command="{Binding OpenPurchaseVendorLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" IsEnabled="{Binding IsPurchaseVendorSelectable}" ToolTip="Select Vendor" />
+
+                            <Label Grid.Row="3" Grid.Column="0" Content="Walk-in Vendor" />
+                            <CheckBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" IsChecked="{Binding PurchaseDetailsForm.WalkInVendor, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsPurchaseDetailsEditable}" VerticalAlignment="Center" />
+
+                            <Label Grid.Row="4" Grid.Column="0" Content="Supplier / Driver Name" />
+                            <TextBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding PurchaseDetailsForm.SupplierDriverName, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsPurchaseDetailsEditable}" />
+
+                            <Label Grid.Row="5" Grid.Column="0" Content="Purchase / Contract Ref" />
+                            <TextBox Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding PurchaseDetailsForm.PurchaseContractReference, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsPurchaseDetailsEditable}" />
+
+                            <Label Grid.Row="6" Grid.Column="0" Content="Source *" />
+                            <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding PurchaseSourceDisplay, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" />
+                            <Button Grid.Row="6" Grid.Column="2" Content="🔍" Command="{Binding OpenPurchaseSourceLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" IsEnabled="{Binding IsPurchaseDetailsEditable}" ToolTip="Select Source" />
+
+                            <Label Grid.Row="7" Grid.Column="0" Content="Destination *" />
+                            <TextBox Grid.Row="7" Grid.Column="1" Text="{Binding PurchaseDestinationDisplay, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" />
+                            <Button Grid.Row="7" Grid.Column="2" Content="🔍" Command="{Binding OpenPurchaseDestinationLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" IsEnabled="{Binding IsPurchaseDetailsEditable}" ToolTip="Select Destination" />
+
+                            <Label Grid.Row="8" Grid.Column="0" Content="FOC Flag" />
+                            <CheckBox Grid.Row="8" Grid.Column="1" Grid.ColumnSpan="2" IsChecked="{Binding PurchaseDetailsForm.FocFlag, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsPurchaseDetailsEditable}" VerticalAlignment="Center" />
+
+                            <Label Grid.Row="9" Grid.Column="0" Content="Rate / Amount" />
+                            <TextBox Grid.Row="9" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding PurchaseDetailsForm.RateAmount, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsPurchaseRateAmountEditable}" />
+                        </Grid>
+                    </Border>
+
+                    <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Grid.RowSpan="2" Background="White" CornerRadius="8" Padding="14" Margin="4">
+                        <DockPanel>
+                            <DockPanel DockPanel.Dock="Top" LastChildFill="False" Margin="0,0,0,8">
+                                <TextBlock Text="Material Lines" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" DockPanel.Dock="Left" />
+                                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                                    <Button Content="＋" Command="{Binding AddMaterialLineCommand}" Style="{StaticResource GridIconButtonStyle}" IsEnabled="{Binding IsHeaderAndLinesEditable}" ToolTip="Add material line" />
+                                    <Button Content="🗑" Command="{Binding DeleteMaterialLineCommand}" Style="{StaticResource GridIconButtonStyle}" IsEnabled="{Binding IsHeaderAndLinesEditable}" ToolTip="Delete selected material line" />
                                 </StackPanel>
-                            </Border>
+                            </DockPanel>
+                            <DataGrid ItemsSource="{Binding MaterialLines}" SelectedItem="{Binding SelectedMaterialLine}" IsReadOnly="{Binding IsHeaderAndLinesLocked}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Line" Binding="{Binding LineNo}" Width="55" IsReadOnly="True" />
+                                    <DataGridTextColumn Header="Item Number" Binding="{Binding ItemNumber}" Width="140" IsReadOnly="True" />
+                                    <DataGridTextColumn Header="Item Name" Binding="{Binding ItemName}" Width="240" IsReadOnly="True" />
+                                    <DataGridTextColumn Header="Expected Qty" Binding="{Binding ExpectedQty, UpdateSourceTrigger=PropertyChanged}" Width="120" />
+                                    <DataGridTextColumn Header="UOM" Binding="{Binding Uom, UpdateSourceTrigger=PropertyChanged}" Width="80" />
+                                    <DataGridTextColumn Header="Remarks" Binding="{Binding Remarks, UpdateSourceTrigger=PropertyChanged}" Width="*" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </DockPanel>
+                    </Border>
 
-                            <Border Background="White" CornerRadius="8" Padding="14" Margin="4">
+                    <Border Grid.Row="0" Grid.Column="2" Background="White" CornerRadius="8" Padding="10" Margin="4" MinHeight="260">
+                        <StackPanel>
+                            <Border Background="#12324D" CornerRadius="10" Padding="16" MinHeight="135">
                                 <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="120" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
                                         <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
 
-                                    <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Text="Weighment Entry" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="LIVE SCALE" Foreground="White" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Left" />
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding LiveScaleStatusText}" Foreground="White" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Right" />
 
-                                    <Label Grid.Row="1" Grid.Column="0" Content="Ticket No" />
-                                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding TicketNo}" IsReadOnly="True" Background="#EFEFEF" />
-
-                                    <Label Grid.Row="2" Grid.Column="0" Content="Company *" />
-                                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding CurrentUserCompany, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" />
-
-                                    <Label Grid.Row="3" Grid.Column="0" Content="Vehicle No *" />
-                                    <DockPanel Grid.Row="3" Grid.Column="1" LastChildFill="True">
-                                        <Button DockPanel.Dock="Right" Content="🔍" Command="{Binding OpenVehicleLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" ToolTip="Select Vehicle" />
-                                        <TextBox Text="{Binding VehicleNo, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" ToolTip="Selected Vehicle" />
-                                    </DockPanel>
-
-                                    <Label Grid.Row="4" Grid.Column="0" Content="Driver Name *" />
-                                    <DockPanel Grid.Row="4" Grid.Column="1" LastChildFill="True">
-                                        <Button DockPanel.Dock="Right" Content="🔍" Command="{Binding OpenDriverLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" ToolTip="Select Driver" />
-                                        <TextBox Text="{Binding DriverName, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" ToolTip="Selected Driver" />
-                                    </DockPanel>
-
-                                    <Label Grid.Row="5" Grid.Column="0" Content="Party Type *" />
-                                    <ComboBox Grid.Row="5" Grid.Column="1"
-                                              ItemsSource="{Binding PartyTypes}"
-                                              SelectedItem="{Binding SelectedPartyType}" />
-
-                                    <Label Grid.Row="6" Grid.Column="0" Content="Party *" />
-                                    <DockPanel Grid.Row="6" Grid.Column="1" LastChildFill="True">
-                                        <Button DockPanel.Dock="Right" Content="🔍" Command="{Binding OpenPartyLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" ToolTip="Select Party" />
-                                        <TextBox Text="{Binding PartyDisplay, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" ToolTip="Selected Party" />
-                                    </DockPanel>
-
-                                    <Label Grid.Row="7" Grid.Column="0" Content="Item *" />
-                                    <DockPanel Grid.Row="7" Grid.Column="1" LastChildFill="True">
-                                        <Button DockPanel.Dock="Right" Content="🔍" Command="{Binding OpenItemLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" ToolTip="Select Item" />
-                                        <TextBox Text="{Binding ItemDisplay, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" ToolTip="Selected Item" />
-                                    </DockPanel>
-
-                                    <Label Grid.Row="8" Grid.Column="0" Content="Remarks" />
-                                    <TextBox Grid.Row="8" Grid.Column="1" Text="{Binding Remarks, UpdateSourceTrigger=PropertyChanged}" />
-
-                                    <StackPanel Grid.Row="9" Grid.ColumnSpan="2" Margin="0,10,0,0">
-                                        <UniformGrid Columns="3">
-                                            <StackPanel>
-                                                <TextBlock Text="First Weight" FontWeight="SemiBold" />
-                                                <TextBlock Text="{Binding FirstWeightText}" FontSize="18" />
-                                            </StackPanel>
-                                            <StackPanel>
-                                                <TextBlock Text="Second Weight" FontWeight="SemiBold" />
-                                                <TextBlock Text="{Binding SecondWeightText}" FontSize="18" />
-                                            </StackPanel>
-                                            <StackPanel>
-                                                <TextBlock Text="Net Weight" FontWeight="SemiBold" />
-                                                <TextBlock Text="{Binding NetWeightText}" FontSize="18" />
-                                            </StackPanel>
-                                        </UniformGrid>
-
-                                        <WrapPanel Margin="0,10,0,0">
-                                            <Button Content="Save First Weight" Command="{Binding SaveFirstWeightCommand}" IsEnabled="{Binding CanSaveFirstWeight}" />
-                                            <Button Content="Save Second Weight" Command="{Binding SaveSecondWeightCommand}" IsEnabled="{Binding CanSaveSecondWeight}" />
-                                            <Button Content="Clear" Command="{Binding ClearCommand}" />
-                                        </WrapPanel>
+                                    <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,14,0,8">
+                                        <TextBlock Text="{Binding LiveScaleWeightText}" Foreground="White" FontSize="42" FontWeight="Bold" HorizontalAlignment="Center" />
+                                        <TextBlock Text="kg" Foreground="White" FontSize="16" HorizontalAlignment="Center" Margin="0,2,0,0" />
                                     </StackPanel>
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Text="{Binding LiveRaw}" Foreground="#C9D6E3" FontSize="11" TextWrapping="Wrap" HorizontalAlignment="Left" />
                                 </Grid>
                             </Border>
-                        </StackPanel>
-                    </ScrollViewer>
 
-                    <Grid Grid.Column="1" Margin="8,0,0,0">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="*" />
-                            <RowDefinition Height="*" />
-                        </Grid.RowDefinitions>
-
-                        <Border Grid.Row="0" Background="White" CornerRadius="8" Padding="10" Margin="4">
-                            <DockPanel>
-                                <DockPanel DockPanel.Dock="Top" LastChildFill="False" Margin="0,0,0,6">
-                                    <TextBlock Text="Open Tickets" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" DockPanel.Dock="Left" />
-                                </DockPanel>
-                                <DataGrid ItemsSource="{Binding OpenWeighments}" SelectedItem="{Binding SelectedOpenWeighment}">
-                                    <DataGrid.Columns>
-                                        <DataGridTextColumn Header="Ticket" Binding="{Binding TicketNo}" Width="120" />
-                                        <DataGridTextColumn Header="Company" Binding="{Binding CompanyName}" Width="130" />
-                                        <DataGridTextColumn Header="Vehicle" Binding="{Binding VehicleNo}" Width="100" />
-                                        <DataGridTextColumn Header="Driver" Binding="{Binding DriverName}" Width="110" />
-                                        <DataGridTextColumn Header="Party Account" Binding="{Binding PartyAccount}" Width="120" />
-                                        <DataGridTextColumn Header="Party Name" Binding="{Binding PartyName}" Width="150" />
-                                        <DataGridTextColumn Header="Party Type" Binding="{Binding PartyType}" Width="90" />
-                                        <DataGridTextColumn Header="Item Number" Binding="{Binding ItemNumber}" Width="120" />
-                                        <DataGridTextColumn Header="Item Name" Binding="{Binding ItemName}" Width="150" />
-                                        <DataGridTextColumn Header="First Weight" Binding="{Binding FirstWeight}" Width="100" />
-                                        <DataGridTextColumn Header="First Time" Binding="{Binding FirstWeightTime}" Width="150" />
-                                        <DataGridTextColumn Header="First Weight By" Binding="{Binding FirstWeightBy}" Width="130" />
-                                    </DataGrid.Columns>
-                                </DataGrid>
-                            </DockPanel>
-                        </Border>
-
-                        <Border Grid.Row="1" Background="White" CornerRadius="8" Padding="10" Margin="4">
-                            <DockPanel>
-                                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
-                                    <TextBlock Text="Completed Today" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <GroupBox Header="Captured Weights" Margin="0,10,0,0" Padding="10">
+                                <StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="First Weight" FontWeight="SemiBold" />
+                                        <TextBlock Grid.Column="1" Text="{Binding FirstWeightText}" FontWeight="SemiBold" />
+                                    </Grid>
+                                    <Grid Margin="0,8,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Second Weight" FontWeight="SemiBold" />
+                                        <TextBlock Grid.Column="1" Text="{Binding SecondWeightText}" FontWeight="SemiBold" />
+                                    </Grid>
+                                    <Grid Margin="0,8,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Net Weight" FontWeight="SemiBold" />
+                                        <TextBlock Grid.Column="1" Text="{Binding NetWeightText}" FontWeight="SemiBold" />
+                                    </Grid>
                                 </StackPanel>
-                                <DataGrid ItemsSource="{Binding CompletedToday}" SelectedItem="{Binding SelectedCompletedWeighment}" IsReadOnly="True">
-                                    <DataGrid.Columns>
-                                        <DataGridTextColumn Header="Ticket" Binding="{Binding TicketNo}" Width="120" IsReadOnly="True" />
-                                        <DataGridTextColumn Header="Company" Binding="{Binding CompanyName}" Width="130" />
-                                        <DataGridTextColumn Header="Vehicle" Binding="{Binding VehicleNo}" Width="100" />
-                                        <DataGridTextColumn Header="Driver" Binding="{Binding DriverName}" Width="100" />
-                                        <DataGridTextColumn Header="Party Account" Binding="{Binding PartyAccount}" Width="120" />
-                                        <DataGridTextColumn Header="Party Name" Binding="{Binding PartyName}" Width="150" />
-                                        <DataGridTextColumn Header="Party Type" Binding="{Binding PartyType}" Width="90" />
-                                        <DataGridTextColumn Header="Item Number" Binding="{Binding ItemNumber}" Width="120" />
-                                        <DataGridTextColumn Header="Item Name" Binding="{Binding ItemName}" Width="150" />
-                                        <DataGridTextColumn Header="First Weight" Binding="{Binding FirstWeight}" Width="100" />
-                                        <DataGridTextColumn Header="First Weight By" Binding="{Binding FirstWeightBy}" Width="130" IsReadOnly="True" />
-                                        <DataGridTextColumn Header="Second Weight" Binding="{Binding SecondWeight}" Width="105" />
-                                        <DataGridTextColumn Header="Second Weight By" Binding="{Binding SecondWeightBy}" Width="140" IsReadOnly="True" />
-                                        <DataGridTextColumn Header="Net" Binding="{Binding NetWeight}" Width="75" IsReadOnly="True" />
-                                        <DataGridTextColumn Header="Remarks" Binding="{Binding Remarks}" Width="160" />
-                                    </DataGrid.Columns>
-                                </DataGrid>
-                            </DockPanel>
-                        </Border>
-                    </Grid>
+                            </GroupBox>
+
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
+                                <Button Content="Connect" Command="{Binding ConnectCommand}" Width="95" Margin="0,0,8,0" />
+                                <Button Content="Disconnect" Command="{Binding DisconnectCommand}" Width="95" />
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
+                                <Button Content="First Weight" Command="{Binding SaveFirstWeightCommand}" IsEnabled="{Binding CanSaveFirstWeight}" Width="100" Margin="0,0,8,0" />
+                                <Button Content="Second Weight" Command="{Binding SaveSecondWeightCommand}" IsEnabled="{Binding CanSaveSecondWeight}" Width="105" Margin="0,0,8,0" />
+                                <Button Content="Clear" Command="{Binding ClearCommand}" Width="80" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Row="1" Grid.Column="2" Grid.RowSpan="2" Background="White" CornerRadius="8" Padding="10" Margin="4">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Top" Text="Open Slips" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,8" />
+                            <DataGrid ItemsSource="{Binding OpenWeighments}" SelectedItem="{Binding SelectedOpenWeighment}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Slip Number" Binding="{Binding SlipNumber}" Width="180" />
+                                    <DataGridTextColumn Header="Vehicle" Binding="{Binding VehicleNo}" Width="100" />
+                                    <DataGridTextColumn Header="Driver" Binding="{Binding DriverName}" Width="110" />
+                                    <DataGridTextColumn Header="First Weight" Binding="{Binding FirstWeight}" Width="100" />
+                                    <DataGridTextColumn Header="First Time" Binding="{Binding FirstWeightTime}" Width="150" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </DockPanel>
+                    </Border>
                 </Grid>
             </TabItem>
 
+            <TabItem Header="Gate Pass" Visibility="{Binding CanAccessGatePass, Converter={StaticResource BoolToVisibilityConverter}}">
+                <Grid Margin="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="5*" />
+                        <ColumnDefinition Width="4*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Background="White" CornerRadius="8" Padding="10" Margin="4">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Top" Text="Gate Pass List" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,8" />
+                            <DataGrid ItemsSource="{Binding GatePasses}" SelectedItem="{Binding SelectedGatePass}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Gate Pass Number" Binding="{Binding GatePassNumber}" Width="160" />
+                                    <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="90" />
+                                    <DataGridTextColumn Header="Vehicle Plate" Binding="{Binding VehiclePlate}" Width="120" />
+                                    <DataGridTextColumn Header="Driver" Binding="{Binding DriverName}" Width="120" />
+                                            <DataGridTextColumn Header="Party Name" Binding="{Binding PartyName}" Width="150" />
+                                    <DataGridTextColumn Header="Expected Type" Binding="{Binding ExpectedTransactionType}" Width="130" />
+                                    <DataGridTextColumn Header="Expected Item" Binding="{Binding ExpectedItem}" Width="150" />
+                                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="90" />
+                                    <DataGridTextColumn Header="Entry Date Time" Binding="{Binding EntryDateTime}" Width="160" />
+                                    <DataGridTextColumn Header="Exit Date Time" Binding="{Binding ExitDateTime}" Width="160" />
+                                    <DataGridTextColumn Header="Security Officer" Binding="{Binding SecurityOfficer}" Width="130" />
+                                    <DataGridTextColumn Header="Linked Slip" Binding="{Binding LinkedTicketNo}" Width="150" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </DockPanel>
+                    </Border>
+
+                    <Border Grid.Column="1" Background="White" CornerRadius="8" Padding="10" Margin="4">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
+                                <TextBlock Text="Open / Edit Gate Pass" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                <WrapPanel Margin="0,0,0,8">
+                                    <Button Content="New" Command="{Binding ClearGatePassCommand}" />
+                                    <Button Content="Save / Open Gate Pass" Command="{Binding SaveGatePassCommand}" />
+                                    <Button Content="Close" Command="{Binding CloseGatePassCommand}" />
+                                    <Button Content="Cancel" Command="{Binding CancelGatePassCommand}" />
+                                    <Button Content="Print" Command="{Binding PrintGatePassCommand}" />
+                                </WrapPanel>
+
+                                <GroupBox Header="General" Margin="0,4" Padding="8">
+                                    <StackPanel>
+                                        <DockPanel Margin="0,3"><Label Content="Gate Pass Number" Width="180" /><TextBox Text="{Binding GatePassForm.GatePassNumber}" IsReadOnly="True" Background="#EFEFEF" /></DockPanel>
+                                        <DockPanel Margin="0,3"><Label Content="Type *" Width="180" /><ComboBox ItemsSource="{Binding GatePassTypes}" SelectedItem="{Binding GatePassForm.Type}" IsEnabled="{Binding IsGatePassFormEditable}" /></DockPanel>
+                                        <DockPanel Margin="0,3"><Label Content="Legal Entity" Width="180" /><TextBox Text="{Binding CurrentUserCompany, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" /></DockPanel>
+                                        <DockPanel Margin="0,3"><Label Content="Entry Date &amp; Time" Width="180" /><DatePicker SelectedDate="{Binding GatePassForm.EntryDateTime}" IsEnabled="False" /></DockPanel>
+                                        <DockPanel Margin="0,3"><Label Content="Status" Width="180" /><TextBox Text="{Binding GatePassForm.Status}" IsReadOnly="True" Background="#EFEFEF" /></DockPanel>
+                                    </StackPanel>
+                                </GroupBox>
+
+                                <GroupBox Header="Details" Margin="0,4" Padding="8">
+                                    <StackPanel>
+                                        <DockPanel Margin="0,3"><Label Content="Vehicle Plate *" Width="180" /><Button DockPanel.Dock="Right" Content="🔍" Command="{Binding OpenGatePassVehicleLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" ToolTip="Select Vehicle" /><TextBox Text="{Binding GatePassForm.VehiclePlate, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" /></DockPanel>
+                                        <DockPanel Margin="0,3"><Label Content="Driver *" Width="180" /><Button DockPanel.Dock="Right" Content="🔍" Command="{Binding OpenGatePassDriverLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" ToolTip="Select Driver" /><TextBox Text="{Binding GatePassForm.DriverName, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" /></DockPanel>
+                                        <DockPanel Margin="0,3"><Label Content="Driver Mobile" Width="180" /><TextBox Text="{Binding GatePassForm.DriverMobile, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" /></DockPanel>
+                                        <DockPanel Margin="0,3"><Label Content="Party Type *" Width="180" /><ComboBox ItemsSource="{Binding PartyTypes}" SelectedItem="{Binding GatePassForm.PartyType}" IsEnabled="{Binding IsGatePassFormEditable}" /></DockPanel>
+                                        <DockPanel Margin="0,3"><Label Content="Party *" Width="180" /><Button DockPanel.Dock="Right" Content="🔍" Command="{Binding OpenGatePassPartyLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" ToolTip="Select Party" /><TextBox Text="{Binding GatePassPartyDisplay, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" /></DockPanel>
+                                        <DockPanel Margin="0,3"><Label Content="Expected Transaction Type *" Width="180" /><ComboBox ItemsSource="{Binding TransactionTypeMasters}" DisplayMemberPath="Type" Text="{Binding GatePassForm.ExpectedTransactionType, UpdateSourceTrigger=PropertyChanged}" IsEditable="True" IsEnabled="{Binding IsGatePassFormEditable}" /></DockPanel>
+                                        <DockPanel Margin="0,3"><Label Content="Expected Item" Width="180" /><Button DockPanel.Dock="Right" Content="🔍" Command="{Binding OpenGatePassItemLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" ToolTip="Select Item" /><TextBox Text="{Binding GatePassExpectedItemDisplay, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" /></DockPanel>
+                                        <DockPanel Margin="0,3"><Label Content="Source" Width="180" /><TextBox Text="{Binding GatePassForm.Source, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="{Binding IsGatePassFormReadOnly}" /></DockPanel>
+                                        <DockPanel Margin="0,3"><Label Content="Destination" Width="180" /><TextBox Text="{Binding GatePassForm.Destination, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="{Binding IsGatePassFormReadOnly}" /></DockPanel>
+                                    </StackPanel>
+                                </GroupBox>
+
+                                <GroupBox Header="Closure" Margin="0,4" Padding="8">
+                                    <StackPanel>
+                                        <DockPanel Margin="0,3"><Label Content="Security Officer" Width="180" /><TextBox Text="{Binding GatePassForm.SecurityOfficer}" IsReadOnly="True" Background="#EFEFEF" /></DockPanel>
+                                        <DockPanel Margin="0,3"><Label Content="Exit Date Time" Width="180" /><DatePicker SelectedDate="{Binding GatePassForm.ExitDateTime}" IsEnabled="False" /></DockPanel>
+                                        <DockPanel Margin="0,3"><Label Content="Closed By" Width="180" /><TextBox Text="{Binding GatePassForm.ClosedBy}" IsReadOnly="True" Background="#EFEFEF" /></DockPanel>
+                                        <DockPanel Margin="0,3"><Label Content="Linked Slip" Width="180" /><TextBox Text="{Binding GatePassForm.LinkedTicketNo}" IsReadOnly="True" Background="#EFEFEF" /></DockPanel>
+                                        <DockPanel Margin="0,3"><Label Content="Remarks" Width="180" /><TextBox Text="{Binding GatePassForm.Remarks, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="{Binding IsGatePassFormReadOnly}" AcceptsReturn="True" Height="60" TextWrapping="Wrap" /></DockPanel>
+                                    </StackPanel>
+                                </GroupBox>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+
             <TabItem Header="Masters" Visibility="{Binding CanAccessMasters, Converter={StaticResource BoolToVisibilityConverter}}">
-                <TabControl Margin="12">
+                <TabControl Margin="12" SelectionChanged="MastersTabControl_SelectionChanged">
 
                         <TabItem Header="Legal Entity Master">
                             <Grid Margin="8">
@@ -1561,7 +1704,7 @@
                                                         <DockPanel Margin="0,2"><Label Content="Last Calibration Date" Width="205" /><DatePicker SelectedDate="{Binding WeighbridgeMasterForm.LastCalibrationDate, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
                                                         <DockPanel Margin="0,2"><Label Content="Next Calibration Date" Width="205" /><DatePicker SelectedDate="{Binding WeighbridgeMasterForm.NextCalibrationDate, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
                                                         <DockPanel Margin="0,2"><Label Content="Printer" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.Printer, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
-                                                        <DockPanel Margin="0,2"><Label Content="Default Ticket Template" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.DefaultTicketTemplate, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Default Slip Template" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.DefaultTicketTemplate, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
                                                         <DockPanel Margin="0,2"><Label Content="Default Currency" Width="205" /><TextBox Text="{Binding WeighbridgeMasterForm.DefaultCurrency, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
                                                     </StackPanel>
                                                 </GroupBox>
@@ -1695,6 +1838,7 @@
                                                         <CheckBox Content="Can Access Masters" IsChecked="{Binding OperatorMasterForm.CanAccessMasters}" Margin="205,4,0,0" />
                                                         <CheckBox Content="Can Access Reports" IsChecked="{Binding OperatorMasterForm.CanAccessReports}" Margin="205,4,0,0" />
                                                         <CheckBox Content="Can Access Transactions" IsChecked="{Binding OperatorMasterForm.CanAccessTransactions}" Margin="205,4,0,0" />
+                                                        <CheckBox Content="Can Access Gate Pass" IsChecked="{Binding OperatorMasterForm.CanAccessGatePass}" Margin="205,4,0,0" />
                                                         <CheckBox Content="Can Access Settings" IsChecked="{Binding OperatorMasterForm.CanAccessSettings}" Margin="205,4,0,0" />
                                                         <TextBlock Text="Transaction Permissions" FontWeight="SemiBold" Margin="205,10,0,4" />
                                                         <CheckBox Content="Can Capture First Weight" IsChecked="{Binding OperatorMasterForm.CanCaptureFirstWeight}" Margin="205,4,0,0" />
@@ -1716,6 +1860,125 @@
                                         </ScrollViewer>
                                     </DockPanel>
                                 </Border>
+                            </Grid>
+                        </TabItem>
+                
+                        <TabItem Header="Shift Master">
+                            <Grid Margin="8">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="430" /></Grid.ColumnDefinitions>
+                                <DataGrid Grid.Column="0" ItemsSource="{Binding ShiftMasters}" SelectedItem="{Binding SelectedShiftMaster}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
+                                    <DataGrid.Columns><DataGridTextColumn Header="Code" Binding="{Binding Code}" Width="140" /><DataGridTextColumn Header="Start Time" Binding="{Binding StartTime}" Width="140" /><DataGridTextColumn Header="End Time" Binding="{Binding EndTime}" Width="140" /><DataGridTextColumn Header="Crossing Midnight Rule" Binding="{Binding CrossingMidnightRule}" Width="140" /></DataGrid.Columns>
+                                </DataGrid>
+                                <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                    <TextBlock Text="Open / Edit Shift Master" FontSize="18" FontWeight="SemiBold" />
+                                    <WrapPanel><Button Content="Save" Command="{Binding SaveShiftMasterCommand}" /><Button Content="New / Clear" Command="{Binding ClearShiftMasterFormCommand}" /></WrapPanel>
+                                    <DockPanel Margin="0,4"><Label Content="Code" Width="170" /><TextBox Text="{Binding ShiftMasterForm.Code, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Start Time" Width="170" /><TextBox Text="{Binding ShiftMasterForm.StartTime, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="End Time" Width="170" /><TextBox Text="{Binding ShiftMasterForm.EndTime, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Crossing Midnight Rule" Width="170" /><TextBox Text="{Binding ShiftMasterForm.CrossingMidnightRule, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                </StackPanel>
+                            </Grid>
+                        </TabItem>
+                        <TabItem Header="Scenario Master">
+                            <Grid Margin="8">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="430" /></Grid.ColumnDefinitions>
+                                <DataGrid Grid.Column="0" ItemsSource="{Binding ScenarioMasters}" SelectedItem="{Binding SelectedScenarioConfig}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
+                                    <DataGrid.Columns><DataGridTextColumn Header="Form" Binding="{Binding Form}" Width="140" /><DataGridTextColumn Header="Legal Entity" Binding="{Binding DataAreaId}" Width="140" /><DataGridTextColumn Header="Movement" Binding="{Binding Movement}" Width="140" /><DataGridTextColumn Header="Formula" Binding="{Binding Formula}" Width="140" /><DataGridTextColumn Header="Party Rule" Binding="{Binding PartyRule}" Width="140" /><DataGridTextColumn Header="QC" Binding="{Binding QC}" Width="140" /><DataGridTextColumn Header="Multi-item" Binding="{Binding MultiItem}" Width="140" /><DataGridTextColumn Header="Print" Binding="{Binding Print}" Width="140" /></DataGrid.Columns>
+                                </DataGrid>
+                                <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                    <TextBlock Text="Open / Edit Scenario Master" FontSize="18" FontWeight="SemiBold" />
+                                    <WrapPanel><Button Content="Save" Command="{Binding SaveScenarioMasterCommand}" /><Button Content="New / Clear" Command="{Binding ClearScenarioMasterFormCommand}" /></WrapPanel>
+                                    <DockPanel Margin="0,4"><Label Content="Form" Width="170" /><TextBox Text="{Binding ScenarioMasterForm.Form, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Legal Entity" Width="170" /><TextBox Text="{Binding ScenarioMasterForm.DataAreaId, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Movement" Width="170" /><TextBox Text="{Binding ScenarioMasterForm.Movement, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Formula" Width="170" /><TextBox Text="{Binding ScenarioMasterForm.Formula, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Party Rule" Width="170" /><TextBox Text="{Binding ScenarioMasterForm.PartyRule, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="QC" Width="170" /><TextBox Text="{Binding ScenarioMasterForm.QC, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Multi-item" Width="170" /><TextBox Text="{Binding ScenarioMasterForm.MultiItem, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Print" Width="170" /><TextBox Text="{Binding ScenarioMasterForm.Print, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                </StackPanel>
+                            </Grid>
+                        </TabItem>
+                        <TabItem Header="Reason Master">
+                            <Grid Margin="8">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="430" /></Grid.ColumnDefinitions>
+                                <DataGrid Grid.Column="0" ItemsSource="{Binding ReasonMasters}" SelectedItem="{Binding SelectedReasonMaster}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
+                                    <DataGrid.Columns><DataGridTextColumn Header="QC Rejection" Binding="{Binding QcRejection}" Width="140" /><DataGridTextColumn Header="Return" Binding="{Binding Return}" Width="140" /><DataGridTextColumn Header="Disposal" Binding="{Binding Disposal}" Width="140" /><DataGridTextColumn Header="Correction" Binding="{Binding Correction}" Width="140" /><DataGridTextColumn Header="Void" Binding="{Binding Void}" Width="140" /><DataGridTextColumn Header="Conversion" Binding="{Binding Conversion}" Width="140" /></DataGrid.Columns>
+                                </DataGrid>
+                                <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                    <TextBlock Text="Open / Edit Reason Master" FontSize="18" FontWeight="SemiBold" />
+                                    <WrapPanel><Button Content="Save" Command="{Binding SaveReasonMasterCommand}" /><Button Content="New / Clear" Command="{Binding ClearReasonMasterFormCommand}" /></WrapPanel>
+                                    <DockPanel Margin="0,4"><Label Content="QC Rejection" Width="170" /><TextBox Text="{Binding ReasonMasterForm.QcRejection, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Return" Width="170" /><TextBox Text="{Binding ReasonMasterForm.Return, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Disposal" Width="170" /><TextBox Text="{Binding ReasonMasterForm.Disposal, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Correction" Width="170" /><TextBox Text="{Binding ReasonMasterForm.Correction, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Void" Width="170" /><TextBox Text="{Binding ReasonMasterForm.Void, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Conversion" Width="170" /><TextBox Text="{Binding ReasonMasterForm.Conversion, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                </StackPanel>
+                            </Grid>
+                        </TabItem>
+                        <TabItem Header="Contract Master">
+                            <Grid Margin="8">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="430" /></Grid.ColumnDefinitions>
+                                <DataGrid Grid.Column="0" ItemsSource="{Binding ContractMasters}" SelectedItem="{Binding SelectedContractMaster}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
+                                    <DataGrid.Columns><DataGridTextColumn Header="Contract Number" Binding="{Binding ContractNumber}" Width="140" /><DataGridTextColumn Header="Parties" Binding="{Binding Parties}" Width="140" /><DataGridTextColumn Header="Locations" Binding="{Binding Locations}" Width="140" /><DataGridTextColumn Header="Billing Basis" Binding="{Binding BillingBasis}" Width="140" /><DataGridTextColumn Header="Validity" Binding="{Binding Validity}" Width="140" /></DataGrid.Columns>
+                                </DataGrid>
+                                <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                    <TextBlock Text="Open / Edit Contract Master" FontSize="18" FontWeight="SemiBold" />
+                                    <WrapPanel><Button Content="Save" Command="{Binding SaveContractMasterCommand}" /><Button Content="New / Clear" Command="{Binding ClearContractMasterFormCommand}" /></WrapPanel>
+                                    <DockPanel Margin="0,4"><Label Content="Contract Number" Width="170" /><TextBox Text="{Binding ContractMasterForm.ContractNumber, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Parties" Width="170" /><TextBox Text="{Binding ContractMasterForm.Parties, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Locations" Width="170" /><TextBox Text="{Binding ContractMasterForm.Locations, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Billing Basis" Width="170" /><TextBox Text="{Binding ContractMasterForm.BillingBasis, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Validity" Width="170" /><TextBox Text="{Binding ContractMasterForm.Validity, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                </StackPanel>
+                            </Grid>
+                        </TabItem>
+                        <TabItem Header="Tolerance Master">
+                            <Grid Margin="8">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="430" /></Grid.ColumnDefinitions>
+                                <DataGrid Grid.Column="0" ItemsSource="{Binding ToleranceMasters}" SelectedItem="{Binding SelectedToleranceMaster}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
+                                    <DataGrid.Columns><DataGridTextColumn Header="Absolute Tolerance" Binding="{Binding AbsoluteTolerance}" Width="140" /><DataGridTextColumn Header="Percentage Tolerance" Binding="{Binding PercentageTolerance}" Width="140" /><DataGridTextColumn Header="Allocation Tolerance" Binding="{Binding AllocationTolerance}" Width="140" /><DataGridTextColumn Header="Approval Threshold" Binding="{Binding ApprovalThreshold}" Width="140" /></DataGrid.Columns>
+                                </DataGrid>
+                                <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                    <TextBlock Text="Open / Edit Tolerance Master" FontSize="18" FontWeight="SemiBold" />
+                                    <WrapPanel><Button Content="Save" Command="{Binding SaveToleranceMasterCommand}" /><Button Content="New / Clear" Command="{Binding ClearToleranceMasterFormCommand}" /></WrapPanel>
+                                    <DockPanel Margin="0,4"><Label Content="Absolute Tolerance" Width="170" /><TextBox Text="{Binding ToleranceMasterForm.AbsoluteTolerance, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Percentage Tolerance" Width="170" /><TextBox Text="{Binding ToleranceMasterForm.PercentageTolerance, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Allocation Tolerance" Width="170" /><TextBox Text="{Binding ToleranceMasterForm.AllocationTolerance, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Approval Threshold" Width="170" /><TextBox Text="{Binding ToleranceMasterForm.ApprovalThreshold, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                </StackPanel>
+                            </Grid>
+                        </TabItem>
+                        <TabItem Header="Service Charge Master">
+                            <Grid Margin="8">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="430" /></Grid.ColumnDefinitions>
+                                <DataGrid Grid.Column="0" ItemsSource="{Binding ServiceChargeMasters}" SelectedItem="{Binding SelectedServiceChargeMaster}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
+                                    <DataGrid.Columns><DataGridTextColumn Header="Legal Entity" Binding="{Binding DataAreaId}" Width="140" /><DataGridTextColumn Header="Service Mode" Binding="{Binding ServiceMode}" Width="140" /><DataGridTextColumn Header="Amount" Binding="{Binding Amount}" Width="140" /><DataGridTextColumn Header="Currency" Binding="{Binding Currency}" Width="140" /><DataGridTextColumn Header="Validity" Binding="{Binding Validity}" Width="140" /></DataGrid.Columns>
+                                </DataGrid>
+                                <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                    <TextBlock Text="Open / Edit Service Charge Master" FontSize="18" FontWeight="SemiBold" />
+                                    <WrapPanel><Button Content="Save" Command="{Binding SaveServiceChargeMasterCommand}" /><Button Content="New / Clear" Command="{Binding ClearServiceChargeMasterFormCommand}" /></WrapPanel>
+                                    <DockPanel Margin="0,4"><Label Content="Legal Entity" Width="170" /><TextBox Text="{Binding ServiceChargeMasterForm.DataAreaId, Mode=OneWay}" IsReadOnly="True" Background="#FFEFEFEF" /></DockPanel><DockPanel Margin="0,4"><Label Content="Service Mode" Width="170" /><TextBox Text="{Binding ServiceChargeMasterForm.ServiceMode, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Amount" Width="170" /><TextBox Text="{Binding ServiceChargeMasterForm.Amount, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Currency" Width="170" /><TextBox Text="{Binding ServiceChargeMasterForm.Currency, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Validity" Width="170" /><TextBox Text="{Binding ServiceChargeMasterForm.Validity, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                </StackPanel>
+                            </Grid>
+                        </TabItem>
+                        <TabItem Header="Transaction Type Master">
+                            <Grid Margin="8">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="430" /></Grid.ColumnDefinitions>
+                                <DataGrid Grid.Column="0" ItemsSource="{Binding TransactionTypeMasters}" SelectedItem="{Binding SelectedTransactionTypeConfig}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
+                                    <DataGrid.Columns><DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="140" /><DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="180" /><DataGridTextColumn Header="Form" Binding="{Binding Form}" Width="240" /></DataGrid.Columns>
+                                </DataGrid>
+                                <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                    <TextBlock Text="Open / Edit Transaction Type Master" FontSize="18" FontWeight="SemiBold" />
+                                    <WrapPanel><Button Content="Save" Command="{Binding SaveTransactionTypeMasterCommand}" /><Button Content="New / Clear" Command="{Binding ClearTransactionTypeMasterFormCommand}" /></WrapPanel>
+                                    <DockPanel Margin="0,4"><Label Content="Type" Width="170" /><TextBox Text="{Binding TransactionTypeMasterForm.Type, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Description" Width="170" /><TextBox Text="{Binding TransactionTypeMasterForm.Description, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Form" Width="170" /><ComboBox ItemsSource="{Binding TransactionFormValues}" SelectedItem="{Binding TransactionTypeMasterForm.Form, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                </StackPanel>
+                            </Grid>
+                        </TabItem>
+                        <TabItem Header="Location Master">
+                            <Grid Margin="8">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="430" /></Grid.ColumnDefinitions>
+                                <DataGrid Grid.Column="0" ItemsSource="{Binding LocationMasters}" SelectedItem="{Binding SelectedLocationMaster}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Legal Entity" Binding="{Binding DataAreaId}" Width="120" />
+                                        <DataGridTextColumn Header="Location Code" Binding="{Binding LocationCode}" Width="150" />
+                                        <DataGridTextColumn Header="Location Name" Binding="{Binding LocationName}" Width="220" />
+                                        <DataGridTextColumn Header="Location Type" Binding="{Binding LocationType}" Width="160" />
+                                        <DataGridTextColumn Header="Warehouse" Binding="{Binding Warehouse}" Width="140" />
+                                        <DataGridTextColumn Header="Site" Binding="{Binding Site}" Width="120" />
+                                        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                                <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                    <TextBlock Text="Open / Edit Location Master" FontSize="18" FontWeight="SemiBold" />
+                                    <WrapPanel><Button Content="Save" Command="{Binding SaveLocationMasterCommand}" /><Button Content="New / Clear" Command="{Binding ClearLocationMasterFormCommand}" /></WrapPanel>
+                                    <DockPanel Margin="0,4"><Label Content="Legal Entity" Width="170" /><TextBox Text="{Binding LocationMasterForm.DataAreaId, Mode=OneWay}" IsReadOnly="True" /></DockPanel>
+                                    <DockPanel Margin="0,4"><Label Content="Location Code" Width="170" /><TextBox Text="{Binding LocationMasterForm.LocationCode, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                    <DockPanel Margin="0,4"><Label Content="Location Name" Width="170" /><TextBox Text="{Binding LocationMasterForm.LocationName, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                    <DockPanel Margin="0,4"><Label Content="Location Type" Width="170" /><ComboBox ItemsSource="{Binding LocationTypeValues}" SelectedItem="{Binding LocationMasterForm.LocationType, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                    <DockPanel Margin="0,4"><Label Content="Warehouse" Width="170" /><ComboBox ItemsSource="{Binding WarehouseMasters}" DisplayMemberPath="Warehouse" SelectedValuePath="Warehouse" SelectedValue="{Binding LocationMasterForm.Warehouse, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" SelectionChanged="LocationWarehouseComboBox_SelectionChanged" /></DockPanel>
+                                    <DockPanel Margin="0,4"><Label Content="Site" Width="170" /><TextBox Text="{Binding LocationMasterForm.Site, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                    <DockPanel Margin="0,4"><Label Content="Status" Width="170" /><ComboBox IsEditable="True" Text="{Binding LocationMasterForm.Status, UpdateSourceTrigger=PropertyChanged}"><ComboBoxItem Content="Active" /><ComboBoxItem Content="Inactive" /></ComboBox></DockPanel>
+                                </StackPanel>
                             </Grid>
                         </TabItem>
                 </TabControl>
@@ -1748,8 +2011,8 @@
                                     </StackPanel>
 
                                     <StackPanel Margin="0,0,10,0">
-                                        <TextBlock Text="Ticket" FontWeight="SemiBold" Margin="0,0,0,4" />
-                                        <TextBox Text="{Binding ReportTicketFilter, UpdateSourceTrigger=PropertyChanged}" Width="120" Height="30" />
+                                        <TextBlock Text="Slip Number" FontWeight="SemiBold" Margin="0,0,0,4" />
+                                        <TextBox Text="{Binding ReportTicketFilter, UpdateSourceTrigger=PropertyChanged}" Width="150" Height="30" />
                                     </StackPanel>
 
                                     <StackPanel Margin="0,0,10,0">
@@ -1765,16 +2028,6 @@
                                     <StackPanel Margin="0,0,10,0">
                                         <TextBlock Text="Driver" FontWeight="SemiBold" Margin="0,0,0,4" />
                                         <TextBox Text="{Binding ReportDriverFilter, UpdateSourceTrigger=PropertyChanged}" Width="120" Height="30" />
-                                    </StackPanel>
-
-                                    <StackPanel Margin="0,0,10,0">
-                                        <TextBlock Text="Party" FontWeight="SemiBold" Margin="0,0,0,4" />
-                                        <TextBox Text="{Binding ReportPartyFilter, UpdateSourceTrigger=PropertyChanged}" Width="150" Height="30" />
-                                    </StackPanel>
-
-                                    <StackPanel Margin="0,0,10,0">
-                                        <TextBlock Text="Party Type" FontWeight="SemiBold" Margin="0,0,0,4" />
-                                        <TextBox Text="{Binding ReportPartyTypeFilter, UpdateSourceTrigger=PropertyChanged}" Width="115" Height="30" />
                                     </StackPanel>
 
                                     <StackPanel Margin="0,0,10,0">
@@ -1799,13 +2052,10 @@
                     <Border Grid.Row="1" Background="White" CornerRadius="8" Padding="10" Margin="4">
                         <DataGrid ItemsSource="{Binding FilteredReportRows}" SelectedItem="{Binding SelectedReportWeighment}" IsReadOnly="True">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Ticket" Binding="{Binding TicketNo}" Width="120" IsReadOnly="True" />
+                                <DataGridTextColumn Header="Slip Number" Binding="{Binding SlipNumber}" Width="180" IsReadOnly="True" />
                                 <DataGridTextColumn Header="Company" Binding="{Binding CompanyName}" Width="130" />
                                 <DataGridTextColumn Header="Vehicle" Binding="{Binding VehicleNo}" Width="110" />
                                 <DataGridTextColumn Header="Driver" Binding="{Binding DriverName}" Width="120" />
-                                <DataGridTextColumn Header="Party Account" Binding="{Binding PartyAccount}" Width="120" />
-                                <DataGridTextColumn Header="Party Name" Binding="{Binding PartyName}" Width="160" />
-                                <DataGridTextColumn Header="Party Type" Binding="{Binding PartyType}" Width="90" />
                                 <DataGridTextColumn Header="Item Number" Binding="{Binding ItemNumber}" Width="120" />
                                 <DataGridTextColumn Header="Item Name" Binding="{Binding ItemName}" Width="160" />
                                 <DataGridTextColumn Header="First Weight" Binding="{Binding FirstWeight}" Width="100" />
@@ -1850,8 +2100,8 @@
                                     </StackPanel>
 
                                     <StackPanel Margin="0,0,10,0">
-                                        <TextBlock Text="Ticket" FontWeight="SemiBold" Margin="0,0,0,4" />
-                                        <TextBox Text="{Binding TransactionTicketFilter, UpdateSourceTrigger=PropertyChanged}" Width="120" Height="30" />
+                                        <TextBlock Text="Slip Number" FontWeight="SemiBold" Margin="0,0,0,4" />
+                                        <TextBox Text="{Binding TransactionTicketFilter, UpdateSourceTrigger=PropertyChanged}" Width="150" Height="30" />
                                     </StackPanel>
 
                                     <StackPanel Margin="0,0,10,0">
@@ -1867,16 +2117,6 @@
                                     <StackPanel Margin="0,0,10,0">
                                         <TextBlock Text="Driver" FontWeight="SemiBold" Margin="0,0,0,4" />
                                         <TextBox Text="{Binding TransactionDriverFilter, UpdateSourceTrigger=PropertyChanged}" Width="120" Height="30" />
-                                    </StackPanel>
-
-                                    <StackPanel Margin="0,0,10,0">
-                                        <TextBlock Text="Party" FontWeight="SemiBold" Margin="0,0,0,4" />
-                                        <TextBox Text="{Binding TransactionPartyFilter, UpdateSourceTrigger=PropertyChanged}" Width="150" Height="30" />
-                                    </StackPanel>
-
-                                    <StackPanel Margin="0,0,10,0">
-                                        <TextBlock Text="Party Type" FontWeight="SemiBold" Margin="0,0,0,4" />
-                                        <TextBox Text="{Binding TransactionPartyTypeFilter, UpdateSourceTrigger=PropertyChanged}" Width="115" Height="30" />
                                     </StackPanel>
 
                                     <StackPanel Margin="0,0,10,0">
@@ -1901,13 +2141,12 @@
                     <Border Grid.Row="1" Background="White" CornerRadius="8" Padding="10" Margin="4">
                         <DataGrid ItemsSource="{Binding FilteredTransactionRows}" SelectedItem="{Binding SelectedTransactionWeighment}" IsReadOnly="True">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Ticket" Binding="{Binding TicketNo}" Width="120" />
+                                <DataGridTextColumn Header="Slip Number" Binding="{Binding SlipNumber}" Width="180" />
+                                        <DataGridTextColumn Header="Type" Binding="{Binding TransactionType}" Width="110" />
+                                        <DataGridTextColumn Header="Scenario" Binding="{Binding Scenario}" Width="120" />
                                 <DataGridTextColumn Header="Company" Binding="{Binding CompanyName}" Width="130" />
                                 <DataGridTextColumn Header="Vehicle" Binding="{Binding VehicleNo}" Width="110" />
                                 <DataGridTextColumn Header="Driver" Binding="{Binding DriverName}" Width="120" />
-                                <DataGridTextColumn Header="Party Account" Binding="{Binding PartyAccount}" Width="120" />
-                                <DataGridTextColumn Header="Party Name" Binding="{Binding PartyName}" Width="160" />
-                                <DataGridTextColumn Header="Party Type" Binding="{Binding PartyType}" Width="90" />
                                 <DataGridTextColumn Header="Item Number" Binding="{Binding ItemNumber}" Width="120" />
                                 <DataGridTextColumn Header="Item Name" Binding="{Binding ItemName}" Width="160" />
                                 <DataGridTextColumn Header="First Weight" Binding="{Binding FirstWeight}" Width="100" />

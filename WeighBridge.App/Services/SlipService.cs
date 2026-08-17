@@ -22,7 +22,7 @@ public static class SlipService
         var folder = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "BridgeOneSlips");
         System.IO.Directory.CreateDirectory(folder);
 
-        var filePath = System.IO.Path.Combine(folder, $"Slip-{SafeFileName(weighment.TicketNo)}.pdf");
+        var filePath = System.IO.Path.Combine(folder, $"Slip-{SafeFileName(weighment.SlipNumber)}.pdf");
         System.IO.File.WriteAllBytes(filePath, BuildSlipPdf(weighment));
         return filePath;
     }
@@ -41,7 +41,25 @@ public static class SlipService
         page.Arrange(new WpfRect(new WpfSize(pageWidth, pageHeight)));
         page.UpdateLayout();
 
-        printDialog.PrintVisual(page, $"BridgeOne Slip {weighment.TicketNo}");
+        printDialog.PrintVisual(page, $"BridgeOne Slip {weighment.SlipNumber}");
+        return true;
+    }
+
+    public static bool PrintGatePass(GatePass gatePass)
+    {
+        var printDialog = new WpfPrintDialog();
+        if (printDialog.ShowDialog() != true)
+            return false;
+
+        var pageWidth = printDialog.PrintableAreaWidth > 0 ? printDialog.PrintableAreaWidth : 793;
+        var pageHeight = printDialog.PrintableAreaHeight > 0 ? printDialog.PrintableAreaHeight : 1122;
+        var page = BuildGatePassPage(gatePass, pageWidth, pageHeight);
+
+        page.Measure(new WpfSize(pageWidth, pageHeight));
+        page.Arrange(new WpfRect(new WpfSize(pageWidth, pageHeight)));
+        page.UpdateLayout();
+
+        printDialog.PrintVisual(page, $"BridgeOne Gate Pass {gatePass.GatePassNumber}");
         return true;
     }
 
@@ -51,11 +69,10 @@ public static class SlipService
         sb.AppendLine("========================================");
         sb.AppendLine("           BRIDGEONE SLIP             ");
         sb.AppendLine("========================================");
-        sb.AppendLine($"Ticket No     : {w.TicketNo}");
+        sb.AppendLine($"Slip Number   : {w.SlipNumber}");
         sb.AppendLine($"Company       : {w.CompanyName}");
         sb.AppendLine($"Vehicle No    : {w.VehicleNo}");
         sb.AppendLine($"Driver Name   : {w.DriverName}");
-        sb.AppendLine($"Party         : {FormatParty(w)}");
         sb.AppendLine($"Item          : {FormatItem(w)}");
         sb.AppendLine("----------------------------------------");
         sb.AppendLine($"First Weight  : {FormatWeight(w.FirstWeight)}");
@@ -120,6 +137,52 @@ public static class SlipService
         return page;
     }
 
+    private static FixedPage BuildGatePassPage(GatePass gatePass, double pageWidth, double pageHeight)
+    {
+        var page = new FixedPage
+        {
+            Width = pageWidth,
+            Height = pageHeight,
+            Background = WpfBrushes.White
+        };
+
+        var margin = Math.Max(35, Math.Min(55, pageWidth * 0.06));
+        var contentWidth = pageWidth - (margin * 2);
+        var y = 42d;
+
+        AddText(page, "BRIDGEONE GATE PASS", margin, y, contentWidth, 22, FontWeights.Bold, TextAlignment.Center);
+        y += 30;
+        AddText(page, "Security entry document", margin, y, contentWidth, 11, FontWeights.Normal, TextAlignment.Center);
+        y += 35;
+
+        DrawLine(page, margin, y, margin + contentWidth, y, 1.2);
+        y += 15;
+
+        foreach (var row in GetGatePassRows(gatePass))
+        {
+            AddText(page, row.Label, margin + 8, y, 155, 12, FontWeights.SemiBold, TextAlignment.Left);
+            AddText(page, row.Value, margin + 175, y, contentWidth - 185, 12, FontWeights.Normal, TextAlignment.Left);
+            y += 25;
+
+            if (row.Label == "Party" || row.Label == "Expected Item" || row.Label == "Status")
+            {
+                DrawLine(page, margin, y - 4, margin + contentWidth, y - 4, 0.8);
+                y += 10;
+            }
+        }
+
+        y += 22;
+        DrawLine(page, margin, y, margin + contentWidth, y, 1.0);
+        y += 35;
+        AddText(page, "Security Officer Signature ____________________", margin + 8, y, contentWidth / 2 - 20, 11, FontWeights.Normal, TextAlignment.Left);
+        AddText(page, "Driver Signature ____________________", margin + contentWidth / 2 + 10, y, contentWidth / 2 - 18, 11, FontWeights.Normal, TextAlignment.Left);
+
+        y += 42;
+        AddText(page, "This is a system generated gate pass.", margin, y, contentWidth, 10, FontWeights.Normal, TextAlignment.Center);
+
+        return page;
+    }
+
     private static void AddText(FixedPage page, string text, double x, double y, double width, double fontSize, FontWeight fontWeight, TextAlignment alignment)
     {
         var block = new TextBlock
@@ -154,11 +217,10 @@ public static class SlipService
 
     private static List<(string Label, string Value)> GetSlipRows(Weighment w) => new()
     {
-        ("Ticket No", w.TicketNo),
+        ("Slip Number", w.SlipNumber),
         ("Company", w.CompanyName),
         ("Vehicle No", w.VehicleNo),
         ("Driver Name", w.DriverName),
-        ("Party", FormatParty(w)),
         ("Item", FormatItem(w)),
         ("First Weight", FormatWeight(w.FirstWeight)),
         ("First Time", FormatDate(w.FirstWeightTime)),
@@ -202,16 +264,47 @@ public static class SlipService
         return CreatePdf(content.ToString());
     }
 
-    private static string FormatParty(Weighment w)
+    private static List<(string Label, string Value)> GetGatePassRows(GatePass gatePass) => new()
     {
-        var party = string.IsNullOrWhiteSpace(w.PartyAccount)
-            ? w.PartyName ?? string.Empty
-            : string.IsNullOrWhiteSpace(w.PartyName) ? w.PartyAccount : $"{w.PartyAccount} - {w.PartyName}";
+        ("Gate Pass Number", gatePass.GatePassNumber),
+        ("Type", gatePass.Type),
+        ("Legal Entity", gatePass.DataAreaId),
+        ("Entry Date & Time", FormatNullableDate(gatePass.EntryDateTime)),
+        ("Vehicle Plate", gatePass.VehiclePlate),
+        ("Driver", gatePass.DriverName),
+        ("Driver Mobile", gatePass.DriverMobile),
+        ("Party", FormatGatePassParty(gatePass)),
+        ("Expected Transaction Type", gatePass.ExpectedTransactionType),
+        ("Expected Item", FormatGatePassItem(gatePass)),
+        ("Source", gatePass.Source),
+        ("Destination", gatePass.Destination),
+        ("Security Officer", gatePass.SecurityOfficer),
+        ("Status", gatePass.Status),
+        ("Exit Date Time", FormatNullableDate(gatePass.ExitDateTime)),
+        ("Linked Slip", gatePass.LinkedTicketNo),
+        ("Remarks", gatePass.Remarks),
+        ("Printed At", FormatDate(DateTime.Now))
+    };
 
-        return string.IsNullOrWhiteSpace(w.PartyType)
+    private static string FormatGatePassParty(GatePass gatePass)
+    {
+        var party = string.IsNullOrWhiteSpace(gatePass.PartyAccount)
+            ? gatePass.PartyName ?? string.Empty
+            : string.IsNullOrWhiteSpace(gatePass.PartyName) ? gatePass.PartyAccount : $"{gatePass.PartyAccount} - {gatePass.PartyName}";
+
+        return string.IsNullOrWhiteSpace(gatePass.PartyType)
             ? party
-            : $"{party} ({w.PartyType})";
+            : $"{party} ({gatePass.PartyType})";
     }
+
+    private static string FormatGatePassItem(GatePass gatePass)
+        => string.IsNullOrWhiteSpace(gatePass.ExpectedItemNumber)
+            ? gatePass.ExpectedItem ?? string.Empty
+            : string.IsNullOrWhiteSpace(gatePass.ExpectedItem) ? gatePass.ExpectedItemNumber : $"{gatePass.ExpectedItemNumber} - {gatePass.ExpectedItem}";
+
+    private static string FormatNullableDate(DateTime? value)
+        => value.HasValue ? FormatDate(value.Value) : string.Empty;
+
 
     private static string FormatItem(Weighment w)
     {

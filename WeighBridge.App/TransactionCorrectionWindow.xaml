@@ -40,8 +40,8 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <Label Grid.Row="0" Grid.Column="0" Content="Ticket No" />
-                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding TicketNo}" IsReadOnly="True" Background="#EFEFEF" />
+                <Label Grid.Row="0" Grid.Column="0" Content="Slip Number" />
+                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding SlipNumber}" IsReadOnly="True" Background="#EFEFEF" />
 
                 <Label Grid.Row="1" Grid.Column="0" Content="Status" />
                 <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Status}" IsReadOnly="True" Background="#EFEFEF" />
@@ -55,14 +55,8 @@
                 <Label Grid.Row="4" Grid.Column="0" Content="Driver Name *" />
                 <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding DriverName, UpdateSourceTrigger=PropertyChanged}" />
 
-                <Label Grid.Row="5" Grid.Column="0" Content="Party Type *" />
-                <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding PartyType, UpdateSourceTrigger=PropertyChanged}" />
 
-                <Label Grid.Row="6" Grid.Column="0" Content="Party Account" />
-                <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding PartyAccount, UpdateSourceTrigger=PropertyChanged}" />
 
-                <Label Grid.Row="7" Grid.Column="0" Content="Party Name *" />
-                <TextBox Grid.Row="7" Grid.Column="1" Text="{Binding PartyName, UpdateSourceTrigger=PropertyChanged}" />
 
                 <Label Grid.Row="8" Grid.Column="0" Content="Item Number *" />
                 <TextBox Grid.Row="8" Grid.Column="1" Text="{Binding ItemNumber, UpdateSourceTrigger=PropertyChanged}" />

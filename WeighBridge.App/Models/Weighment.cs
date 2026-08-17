@@ -5,13 +5,19 @@ public class Weighment
     public int WeighmentId { get; set; }
     public string DataAreaId { get; set; } = string.Empty;
     public string TicketNo { get; set; } = string.Empty;
+    public string SlipNumber { get; set; } = string.Empty;
+    public string TransactionType { get; set; } = string.Empty;
+    public string Scenario { get; set; } = string.Empty;
+    public string GatePassNumber { get; set; } = string.Empty;
+    public string WeighbridgeCode { get; set; } = string.Empty;
+    public DateTime? TransactionDateTime { get; set; }
+    public string ShiftCode { get; set; } = string.Empty;
+    public string OperatorUsername { get; set; } = string.Empty;
+    public string ExternalReference { get; set; } = string.Empty;
+    public string OperatorRemarks { get; set; } = string.Empty;
     public string CompanyName { get; set; } = string.Empty;
     public string VehicleNo { get; set; } = string.Empty;
     public string DriverName { get; set; } = string.Empty;
-    public int? PartyId { get; set; }
-    public string PartyAccount { get; set; } = string.Empty;
-    public string PartyName { get; set; } = string.Empty;
-    public string PartyType { get; set; } = string.Empty;
     public int? MaterialId { get; set; }
     public string ItemNumber { get; set; } = string.Empty;
     public string ItemName { get; set; } = string.Empty;
