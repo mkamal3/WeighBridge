@@ -1,0 +1,65 @@
+<Window x:Class="WeightBridgeApp.ScenarioLookupWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Scenario Lookup" Height="420" Width="760"
+        WindowStartupLocation="CenterOwner"
+        Loaded="Window_Loaded">
+    <Window.Resources>
+        <Style TargetType="{x:Type DataGrid}">
+            <Setter Property="AutoGenerateColumns" Value="False" />
+            <Setter Property="IsReadOnly" Value="True" />
+            <Setter Property="CanUserAddRows" Value="False" />
+            <Setter Property="CanUserDeleteRows" Value="False" />
+            <Setter Property="EnableRowVirtualization" Value="True" />
+            <Setter Property="EnableColumnVirtualization" Value="True" />
+        </Style>
+    </Window.Resources>
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <TextBlock Grid.Row="0" Text="Scenario Lookup" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10" />
+        <Grid Grid.Row="1" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="10" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="10" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="Form" FontWeight="SemiBold" />
+                <TextBox x:Name="FormFilterTextBox" TextChanged="FilterTextBox_TextChanged" Height="28" />
+            </StackPanel>
+            <StackPanel Grid.Column="2">
+                <TextBlock Text="Movement" FontWeight="SemiBold" />
+                <TextBox x:Name="MovementFilterTextBox" TextChanged="FilterTextBox_TextChanged" Height="28" />
+            </StackPanel>
+            <StackPanel Grid.Column="4">
+                <TextBlock Text="Party Rule" FontWeight="SemiBold" />
+                <TextBox x:Name="PartyRuleFilterTextBox" TextChanged="FilterTextBox_TextChanged" Height="28" />
+            </StackPanel>
+        </Grid>
+        <DataGrid x:Name="LookupDataGrid" Grid.Row="2" ItemsSource="{Binding LookupRows}" SelectedItem="{Binding SelectedScenario, Mode=TwoWay}" MouseDoubleClick="LookupDataGrid_MouseDoubleClick">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Form" Binding="{Binding Form}" Width="140" />
+                <DataGridTextColumn Header="Legal Entity" Binding="{Binding DataAreaId}" Width="100" />
+                <DataGridTextColumn Header="Movement" Binding="{Binding Movement}" Width="130" />
+                <DataGridTextColumn Header="Formula" Binding="{Binding Formula}" Width="130" />
+                <DataGridTextColumn Header="Party Rule" Binding="{Binding PartyRule}" Width="120" />
+                <DataGridTextColumn Header="QC" Binding="{Binding QC}" Width="80" />
+                <DataGridTextColumn Header="Print" Binding="{Binding Print}" Width="*" />
+            </DataGrid.Columns>
+        </DataGrid>
+        <DockPanel Grid.Row="3" Margin="0,10,0,0" LastChildFill="False">
+            <TextBlock x:Name="StatusTextBlock" DockPanel.Dock="Left" VerticalAlignment="Center" Foreground="#202A44" />
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <Button Content="Select" Width="90" Margin="0,0,8,0" Click="SelectButton_Click" />
+                <Button Content="Cancel" Width="90" Click="CancelButton_Click" />
+            </StackPanel>
+        </DockPanel>
+    </Grid>
+</Window>

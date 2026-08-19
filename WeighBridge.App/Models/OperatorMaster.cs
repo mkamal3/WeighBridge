@@ -26,6 +26,7 @@ public class OperatorMaster
     public bool CanAccessMasters { get; set; }
     public bool CanAccessReports { get; set; } = true;
     public bool CanAccessTransactions { get; set; }
+    public bool CanAccessGatePass { get; set; }
     public bool CanAccessSettings { get; set; }
     public bool CanCaptureFirstWeight { get; set; } = true;
     public bool CanCaptureSecondWeight { get; set; } = true;

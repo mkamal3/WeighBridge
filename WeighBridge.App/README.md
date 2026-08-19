@@ -1,44 +1,29 @@
-# BridgeOne Update - Professional Lookup UI
+# BridgeOne - Gate Pass Update
 
-This package includes the latest BridgeOne WPF source code with these updates:
+This package includes the Gate Pass screen and operator access control update.
 
-## Weighment screen lookup design
+## Added
+- Gate Pass screen with Type values: Inbound and Outbound.
+- Gate Pass fields: Gate Pass Number, Type, Entry Date & Time, Vehicle Plate, Driver Mobile, Party Type, Party, Expected Transaction Type, Expected Item, Source, Destination, Security Officer, Exit Date Time, Status, Linked Ticket, Remarks.
+- Gate Pass Number is generated locally from SQLite number sequence logic.
+- After save, Gate Pass fields are read-only. Wrong gate passes should be cancelled and recreated.
+- Actions: New, Save / Open Gate Pass, Close, Cancel, Print.
+- Operator Master permission: Can Access Gate Pass.
+- Gate Pass tab visibility is controlled by Can Access Gate Pass.
+- Weighment screen Gate Pass No field can be linked from the selected open Gate Pass.
+- First Weight save links the Gate Pass and prevents reusing the same open pass.
 
-- Reworked Vehicle, Driver, Party, and Item controls into a cleaner lookup layout.
-- Removed large text-based `Lookup` buttons from the Weighment Entry screen.
-- Added icon-only lookup actions with no visible button border, background, or button text.
-- Vehicle and Driver are selected through lookup popup windows.
-- Party and Item are selected through lookup popup windows.
-- Party and Item display as a single merged value on the Weighment screen:
-  - `PartyAccount - PartyName`
-  - `ItemNumber - ItemName`
-- Backend values are still maintained separately for reporting, slip printing, and integration:
-  - `PartyAccount`
-  - `PartyName`
-  - `ItemNumber`
-  - `ItemName`
+## Notes
+- Gate Pass is local-only SQLite data.
+- One open Gate Pass should link to only one Weighment transaction.
+- Closed and cancelled Gate Passes are retained for audit; they are not deleted.
 
-## Lookup popup behavior
+## Login binding fix
+- Fixed WPF binding error by setting CurrentUserCompany display binding to OneWay.
+- Legal Entity selection continues to use the settable SelectedLegalEntityDataAreaId property.
 
-- Lookup filter fields are shown on top of each lookup form.
-- No Search or Clear buttons are shown in the filter area.
-- Filtering runs automatically while typing.
-- Result grids return a limited number of rows for performance.
-- Filters are cleared automatically when the lookup closes after selection or cancel.
-
-## Grid cleanup retained
-
-- Disabled empty new-row placeholder in DataGrids.
-- Disabled grid row deletion.
-- Disabled auto-generated backend/internal columns.
-- Kept grid virtualization for performance.
-
-## Performance behavior retained
-
-- Large master data is not loaded directly into heavy dropdowns on the Weighment Entry screen.
-- Lookup windows query SQLite directly and return a limited result set.
-- Customer/Vendor/Item/Warehouse master pages remain paginated.
-
-## Build note
-
-The environment used to prepare this package does not include the .NET SDK, so the project was not compiled here.
+## Latest purchase behavior update
+- FOC Flag checked: Rate / Amount is automatically set to 0 and disabled/greyed out.
+- FOC Flag unchecked: Rate / Amount is editable before First Weight.
+- Walk-in Vendor checked: Vendor is automatically set to WALK-IN - Walk-in Vendor and vendor lookup is disabled.
+- Walk-in Vendor unchecked: Vendor can be selected from Vendor Master lookup before First Weight.

@@ -57,6 +57,27 @@ public partial class MainWindow : Window
         }
     }
 
+    private void LocationWarehouseComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ComboBox comboBox && comboBox.SelectedItem is WarehouseMaster warehouse)
+            _viewModel.ApplyLocationWarehouse(warehouse);
+    }
+
+
+
+    private void MastersTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!ReferenceEquals(sender, e.OriginalSource))
+            return;
+
+        if (sender is not TabControl tabControl)
+            return;
+
+        if (tabControl.SelectedItem is TabItem selectedTab && selectedTab.Header is not null)
+        {
+            _viewModel.EnsureMasterTabReady(selectedTab.Header.ToString());
+        }
+    }
 
     private async void LogoutButton_Click(object sender, RoutedEventArgs e)
     {
