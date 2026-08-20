@@ -256,6 +256,203 @@
                         </Grid>
                     </Border>
 
+                    <Border Grid.Row="0" Grid.Column="1" Background="White" CornerRadius="8" Padding="14" Margin="4" MinHeight="350" Visibility="{Binding IsContractCollectionForm, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="155" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="30" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.ColumnSpan="3" Text="Contract Collection Details" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12" />
+
+                            <Label Grid.Row="1" Grid.Column="0" Content="Vendor Account *" />
+                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding ContractCollectionVendorDisplay, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" />
+                            <Button Grid.Row="1" Grid.Column="2" Content="🔍" Command="{Binding OpenContractCollectionVendorLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" IsEnabled="{Binding IsContractCollectionDetailsEditable}" ToolTip="Select Vendor Account" />
+
+                            <Label Grid.Row="2" Grid.Column="0" Content="Invoice Account" />
+                            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding ContractCollectionInvoiceAccountDisplay, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" />
+                            <Button Grid.Row="2" Grid.Column="2" Content="🔍" Command="{Binding OpenContractCollectionInvoiceAccountLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" IsEnabled="{Binding IsContractCollectionDetailsEditable}" ToolTip="Select Invoice Account" />
+
+                            <Label Grid.Row="3" Grid.Column="0" Content="Contract Number *" />
+                            <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding ContractCollectionContractDisplay, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" />
+                            <Button Grid.Row="3" Grid.Column="2" Content="🔍" Command="{Binding OpenContractCollectionContractLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" IsEnabled="{Binding IsContractCollectionDetailsEditable}" ToolTip="Select Contract" />
+
+                            <Label Grid.Row="4" Grid.Column="0" Content="Collection Location *" />
+                            <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding ContractCollectionLocationDisplay, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" />
+                            <Button Grid.Row="4" Grid.Column="2" Content="🔍" Command="{Binding OpenContractCollectionLocationLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" IsEnabled="{Binding IsContractCollectionDetailsEditable}" ToolTip="Select Collection Location" />
+
+                            <Label Grid.Row="5" Grid.Column="0" Content="Destination *" />
+                            <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding ContractCollectionDestinationDisplay, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" />
+                            <Button Grid.Row="5" Grid.Column="2" Content="🔍" Command="{Binding OpenContractCollectionDestinationLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" IsEnabled="{Binding IsContractCollectionDetailsEditable}" ToolTip="Select Destination" />
+
+                            <Label Grid.Row="6" Grid.Column="0" Content="Billing Basis" />
+                            <TextBox Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding ContractCollectionDetailsForm.BillingBasis, Mode=OneWay}" IsReadOnly="True" Background="#EFEFEF" />
+                        </Grid>
+                    </Border>
+
+
+                    <Border Grid.Row="0" Grid.Column="1" Background="White" CornerRadius="8" Padding="14" Margin="4" MinHeight="350" Visibility="{Binding IsTransferForm, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="350">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="155" /><ColumnDefinition Width="*" /><ColumnDefinition Width="30" /></Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0" Grid.ColumnSpan="3" Text="Transfer Details" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12" />
+                                <Label Grid.Row="1" Grid.Column="0" Content="Transfer Direction *" />
+                                <ComboBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding TransferDirectionValues}" SelectedItem="{Binding TransferDetailsForm.TransferDirection, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsTransferDetailsEditable}" />
+                                <Label Grid.Row="2" Grid.Column="0" Content="From Legal Entity *" />
+                                <ComboBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding LegalEntities}" DisplayMemberPath="DataAreaId" SelectedValuePath="DataAreaId" SelectedValue="{Binding TransferDetailsForm.FromLegalEntity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsTransferDetailsEditable}" />
+                                <Label Grid.Row="3" Grid.Column="0" Content="To Legal Entity *" />
+                                <ComboBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding LegalEntities}" DisplayMemberPath="DataAreaId" SelectedValuePath="DataAreaId" SelectedValue="{Binding TransferDetailsForm.ToLegalEntity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsTransferDetailsEditable}" />
+                                <Label Grid.Row="4" Grid.Column="0" Content="From Location *" />
+                                <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding TransferDetailsForm.FromLocation}" IsReadOnly="True" Background="#EFEFEF" />
+                                <Button Grid.Row="4" Grid.Column="2" Content="🔍" Command="{Binding OpenTransferFromLocationLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" IsEnabled="{Binding IsTransferDetailsEditable}" />
+                                <Label Grid.Row="5" Grid.Column="0" Content="To Location *" />
+                                <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding TransferDetailsForm.ToLocation}" IsReadOnly="True" Background="#EFEFEF" />
+                                <Button Grid.Row="5" Grid.Column="2" Content="🔍" Command="{Binding OpenTransferToLocationLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" IsEnabled="{Binding IsTransferDetailsEditable}" />
+                                <Label Grid.Row="6" Grid.Column="0" Content="Transfer Reference" />
+                                <TextBox Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding TransferDetailsForm.TransferReference, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsTransferDetailsEditable}" />
+                                <Label Grid.Row="7" Grid.Column="0" Content="Sending Slip Ref" />
+                                <ComboBox Grid.Row="7" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding CompletedToday}" DisplayMemberPath="SlipNumber" IsEditable="True" Text="{Binding TransferDetailsForm.SendingSlipReference, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsTransferDetailsEditable}" />
+                            </Grid>
+                        </ScrollViewer>
+                    </Border>
+
+                    <Border Grid.Row="0" Grid.Column="1" Background="White" CornerRadius="8" Padding="14" Margin="4" MinHeight="350" Visibility="{Binding IsSalesDispatchForm, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="350">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="155" /><ColumnDefinition Width="*" /><ColumnDefinition Width="30" /></Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0" Grid.ColumnSpan="3" Text="Sales / Dispatch Details" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12" />
+                                <Label Grid.Row="1" Grid.Column="0" Content="Sales Subtype *" />
+                                <ComboBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding SalesSubtypeValues}" SelectedItem="{Binding SalesDispatchDetailsForm.SalesSubtype, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsSalesDispatchDetailsEditable}" />
+                                <Label Grid.Row="2" Grid.Column="0" Content="Customer" />
+                                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding SalesDispatchDetailsForm.CustomerAccount}" IsReadOnly="True" Background="#EFEFEF" ToolTip="{Binding SalesDispatchDetailsForm.CustomerName}" />
+                                <Button Grid.Row="2" Grid.Column="2" Content="🔍" Command="{Binding OpenSalesCustomerLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" IsEnabled="{Binding IsSalesDispatchDetailsEditable}" />
+                                <Label Grid.Row="3" Grid.Column="0" Content="Walk-in Customer" />
+                                <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding SalesDispatchDetailsForm.WalkInCustomer, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsSalesDispatchDetailsEditable}" />
+                                <Label Grid.Row="4" Grid.Column="0" Content="Sales Reference" />
+                                <TextBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding SalesDispatchDetailsForm.SalesReference, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsSalesDispatchDetailsEditable}" />
+                                <Label Grid.Row="5" Grid.Column="0" Content="Source *" />
+                                <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding SalesDispatchDetailsForm.Source}" IsReadOnly="True" Background="#EFEFEF" />
+                                <Button Grid.Row="5" Grid.Column="2" Content="🔍" Command="{Binding OpenSalesSourceLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" IsEnabled="{Binding IsSalesDispatchDetailsEditable}" />
+                                <Label Grid.Row="6" Grid.Column="0" Content="Destination" />
+                                <TextBox Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding SalesDispatchDetailsForm.Destination, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsSalesDispatchDetailsEditable}" />
+                                <Label Grid.Row="7" Grid.Column="0" Content="Payment Status" />
+                                <ComboBox Grid.Row="7" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding PaymentStatusValues}" SelectedItem="{Binding SalesDispatchDetailsForm.PaymentStatus, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsSalesDispatchDetailsEditable}" />
+                                <Label Grid.Row="8" Grid.Column="0" Content="Receipt Number" />
+                                <TextBox Grid.Row="8" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding SalesDispatchDetailsForm.ReceiptNumber, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsSalesDispatchDetailsEditable}" />
+                            </Grid>
+                        </ScrollViewer>
+                    </Border>
+
+                    <Border Grid.Row="0" Grid.Column="1" Background="White" CornerRadius="8" Padding="14" Margin="4" MinHeight="350" Visibility="{Binding IsProductionWeighingForm, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="350">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="165" /><ColumnDefinition Width="*" /><ColumnDefinition Width="30" /></Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0" Grid.ColumnSpan="3" Text="Production Weighing Details" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12" />
+                                <Label Grid.Row="1" Grid.Column="0" Content="Production Movement *" />
+                                <ComboBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding ProductionMovementValues}" SelectedItem="{Binding ProductionDetailsForm.ProductionMovement, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsProductionDetailsEditable}" />
+                                <Label Grid.Row="2" Grid.Column="0" Content="Production Order Ref *" />
+                                <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding ProductionDetailsForm.ProductionOrderReference, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsProductionDetailsEditable}" />
+                                <Label Grid.Row="3" Grid.Column="0" Content="Production Line" />
+                                <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding ProductionDetailsForm.ProductionLine, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsProductionDetailsEditable}" ToolTip="Manual entry - no Production Line Master" />
+                                <Label Grid.Row="4" Grid.Column="0" Content="Warehouse / Location *" />
+                                <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding ProductionDetailsForm.WarehouseLocation}" IsReadOnly="True" Background="#EFEFEF" />
+                                <Button Grid.Row="4" Grid.Column="2" Content="🔍" Command="{Binding OpenProductionWarehouseLocationLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" IsEnabled="{Binding IsProductionDetailsEditable}" />
+                                <Label Grid.Row="5" Grid.Column="0" Content="Batch Number" />
+                                <TextBox Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding ProductionDetailsForm.BatchNumber, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsProductionDetailsEditable}" />
+                                <Label Grid.Row="6" Grid.Column="0" Content="No. of Rolls / Units" />
+                                <TextBox Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding ProductionDetailsForm.NumberOfRollsUnits, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsProductionDetailsEditable}" />
+                                <Label Grid.Row="7" Grid.Column="0" Content="Grade / GSM / Width" />
+                                <TextBox Grid.Row="7" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding ProductionDetailsForm.GradeGsmWidth, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsProductionDetailsEditable}" />
+                            </Grid>
+                        </ScrollViewer>
+                    </Border>
+
+                    <Border Grid.Row="0" Grid.Column="1" Background="White" CornerRadius="8" Padding="14" Margin="4" MinHeight="350" Visibility="{Binding IsReturnForm, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="350">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="160" /><ColumnDefinition Width="*" /><ColumnDefinition Width="30" /></Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0" Grid.ColumnSpan="3" Text="Return Details" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12" />
+                                <Label Grid.Row="1" Grid.Column="0" Content="Return Type *" />
+                                <ComboBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding ReturnTypeValues}" SelectedItem="{Binding ReturnDetailsForm.ReturnType, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsReturnDetailsEditable}" />
+                                <Label Grid.Row="2" Grid.Column="0" Content="Vendor" />
+                                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding ReturnDetailsForm.VendorAccount}" IsReadOnly="True" Background="#EFEFEF" ToolTip="{Binding ReturnDetailsForm.VendorName}" />
+                                <Button Grid.Row="2" Grid.Column="2" Content="🔍" Command="{Binding OpenReturnVendorLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" IsEnabled="{Binding IsReturnDetailsEditable}" />
+                                <Label Grid.Row="3" Grid.Column="0" Content="Customer" />
+                                <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding ReturnDetailsForm.CustomerAccount}" IsReadOnly="True" Background="#EFEFEF" ToolTip="{Binding ReturnDetailsForm.CustomerName}" />
+                                <Button Grid.Row="3" Grid.Column="2" Content="🔍" Command="{Binding OpenReturnCustomerLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" IsEnabled="{Binding IsReturnDetailsEditable}" />
+                                <Label Grid.Row="4" Grid.Column="0" Content="From Legal Entity" />
+                                <ComboBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding LegalEntities}" DisplayMemberPath="DataAreaId" SelectedValuePath="DataAreaId" SelectedValue="{Binding ReturnDetailsForm.FromLegalEntity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsReturnDetailsEditable}" />
+                                <Label Grid.Row="5" Grid.Column="0" Content="To Legal Entity" />
+                                <ComboBox Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding LegalEntities}" DisplayMemberPath="DataAreaId" SelectedValuePath="DataAreaId" SelectedValue="{Binding ReturnDetailsForm.ToLegalEntity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsReturnDetailsEditable}" />
+                                <Label Grid.Row="6" Grid.Column="0" Content="Original Slip Number" />
+                                <ComboBox Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding CompletedToday}" DisplayMemberPath="SlipNumber" IsEditable="True" Text="{Binding ReturnDetailsForm.OriginalSlipNumber, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsReturnDetailsEditable}" />
+                                <Label Grid.Row="7" Grid.Column="0" Content="Return Reference" />
+                                <TextBox Grid.Row="7" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding ReturnDetailsForm.ReturnReference, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsReturnDetailsEditable}" />
+                                <Label Grid.Row="8" Grid.Column="0" Content="Return Reason *" />
+                                <ComboBox Grid.Row="8" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding ReasonMasters}" DisplayMemberPath="Return" SelectedValuePath="Return" SelectedValue="{Binding ReturnDetailsForm.ReturnReason, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsReturnDetailsEditable}" />
+                                <Label Grid.Row="9" Grid.Column="0" Content="Source *" />
+                                <TextBox Grid.Row="9" Grid.Column="1" Text="{Binding ReturnDetailsForm.Source}" IsReadOnly="True" Background="#EFEFEF" />
+                                <Button Grid.Row="9" Grid.Column="2" Content="🔍" Command="{Binding OpenReturnSourceLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" IsEnabled="{Binding IsReturnDetailsEditable}" />
+                                <Label Grid.Row="10" Grid.Column="0" Content="Destination" />
+                                <TextBox Grid.Row="10" Grid.Column="1" Text="{Binding ReturnDetailsForm.Destination}" IsReadOnly="True" Background="#EFEFEF" />
+                                <Button Grid.Row="10" Grid.Column="2" Content="🔍" Command="{Binding OpenReturnDestinationLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" IsEnabled="{Binding IsReturnDetailsEditable}" />
+                            </Grid>
+                        </ScrollViewer>
+                    </Border>
+
+                    <Border Grid.Row="0" Grid.Column="1" Background="White" CornerRadius="8" Padding="14" Margin="4" MinHeight="350" Visibility="{Binding IsDisposalWasteMovementForm, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="350">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="160" /><ColumnDefinition Width="*" /><ColumnDefinition Width="30" /></Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0" Grid.ColumnSpan="3" Text="Disposal / Waste Movement Details" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12" />
+                                <Label Grid.Row="1" Grid.Column="0" Content="Disposal Type *" />
+                                <ComboBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding DisposalTypeValues}" SelectedItem="{Binding DisposalDetailsForm.DisposalType, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsDisposalDetailsEditable}" />
+                                <Label Grid.Row="2" Grid.Column="0" Content="Source *" />
+                                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding DisposalDetailsForm.Source}" IsReadOnly="True" Background="#EFEFEF" />
+                                <Button Grid.Row="2" Grid.Column="2" Content="🔍" Command="{Binding OpenDisposalSourceLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" IsEnabled="{Binding IsDisposalDetailsEditable}" />
+                                <Label Grid.Row="3" Grid.Column="0" Content="Disposal Destination *" />
+                                <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding DisposalDetailsForm.DisposalDestination}" IsReadOnly="True" Background="#EFEFEF" />
+                                <Button Grid.Row="3" Grid.Column="2" Content="🔍" Command="{Binding OpenDisposalDestinationLookupCommand}" Style="{StaticResource LookupIconButtonStyle}" IsEnabled="{Binding IsDisposalDetailsEditable}" />
+                                <Label Grid.Row="4" Grid.Column="0" Content="Reason *" />
+                                <ComboBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding ReasonMasters}" DisplayMemberPath="Disposal" SelectedValuePath="Disposal" SelectedValue="{Binding DisposalDetailsForm.Reason, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsDisposalDetailsEditable}" />
+                                <Label Grid.Row="5" Grid.Column="0" Content="Permit / Manifest No" />
+                                <TextBox Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding DisposalDetailsForm.PermitManifestNumber, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsDisposalDetailsEditable}" />
+                                <Label Grid.Row="6" Grid.Column="0" Content="Authorized By" />
+                                <ComboBox Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding OperatorMasters}" DisplayMemberPath="FullName" SelectedValuePath="Username" SelectedValue="{Binding DisposalDetailsForm.AuthorizedBy, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsDisposalDetailsEditable}" />
+                            </Grid>
+                        </ScrollViewer>
+                    </Border>
+
+
                     <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Grid.RowSpan="2" Background="White" CornerRadius="8" Padding="14" Margin="4">
                         <DockPanel>
                             <DockPanel DockPanel.Dock="Top" LastChildFill="False" Margin="0,0,0,8">
@@ -1911,7 +2108,7 @@
                                 <StackPanel Grid.Column="1" Margin="10,0,0,0">
                                     <TextBlock Text="Open / Edit Contract Master" FontSize="18" FontWeight="SemiBold" />
                                     <WrapPanel><Button Content="Save" Command="{Binding SaveContractMasterCommand}" /><Button Content="New / Clear" Command="{Binding ClearContractMasterFormCommand}" /></WrapPanel>
-                                    <DockPanel Margin="0,4"><Label Content="Contract Number" Width="170" /><TextBox Text="{Binding ContractMasterForm.ContractNumber, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Parties" Width="170" /><TextBox Text="{Binding ContractMasterForm.Parties, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Locations" Width="170" /><TextBox Text="{Binding ContractMasterForm.Locations, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Billing Basis" Width="170" /><TextBox Text="{Binding ContractMasterForm.BillingBasis, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Validity" Width="170" /><TextBox Text="{Binding ContractMasterForm.Validity, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                    <DockPanel Margin="0,4"><Label Content="Contract Number" Width="170" /><TextBox Text="{Binding ContractMasterForm.ContractNumber, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Parties" Width="170" /><TextBox Text="{Binding ContractMasterForm.Parties, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Locations" Width="170" /><TextBox Text="{Binding ContractMasterForm.Locations, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Billing Basis" Width="170" /><ComboBox ItemsSource="{Binding BillingBasisValues}" SelectedItem="{Binding ContractMasterForm.BillingBasis, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Validity" Width="170" /><TextBox Text="{Binding ContractMasterForm.Validity, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
                                 </StackPanel>
                             </Grid>
                         </TabItem>
