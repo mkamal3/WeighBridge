@@ -486,6 +486,7 @@ public static class ColumnMapper
             return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 // Warehouse
+                {"MasterId",                          "Id"},
                 {"Id",                          "Id"},
                 {"dataarea",                    "DataAreaId"},
                 //{"mserp_dataareaid_idname",              "LegalEntityName"},
