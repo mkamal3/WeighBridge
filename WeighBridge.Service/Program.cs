@@ -163,6 +163,16 @@ public static class Program
                 settings.DeltaTablePath = LegalEntitySchema.DefaultDeltaPath;
                 settings.TableName = LegalEntitySchema.DefaultTableName;
             }
+            else if (string.Equals(settings.TableName, UnitOfMeasureSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase))
+            {
+                settings.DeltaTablePath = UnitOfMeasureSchema.DefaultDeltaPath;
+                settings.TableName = UnitOfMeasureSchema.DefaultTableName;
+            }
+            else if (string.Equals(settings.TableName, UnitConversionSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase))
+            {
+                settings.DeltaTablePath = UnitConversionSchema.DefaultDeltaPath;
+                settings.TableName = UnitConversionSchema.DefaultTableName;
+            }
 
             ValidateSettings(settings, cli.Demo);
 
@@ -200,8 +210,8 @@ public static class Program
                 var sqliteVendor = host.Services.GetRequiredService<SqliteRepository>();
                 await sqliteVendor.OpenAsync(CancellationToken.None).ConfigureAwait(false);
 
-                var syncVendor = host.Services.GetRequiredService<SyncService>();
-                result = await syncVendor.RunAsync(cli, CancellationToken.None).ConfigureAwait(false);
+                var syncRow = host.Services.GetRequiredService<SyncService>();
+                result = await syncRow.RunAsync(cli, CancellationToken.None).ConfigureAwait(false);
             //}
 
             Console.WriteLine();
