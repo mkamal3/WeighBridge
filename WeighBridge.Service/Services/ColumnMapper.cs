@@ -401,14 +401,14 @@ public static class ColumnMapper
                  //{ "<SourceColumn>",                              "Address" },
                  //{ "<SourceColumn>",                              "Purpose" }
                  {"mserp_mk_wbwarehousemasterid",                   "mserp_mk_wbwarehousemasterId"},
-                 {"SinkCreatedOn", "SinkCreatedOn"},
-                 {"SinkModifiedOn", "SinkModifiedOn"},
-                 {"mserp_dataareaid_id", "mserp_dataareaid_id"},
-                 {"mserp_dataareaid_id_entitytype", "mserp_dataareaid_id_entitytype"},
-                 {"mserp_dataareaid", "mserp_dataareaid"},
-                 {"versionnumber", "versionnumber"},
-                 {"IsDelete", "IsDelete"},
-                 {"CreatedOn", "CreatedOn"},
+                 {"SinkCreatedOn",                                  "SinkCreatedOn"},
+                 {"SinkModifiedOn",                                 "SinkModifiedOn"},
+                 {"mserp_dataareaid_id",                            "mserp_dataareaid_id"},
+                 {"mserp_dataareaid_id_entitytype",                 "mserp_dataareaid_id_entitytype"},
+                 {"mserp_dataareaid",                               "mserp_dataareaid"},
+                 {"versionnumber",                                  "versionnumber"},
+                 {"IsDelete",                                       "IsDelete"},
+                 {"CreatedOn",                                      "CreatedOn"},
                 //{"", "createdonpartition "},
                 //{"", "CreatedAt "}
             };
@@ -499,6 +499,67 @@ public static class ColumnMapper
                 {"createdon",                   "CreatedOn"},
                 {"createdonpartition",          "createdonpartition"}
                 //{"", "CreatedAt "}
+            };
+        }
+        if (string.Equals(tableName, UnitOfMeasureSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase))
+        {
+            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                // UnitOfMeasureSchema
+                {"MasterId",                          "Id"},
+                {"Id",                          "Id"},
+                {"SinkCreatedOn",               "SinkCreatedOn"},
+                {"SinkModifiedOn",              "SinkModifiedOn"},
+                {"isbaseunit",                  "isbaseunit"},
+                {"issystemunit",                "issystemunit"},
+                {"systemofunits",               "systemofunits"},
+                {"unitofmeasureclass",          "unitofmeasureclass"},
+                {"sysdatastatecode",            "sysdatastatecode"},
+                {"decimalprecision",            "decimalprecision"},
+                {"symbol",                      "symbol"},
+                {"modifieddatetime",            "modifieddatetime"},
+                {"modifiedby",                  "modifiedby"},
+                {"modifiedtransactionid",       "modifiedtransactionid"},
+                {"createddatetime",              "createddatetime"},
+                {"createdby",                   "createdby"},
+                {"createdtransactionid",        "createdtransactionid"},
+                {"dataareaid",                  "dataareaid"},
+                {"recversion",                  "recversion"},
+                {"partition",                   "partition"},
+                {"sysrowversion",               "sysrowversion"},
+                {"recid",                       "recid"},
+                {"tableid",                     "tableid"},
+                {"versionnumber",               "versionnumber"},
+                {"createdon",                   "createdon"},
+                {"modifiedon",                  "modifiedon"},
+                {"IsDelete",                    "IsDelete"},
+                {"PartitionId",                 "PartitionId"}
+            };
+        }
+        if (string.Equals(tableName, UnitConversionSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase))
+        {
+            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                // Unit conversion mapping
+                {"MasterId",                                                            "Id"},
+                {"Id",                                                                  "Id"},
+                {"SinkCreatedOn",                                                       "SinkCreatedOn"},
+                {"SinkModifiedOn",                                                      "SinkModifiedOn"},
+                {"mserp_rounding",                                                       "mserp_rounding"},
+                {"mserp_denominator",                                                   "mserp_denominator"},
+                {"mserp_factor",                                                        "mserp_factor"},
+                {"mserp_fromunitsymbol",                                                "mserp_fromunitsymbol"},
+                {"mserp_inneroffset",                                                   "mserp_inneroffset"},
+                {"mserp_mk_wb_ecoresproductspecificunitofmeasureconversionentityid",    "mserp_mk_wb_ecoresproductspecificunitofmeasureconversionentityid"},
+                {"mserp_numerator",                                                      "mserp_numerator"},
+                {"mserp_outeroffset",                                                    "mserp_outeroffset"},
+                {"mserp_primaryfield",                                                   "mserp_primaryfield"},
+                {"mserp_productnumber",                                                  "mserp_productnumber"},
+                {"mserp_tounitsymbol",                                                   "mserp_tounitsymbol"},
+                {"versionnumber",                                                        "versionnumber"},
+                {"IsDelete",                                                             "IsDelete"},
+                {"CreatedOn",                                                            "CreatedOn"},
+                {"PartitionId",                                                          "PartitionId"}
             };
         }
         return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);

@@ -218,6 +218,8 @@ public sealed class SyncService
             var t when string.Equals(t, WarehouseSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase) => WarehouseSchema.Columns,
             var t when string.Equals(t, ItemSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase) => ItemSchema.Columns,
             var t when string.Equals(t, LegalEntitySchema.DefaultTableName, StringComparison.OrdinalIgnoreCase) => LegalEntitySchema.Columns,
+            var t when string.Equals(t, UnitConversionSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase) => UnitConversionSchema.Columns,
+            var t when string.Equals(t, UnitOfMeasureSchema.DefaultTableName, StringComparison.OrdinalIgnoreCase) => UnitOfMeasureSchema.Columns,
             _ => VendorSchema.Columns
         };
 
