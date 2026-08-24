@@ -1,0 +1,63 @@
+<Window x:Class="WeightBridgeApp.ContractLookupWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Contract Lookup" Height="460" Width="760"
+        WindowStartupLocation="CenterOwner"
+        Loaded="Window_Loaded">
+    <Window.Resources>
+        <Style TargetType="{x:Type DataGrid}">
+            <Setter Property="AutoGenerateColumns" Value="False" />
+            <Setter Property="IsReadOnly" Value="True" />
+            <Setter Property="CanUserAddRows" Value="False" />
+            <Setter Property="CanUserDeleteRows" Value="False" />
+            <Setter Property="EnableRowVirtualization" Value="True" />
+            <Setter Property="EnableColumnVirtualization" Value="True" />
+            <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
+            <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
+            <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
+        </Style>
+    </Window.Resources>
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Contract Lookup" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10" />
+
+        <Grid Grid.Row="1" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="180" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                <TextBlock Text="Contract Number" FontWeight="SemiBold" />
+                <TextBox x:Name="ContractNumberFilterTextBox" TextChanged="FilterTextBox_TextChanged" Height="28" />
+            </StackPanel>
+            <StackPanel Grid.Column="1">
+                <TextBlock Text="Party / Location" FontWeight="SemiBold" />
+                <TextBox x:Name="TextFilterTextBox" TextChanged="FilterTextBox_TextChanged" Height="28" />
+            </StackPanel>
+        </Grid>
+
+        <DataGrid x:Name="LookupDataGrid" Grid.Row="2" ItemsSource="{Binding LookupRows}" SelectedItem="{Binding SelectedContract, Mode=TwoWay}" MouseDoubleClick="LookupDataGrid_MouseDoubleClick">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Contract Number" Binding="{Binding ContractNumber}" Width="160" />
+                <DataGridTextColumn Header="Parties" Binding="{Binding Parties}" Width="200" />
+                <DataGridTextColumn Header="Locations" Binding="{Binding Locations}" Width="180" />
+                <DataGridTextColumn Header="Billing Basis" Binding="{Binding BillingBasis}" Width="140" />
+                <DataGridTextColumn Header="Validity" Binding="{Binding Validity}" Width="120" />
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <DockPanel Grid.Row="3" Margin="0,10,0,0" LastChildFill="False">
+            <TextBlock x:Name="StatusTextBlock" DockPanel.Dock="Left" VerticalAlignment="Center" Foreground="#202A44" />
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <Button Content="Select" Width="90" Margin="0,0,8,0" Click="SelectButton_Click" />
+                <Button Content="Cancel" Width="90" Click="CancelButton_Click" />
+            </StackPanel>
+        </DockPanel>
+    </Grid>
+</Window>

@@ -1,0 +1,55 @@
+<Window x:Class="WeightBridgeApp.ProductUnitOfMeasureConversionWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Product Unit Conversion" Height="560" Width="1050"
+        WindowStartupLocation="CenterOwner" Loaded="Window_Loaded">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Product Unit of Measure Conversions" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10" />
+
+        <Border Grid.Row="1" Background="#F7F7F7" Padding="10" Margin="0,0,0,10" CornerRadius="4">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="220" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="220" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="Item Number:" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0" />
+                <TextBlock Grid.Column="1" x:Name="ItemNumberTextBlock" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="2" Text="Product Number:" FontWeight="SemiBold" VerticalAlignment="Center" Margin="16,0,8,0" />
+                <TextBlock Grid.Column="3" x:Name="ProductNumberTextBlock" VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+
+        <DataGrid x:Name="ConversionDataGrid" Grid.Row="2" ItemsSource="{Binding ConversionRows}"
+                  AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False"
+                  EnableRowVirtualization="True" EnableColumnVirtualization="True"
+                  VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                  ScrollViewer.CanContentScroll="True">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="From Unit" Binding="{Binding mserp_fromunitsymbol}" Width="100" />
+                <DataGridTextColumn Header="To Unit" Binding="{Binding mserp_tounitsymbol}" Width="100" />
+                <DataGridTextColumn Header="Factor" Binding="{Binding mserp_factor}" Width="100" />
+                <DataGridTextColumn Header="Numerator" Binding="{Binding mserp_numerator}" Width="100" />
+                <DataGridTextColumn Header="Denominator" Binding="{Binding mserp_denominator}" Width="110" />
+                <DataGridTextColumn Header="Rounding" Binding="{Binding mserp_rounding}" Width="100" />
+                <DataGridTextColumn Header="Inner Offset" Binding="{Binding mserp_inneroffset}" Width="110" />
+                <DataGridTextColumn Header="Outer Offset" Binding="{Binding mserp_outeroffset}" Width="110" />
+                <DataGridTextColumn Header="Primary Field" Binding="{Binding mserp_primaryfield}" Width="*" />
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <DockPanel Grid.Row="3" Margin="0,10,0,0" LastChildFill="False">
+            <TextBlock x:Name="StatusTextBlock" DockPanel.Dock="Left" VerticalAlignment="Center" Foreground="#202A44" />
+            <Button DockPanel.Dock="Right" Content="Close" Width="90" Click="CloseButton_Click" />
+        </DockPanel>
+    </Grid>
+</Window>

@@ -296,6 +296,103 @@ CREATE TABLE IF NOT EXISTS WeighmentPurchaseDetails (
     FOREIGN KEY(WeighmentId) REFERENCES Weighments(WeighmentId)
 );
 
+CREATE TABLE IF NOT EXISTS WeighmentContractCollectionDetails (
+    ContractCollectionDetailsId INTEGER PRIMARY KEY AUTOINCREMENT,
+    WeighmentId INTEGER NOT NULL UNIQUE,
+    SlipNumber TEXT NOT NULL DEFAULT '',
+    DataAreaId TEXT NOT NULL DEFAULT 'DAT',
+    VendorAccount TEXT NOT NULL DEFAULT '',
+    VendorName TEXT NOT NULL DEFAULT '',
+    InvoiceAccount TEXT NOT NULL DEFAULT '',
+    InvoiceAccountName TEXT NOT NULL DEFAULT '',
+    ContractNumber TEXT NOT NULL DEFAULT '',
+    CollectionLocation TEXT NOT NULL DEFAULT '',
+    Destination TEXT NOT NULL DEFAULT '',
+    BillingBasis TEXT NOT NULL DEFAULT '',
+    FOREIGN KEY(WeighmentId) REFERENCES Weighments(WeighmentId)
+);
+
+CREATE TABLE IF NOT EXISTS WeighmentTransferDetails (
+    TransferDetailsId INTEGER PRIMARY KEY AUTOINCREMENT,
+    WeighmentId INTEGER NOT NULL UNIQUE,
+    SlipNumber TEXT NOT NULL DEFAULT '',
+    DataAreaId TEXT NOT NULL DEFAULT 'DAT',
+    TransferDirection TEXT NOT NULL DEFAULT '',
+    FromLegalEntity TEXT NOT NULL DEFAULT '',
+    ToLegalEntity TEXT NOT NULL DEFAULT '',
+    FromLocation TEXT NOT NULL DEFAULT '',
+    ToLocation TEXT NOT NULL DEFAULT '',
+    TransferReference TEXT NOT NULL DEFAULT '',
+    SendingSlipReference TEXT NOT NULL DEFAULT '',
+    FOREIGN KEY(WeighmentId) REFERENCES Weighments(WeighmentId)
+);
+
+CREATE TABLE IF NOT EXISTS WeighmentSalesDispatchDetails (
+    SalesDispatchDetailsId INTEGER PRIMARY KEY AUTOINCREMENT,
+    WeighmentId INTEGER NOT NULL UNIQUE,
+    SlipNumber TEXT NOT NULL DEFAULT '',
+    DataAreaId TEXT NOT NULL DEFAULT 'DAT',
+    SalesSubtype TEXT NOT NULL DEFAULT '',
+    CustomerAccount TEXT NOT NULL DEFAULT '',
+    CustomerName TEXT NOT NULL DEFAULT '',
+    WalkInCustomer TEXT NOT NULL DEFAULT '',
+    SalesReference TEXT NOT NULL DEFAULT '',
+    Source TEXT NOT NULL DEFAULT '',
+    Destination TEXT NOT NULL DEFAULT '',
+    PaymentStatus TEXT NOT NULL DEFAULT '',
+    ReceiptNumber TEXT NOT NULL DEFAULT '',
+    FOREIGN KEY(WeighmentId) REFERENCES Weighments(WeighmentId)
+);
+
+CREATE TABLE IF NOT EXISTS WeighmentProductionDetails (
+    ProductionDetailsId INTEGER PRIMARY KEY AUTOINCREMENT,
+    WeighmentId INTEGER NOT NULL UNIQUE,
+    SlipNumber TEXT NOT NULL DEFAULT '',
+    DataAreaId TEXT NOT NULL DEFAULT 'DAT',
+    ProductionMovement TEXT NOT NULL DEFAULT '',
+    ProductionOrderReference TEXT NOT NULL DEFAULT '',
+    ProductionLine TEXT NOT NULL DEFAULT '',
+    WarehouseLocation TEXT NOT NULL DEFAULT '',
+    BatchNumber TEXT NOT NULL DEFAULT '',
+    NumberOfRollsUnits INTEGER NOT NULL DEFAULT 0,
+    GradeGsmWidth TEXT NOT NULL DEFAULT '',
+    FOREIGN KEY(WeighmentId) REFERENCES Weighments(WeighmentId)
+);
+
+CREATE TABLE IF NOT EXISTS WeighmentReturnDetails (
+    ReturnDetailsId INTEGER PRIMARY KEY AUTOINCREMENT,
+    WeighmentId INTEGER NOT NULL UNIQUE,
+    SlipNumber TEXT NOT NULL DEFAULT '',
+    DataAreaId TEXT NOT NULL DEFAULT 'DAT',
+    ReturnType TEXT NOT NULL DEFAULT '',
+    VendorAccount TEXT NOT NULL DEFAULT '',
+    VendorName TEXT NOT NULL DEFAULT '',
+    CustomerAccount TEXT NOT NULL DEFAULT '',
+    CustomerName TEXT NOT NULL DEFAULT '',
+    FromLegalEntity TEXT NOT NULL DEFAULT '',
+    ToLegalEntity TEXT NOT NULL DEFAULT '',
+    OriginalSlipNumber TEXT NOT NULL DEFAULT '',
+    ReturnReference TEXT NOT NULL DEFAULT '',
+    ReturnReason TEXT NOT NULL DEFAULT '',
+    Source TEXT NOT NULL DEFAULT '',
+    Destination TEXT NOT NULL DEFAULT '',
+    FOREIGN KEY(WeighmentId) REFERENCES Weighments(WeighmentId)
+);
+
+CREATE TABLE IF NOT EXISTS WeighmentDisposalDetails (
+    DisposalDetailsId INTEGER PRIMARY KEY AUTOINCREMENT,
+    WeighmentId INTEGER NOT NULL UNIQUE,
+    SlipNumber TEXT NOT NULL DEFAULT '',
+    DataAreaId TEXT NOT NULL DEFAULT 'DAT',
+    DisposalType TEXT NOT NULL DEFAULT '',
+    Source TEXT NOT NULL DEFAULT '',
+    DisposalDestination TEXT NOT NULL DEFAULT '',
+    Reason TEXT NOT NULL DEFAULT '',
+    PermitManifestNumber TEXT NOT NULL DEFAULT '',
+    AuthorizedBy TEXT NOT NULL DEFAULT '',
+    FOREIGN KEY(WeighmentId) REFERENCES Weighments(WeighmentId)
+);
+
 
 
 
@@ -497,6 +594,61 @@ CREATE TABLE IF NOT EXISTS WarehouseMasters (
     CreatedAt TEXT NOT NULL DEFAULT ''
 );
 
+
+CREATE TABLE IF NOT EXISTS UnitOfMeasureMasters (
+    UnitOfMeasureMasterId INTEGER PRIMARY KEY AUTOINCREMENT,
+    symbol TEXT NOT NULL DEFAULT '',
+    isbaseunit INTEGER NOT NULL DEFAULT 0,
+    issystemunit INTEGER NOT NULL DEFAULT 0,
+    systemofunits TEXT NOT NULL DEFAULT '',
+    unitofmeasureclass TEXT NOT NULL DEFAULT '',
+    sysdatastatecode TEXT NOT NULL DEFAULT '',
+    decimalprecision INTEGER,
+    Id TEXT UNIQUE,
+    SinkCreatedOn TEXT NOT NULL DEFAULT '',
+    SinkModifiedOn TEXT NOT NULL DEFAULT '',
+    modifieddatetime TEXT NOT NULL DEFAULT '',
+    modifiedby TEXT NOT NULL DEFAULT '',
+    modifiedtransactionid TEXT NOT NULL DEFAULT '',
+    createddatetime TEXT NOT NULL DEFAULT '',
+    createdby TEXT NOT NULL DEFAULT '',
+    createdtransactionid TEXT NOT NULL DEFAULT '',
+    dataareaid TEXT NOT NULL DEFAULT '',
+    recversion TEXT NOT NULL DEFAULT '',
+    partition TEXT NOT NULL DEFAULT '',
+    sysrowversion TEXT NOT NULL DEFAULT '',
+    recid TEXT NOT NULL DEFAULT '',
+    tableid TEXT NOT NULL DEFAULT '',
+    versionnumber TEXT NOT NULL DEFAULT '',
+    createdon TEXT NOT NULL DEFAULT '',
+    modifiedon TEXT NOT NULL DEFAULT '',
+    IsDelete TEXT NOT NULL DEFAULT '',
+    PartitionId TEXT NOT NULL DEFAULT '',
+    CreatedAt TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS productsunitofmeasureconversion (
+    ProductsUnitOfMeasureConversionId INTEGER PRIMARY KEY AUTOINCREMENT,
+    Id TEXT,
+    SinkCreatedOn TEXT NOT NULL DEFAULT '',
+    SinkModifiedOn TEXT NOT NULL DEFAULT '',
+    mserp_rounding REAL,
+    mserp_denominator REAL,
+    mserp_factor REAL,
+    mserp_fromunitsymbol TEXT NOT NULL DEFAULT '',
+    mserp_inneroffset REAL,
+    mserp_mk_wb_ecoresproductspecificunitofmeasureconversionentityid TEXT,
+    mserp_numerator REAL,
+    mserp_outeroffset REAL,
+    mserp_primaryfield TEXT NOT NULL DEFAULT '',
+    mserp_productnumber TEXT NOT NULL DEFAULT '',
+    mserp_tounitsymbol TEXT NOT NULL DEFAULT '',
+    versionnumber TEXT NOT NULL DEFAULT '',
+    IsDelete TEXT NOT NULL DEFAULT '',
+    CreatedOn TEXT NOT NULL DEFAULT '',
+    PartitionId TEXT NOT NULL DEFAULT '',
+    CreatedAt TEXT NOT NULL DEFAULT ''
+);
 
 CREATE TABLE IF NOT EXISTS WeighbridgeMasters (
     WeighbridgeId INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1762,6 +1914,170 @@ VALUES
     });
 
 
+    public Task<List<UnitOfMeasureMaster>> GetUnitOfMeasureMastersAsync() => Task.Run(() =>
+    {
+        var result = new List<UnitOfMeasureMaster>();
+        using var connection = CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT * FROM UnitOfMeasureMasters ORDER BY symbol";
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+            result.Add(MapUnitOfMeasureMaster(reader));
+        return result;
+    });
+
+    public Task<List<UnitOfMeasureMaster>> GetUnitOfMeasureMastersPageAsync(string symbolFilter, string systemOfUnitsFilter, string unitOfMeasureClassFilter, string stateCodeFilter, int limit, int offset) => Task.Run(() =>
+    {
+        var result = new List<UnitOfMeasureMaster>();
+        using var connection = CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        var where = new List<string> { "1 = 1" };
+        AddLikeFilter(command, where, "symbol", "$Symbol", symbolFilter);
+        AddLikeFilter(command, where, "systemofunits", "$SystemOfUnits", systemOfUnitsFilter);
+        AddLikeFilter(command, where, "unitofmeasureclass", "$UnitOfMeasureClass", unitOfMeasureClassFilter);
+        AddLikeFilter(command, where, "sysdatastatecode", "$SysDataStateCode", stateCodeFilter);
+        command.Parameters.AddWithValue("$Limit", Math.Max(1, limit));
+        command.Parameters.AddWithValue("$Offset", Math.Max(0, offset));
+        command.CommandText = "SELECT * FROM UnitOfMeasureMasters WHERE " + string.Join(" AND ", where) + " ORDER BY symbol LIMIT $Limit OFFSET $Offset";
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+            result.Add(MapUnitOfMeasureMaster(reader));
+        return result;
+    });
+
+    // Kept for synchronization/import processing. The BridgeOne Unit of Measure screen itself is read-only.
+    public Task SaveUnitOfMeasureMasterAsync(UnitOfMeasureMaster unit) => Task.Run(() =>
+    {
+        if (string.IsNullOrWhiteSpace(unit.symbol))
+            throw new InvalidOperationException("Symbol is mandatory.");
+
+        using var connection = CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = unit.UnitOfMeasureMasterId > 0 ? @"
+UPDATE UnitOfMeasureMasters SET
+    symbol = $symbol,
+    isbaseunit = $isbaseunit,
+    issystemunit = $issystemunit,
+    systemofunits = $systemofunits,
+    unitofmeasureclass = $unitofmeasureclass,
+    sysdatastatecode = $sysdatastatecode,
+    decimalprecision = $decimalprecision,
+    Id = $Id,
+    SinkCreatedOn = $SinkCreatedOn,
+    SinkModifiedOn = $SinkModifiedOn,
+    modifieddatetime = $modifieddatetime,
+    modifiedby = $modifiedby,
+    modifiedtransactionid = $modifiedtransactionid,
+    createddatetime = $createddatetime,
+    createdby = $createdby,
+    createdtransactionid = $createdtransactionid,
+    dataareaid = $dataareaid,
+    recversion = $recversion,
+    partition = $partition,
+    sysrowversion = $sysrowversion,
+    recid = $recid,
+    tableid = $tableid,
+    versionnumber = $versionnumber,
+    createdon = $createdon,
+    modifiedon = $modifiedon,
+    IsDelete = $IsDelete,
+    PartitionId = $PartitionId
+WHERE UnitOfMeasureMasterId = $UnitOfMeasureMasterId;" : @"
+INSERT INTO UnitOfMeasureMasters
+(symbol, isbaseunit, issystemunit, systemofunits, unitofmeasureclass, sysdatastatecode, decimalprecision, Id, SinkCreatedOn, SinkModifiedOn, modifieddatetime, modifiedby, modifiedtransactionid, createddatetime, createdby, createdtransactionid, dataareaid, recversion, partition, sysrowversion, recid, tableid, versionnumber, createdon, modifiedon, IsDelete, PartitionId, CreatedAt)
+VALUES
+($symbol, $isbaseunit, $issystemunit, $systemofunits, $unitofmeasureclass, $sysdatastatecode, $decimalprecision, $Id, $SinkCreatedOn, $SinkModifiedOn, $modifieddatetime, $modifiedby, $modifiedtransactionid, $createddatetime, $createdby, $createdtransactionid, $dataareaid, $recversion, $partition, $sysrowversion, $recid, $tableid, $versionnumber, $createdon, $modifiedon, $IsDelete, $PartitionId, $CreatedAt);";
+        AddUnitOfMeasureMasterParameters(command, unit);
+        command.Parameters.AddWithValue("$UnitOfMeasureMasterId", unit.UnitOfMeasureMasterId);
+        command.Parameters.AddWithValue("$CreatedAt", DateTime.Now.ToString("O"));
+        command.ExecuteNonQuery();
+    });
+
+
+    public Task<List<ProductsUnitOfMeasureConversion>> GetProductUnitOfMeasureConversionsByProductNumberAsync(string productNumber) => Task.Run(() =>
+    {
+        var result = new List<ProductsUnitOfMeasureConversion>();
+        if (string.IsNullOrWhiteSpace(productNumber))
+            return result;
+
+        using var connection = CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = @"
+SELECT *
+FROM productsunitofmeasureconversion
+WHERE lower(trim(mserp_productnumber)) = lower(trim($ProductNumber))
+  AND lower(trim(ifnull(IsDelete, ''))) NOT IN ('1', 'true', 'yes')
+ORDER BY mserp_fromunitsymbol, mserp_tounitsymbol;";
+        command.Parameters.AddWithValue("$ProductNumber", productNumber.Trim());
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+            result.Add(MapProductsUnitOfMeasureConversion(reader));
+        return result;
+    });
+
+    // Synchronization/import method. The product conversion UI is read-only.
+    public Task SaveProductsUnitOfMeasureConversionAsync(ProductsUnitOfMeasureConversion conversion) => Task.Run(() =>
+    {
+        if (string.IsNullOrWhiteSpace(conversion.mserp_productnumber))
+            throw new InvalidOperationException("Product Number is mandatory for unit conversion.");
+
+        using var connection = CreateConnection();
+        connection.Open();
+
+        // Match source records by source Id first, then by the product-specific conversion entity id.
+        int existingId = 0;
+        using (var find = connection.CreateCommand())
+        {
+            find.CommandText = @"
+SELECT ProductsUnitOfMeasureConversionId
+FROM productsunitofmeasureconversion
+WHERE ($Id <> '' AND Id = $Id)
+   OR ($EntityId <> '' AND mserp_mk_wb_ecoresproductspecificunitofmeasureconversionentityid = $EntityId)
+LIMIT 1;";
+            find.Parameters.AddWithValue("$Id", conversion.Id?.Trim() ?? string.Empty);
+            find.Parameters.AddWithValue("$EntityId", conversion.mserp_mk_wb_ecoresproductspecificunitofmeasureconversionentityid?.Trim() ?? string.Empty);
+            var found = find.ExecuteScalar();
+            if (found != null && found != DBNull.Value)
+                existingId = Convert.ToInt32(found);
+        }
+
+        using var command = connection.CreateCommand();
+        command.CommandText = existingId > 0 ? @"
+UPDATE productsunitofmeasureconversion SET
+    Id = $Id,
+    SinkCreatedOn = $SinkCreatedOn,
+    SinkModifiedOn = $SinkModifiedOn,
+    mserp_rounding = $mserp_rounding,
+    mserp_denominator = $mserp_denominator,
+    mserp_factor = $mserp_factor,
+    mserp_fromunitsymbol = $mserp_fromunitsymbol,
+    mserp_inneroffset = $mserp_inneroffset,
+    mserp_mk_wb_ecoresproductspecificunitofmeasureconversionentityid = $EntityId,
+    mserp_numerator = $mserp_numerator,
+    mserp_outeroffset = $mserp_outeroffset,
+    mserp_primaryfield = $mserp_primaryfield,
+    mserp_productnumber = $mserp_productnumber,
+    mserp_tounitsymbol = $mserp_tounitsymbol,
+    versionnumber = $versionnumber,
+    IsDelete = $IsDelete,
+    CreatedOn = $CreatedOn,
+    PartitionId = $PartitionId
+WHERE ProductsUnitOfMeasureConversionId = $LocalId;" : @"
+INSERT INTO productsunitofmeasureconversion
+(Id, SinkCreatedOn, SinkModifiedOn, mserp_rounding, mserp_denominator, mserp_factor, mserp_fromunitsymbol, mserp_inneroffset, mserp_mk_wb_ecoresproductspecificunitofmeasureconversionentityid, mserp_numerator, mserp_outeroffset, mserp_primaryfield, mserp_productnumber, mserp_tounitsymbol, versionnumber, IsDelete, CreatedOn, PartitionId, CreatedAt)
+VALUES
+($Id, $SinkCreatedOn, $SinkModifiedOn, $mserp_rounding, $mserp_denominator, $mserp_factor, $mserp_fromunitsymbol, $mserp_inneroffset, $EntityId, $mserp_numerator, $mserp_outeroffset, $mserp_primaryfield, $mserp_productnumber, $mserp_tounitsymbol, $versionnumber, $IsDelete, $CreatedOn, $PartitionId, $CreatedAt);";
+        AddProductsUnitOfMeasureConversionParameters(command, conversion);
+        command.Parameters.AddWithValue("$LocalId", existingId);
+        command.Parameters.AddWithValue("$CreatedAt", DateTime.Now.ToString("O"));
+        command.ExecuteNonQuery();
+    });
+
+
     public Task<List<LegalEntityMaster>> GetLegalEntitiesAsync() => Task.Run(() =>
     {
         var result = new List<LegalEntityMaster>();
@@ -2370,6 +2686,248 @@ ON CONFLICT(WeighmentId) DO UPDATE SET
         return reader.Read() ? MapWeighmentPurchaseDetails(reader) : null;
     });
 
+
+    public Task SaveWeighmentContractCollectionDetailsAsync(WeighmentContractCollectionDetails details) => Task.Run(() =>
+    {
+        using var connection = CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = @"
+INSERT INTO WeighmentContractCollectionDetails
+(WeighmentId, SlipNumber, DataAreaId, VendorAccount, VendorName, InvoiceAccount, InvoiceAccountName, ContractNumber, CollectionLocation, Destination, BillingBasis)
+VALUES
+($WeighmentId, $SlipNumber, $DataAreaId, $VendorAccount, $VendorName, $InvoiceAccount, $InvoiceAccountName, $ContractNumber, $CollectionLocation, $Destination, $BillingBasis)
+ON CONFLICT(WeighmentId) DO UPDATE SET
+    SlipNumber = excluded.SlipNumber,
+    DataAreaId = excluded.DataAreaId,
+    VendorAccount = excluded.VendorAccount,
+    VendorName = excluded.VendorName,
+    InvoiceAccount = excluded.InvoiceAccount,
+    InvoiceAccountName = excluded.InvoiceAccountName,
+    ContractNumber = excluded.ContractNumber,
+    CollectionLocation = excluded.CollectionLocation,
+    Destination = excluded.Destination,
+    BillingBasis = excluded.BillingBasis;";
+        command.Parameters.AddWithValue("$WeighmentId", details.WeighmentId);
+        command.Parameters.AddWithValue("$SlipNumber", details.SlipNumber ?? string.Empty);
+        command.Parameters.AddWithValue("$DataAreaId", details.DataAreaId ?? string.Empty);
+        command.Parameters.AddWithValue("$VendorAccount", details.VendorAccount ?? string.Empty);
+        command.Parameters.AddWithValue("$VendorName", details.VendorName ?? string.Empty);
+        command.Parameters.AddWithValue("$InvoiceAccount", details.InvoiceAccount ?? string.Empty);
+        command.Parameters.AddWithValue("$InvoiceAccountName", details.InvoiceAccountName ?? string.Empty);
+        command.Parameters.AddWithValue("$ContractNumber", details.ContractNumber ?? string.Empty);
+        command.Parameters.AddWithValue("$CollectionLocation", details.CollectionLocation ?? string.Empty);
+        command.Parameters.AddWithValue("$Destination", details.Destination ?? string.Empty);
+        command.Parameters.AddWithValue("$BillingBasis", details.BillingBasis ?? string.Empty);
+        command.ExecuteNonQuery();
+    });
+
+    public Task<WeighmentContractCollectionDetails?> GetWeighmentContractCollectionDetailsAsync(int weighmentId) => Task.Run(() =>
+    {
+        using var connection = CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT * FROM WeighmentContractCollectionDetails WHERE WeighmentId = $WeighmentId";
+        command.Parameters.AddWithValue("$WeighmentId", weighmentId);
+        using var reader = command.ExecuteReader();
+        return reader.Read() ? MapWeighmentContractCollectionDetails(reader) : null;
+    });
+
+
+    public Task SaveWeighmentTransferDetailsAsync(WeighmentTransferDetails details) => Task.Run(() =>
+    {
+        using var connection = CreateConnection(); connection.Open(); using var command = connection.CreateCommand();
+        command.CommandText = @"
+INSERT INTO WeighmentTransferDetails
+(WeighmentId, SlipNumber, DataAreaId, TransferDirection, FromLegalEntity, ToLegalEntity, FromLocation, ToLocation, TransferReference, SendingSlipReference)
+VALUES
+($WeighmentId, $SlipNumber, $DataAreaId, $TransferDirection, $FromLegalEntity, $ToLegalEntity, $FromLocation, $ToLocation, $TransferReference, $SendingSlipReference)
+ON CONFLICT(WeighmentId) DO UPDATE SET
+SlipNumber=excluded.SlipNumber, DataAreaId=excluded.DataAreaId, TransferDirection=excluded.TransferDirection,
+FromLegalEntity=excluded.FromLegalEntity, ToLegalEntity=excluded.ToLegalEntity, FromLocation=excluded.FromLocation,
+ToLocation=excluded.ToLocation, TransferReference=excluded.TransferReference, SendingSlipReference=excluded.SendingSlipReference;";
+        command.Parameters.AddWithValue("$WeighmentId", details.WeighmentId);
+        command.Parameters.AddWithValue("$SlipNumber", details.SlipNumber ?? string.Empty);
+        command.Parameters.AddWithValue("$DataAreaId", details.DataAreaId ?? string.Empty);
+        command.Parameters.AddWithValue("$TransferDirection", details.TransferDirection ?? string.Empty);
+        command.Parameters.AddWithValue("$FromLegalEntity", details.FromLegalEntity ?? string.Empty);
+        command.Parameters.AddWithValue("$ToLegalEntity", details.ToLegalEntity ?? string.Empty);
+        command.Parameters.AddWithValue("$FromLocation", details.FromLocation ?? string.Empty);
+        command.Parameters.AddWithValue("$ToLocation", details.ToLocation ?? string.Empty);
+        command.Parameters.AddWithValue("$TransferReference", details.TransferReference ?? string.Empty);
+        command.Parameters.AddWithValue("$SendingSlipReference", details.SendingSlipReference ?? string.Empty);
+        command.ExecuteNonQuery();
+    });
+
+    public Task<WeighmentTransferDetails?> GetWeighmentTransferDetailsAsync(int weighmentId) => Task.Run(() =>
+    {
+        using var connection = CreateConnection(); connection.Open(); using var command = connection.CreateCommand();
+        command.CommandText = "SELECT * FROM WeighmentTransferDetails WHERE WeighmentId=$WeighmentId";
+        command.Parameters.AddWithValue("$WeighmentId", weighmentId); using var reader = command.ExecuteReader();
+        return reader.Read() ? MapWeighmentTransferDetails(reader) : null;
+    });
+
+    public Task SaveWeighmentSalesDispatchDetailsAsync(WeighmentSalesDispatchDetails details) => Task.Run(() =>
+    {
+        using var connection = CreateConnection(); connection.Open(); using var command = connection.CreateCommand();
+        command.CommandText = @"
+INSERT INTO WeighmentSalesDispatchDetails
+(WeighmentId, SlipNumber, DataAreaId, SalesSubtype, CustomerAccount, CustomerName, WalkInCustomer, SalesReference, Source, Destination, PaymentStatus, ReceiptNumber)
+VALUES
+($WeighmentId, $SlipNumber, $DataAreaId, $SalesSubtype, $CustomerAccount, $CustomerName, $WalkInCustomer, $SalesReference, $Source, $Destination, $PaymentStatus, $ReceiptNumber)
+ON CONFLICT(WeighmentId) DO UPDATE SET
+SlipNumber=excluded.SlipNumber, DataAreaId=excluded.DataAreaId, SalesSubtype=excluded.SalesSubtype,
+CustomerAccount=excluded.CustomerAccount, CustomerName=excluded.CustomerName, WalkInCustomer=excluded.WalkInCustomer,
+SalesReference=excluded.SalesReference, Source=excluded.Source, Destination=excluded.Destination,
+PaymentStatus=excluded.PaymentStatus, ReceiptNumber=excluded.ReceiptNumber;";
+        command.Parameters.AddWithValue("$WeighmentId", details.WeighmentId);
+        command.Parameters.AddWithValue("$SlipNumber", details.SlipNumber ?? string.Empty);
+        command.Parameters.AddWithValue("$DataAreaId", details.DataAreaId ?? string.Empty);
+        command.Parameters.AddWithValue("$SalesSubtype", details.SalesSubtype ?? string.Empty);
+        command.Parameters.AddWithValue("$CustomerAccount", details.CustomerAccount ?? string.Empty);
+        command.Parameters.AddWithValue("$CustomerName", details.CustomerName ?? string.Empty);
+        command.Parameters.AddWithValue("$WalkInCustomer", details.WalkInCustomer ?? string.Empty);
+        command.Parameters.AddWithValue("$SalesReference", details.SalesReference ?? string.Empty);
+        command.Parameters.AddWithValue("$Source", details.Source ?? string.Empty);
+        command.Parameters.AddWithValue("$Destination", details.Destination ?? string.Empty);
+        command.Parameters.AddWithValue("$PaymentStatus", details.PaymentStatus ?? string.Empty);
+        command.Parameters.AddWithValue("$ReceiptNumber", details.ReceiptNumber ?? string.Empty);
+        command.ExecuteNonQuery();
+    });
+
+    public Task<WeighmentSalesDispatchDetails?> GetWeighmentSalesDispatchDetailsAsync(int weighmentId) => Task.Run(() =>
+    {
+        using var connection = CreateConnection(); connection.Open(); using var command = connection.CreateCommand();
+        command.CommandText = "SELECT * FROM WeighmentSalesDispatchDetails WHERE WeighmentId=$WeighmentId";
+        command.Parameters.AddWithValue("$WeighmentId", weighmentId); using var reader = command.ExecuteReader();
+        return reader.Read() ? MapWeighmentSalesDispatchDetails(reader) : null;
+    });
+
+    public Task SaveWeighmentProductionDetailsAsync(WeighmentProductionDetails details) => Task.Run(() =>
+    {
+        using var connection = CreateConnection(); connection.Open(); using var command = connection.CreateCommand();
+        command.CommandText = @"
+INSERT INTO WeighmentProductionDetails
+(WeighmentId, SlipNumber, DataAreaId, ProductionMovement, ProductionOrderReference, ProductionLine, WarehouseLocation, BatchNumber, NumberOfRollsUnits, GradeGsmWidth)
+VALUES
+($WeighmentId, $SlipNumber, $DataAreaId, $ProductionMovement, $ProductionOrderReference, $ProductionLine, $WarehouseLocation, $BatchNumber, $NumberOfRollsUnits, $GradeGsmWidth)
+ON CONFLICT(WeighmentId) DO UPDATE SET
+SlipNumber=excluded.SlipNumber, DataAreaId=excluded.DataAreaId, ProductionMovement=excluded.ProductionMovement,
+ProductionOrderReference=excluded.ProductionOrderReference, ProductionLine=excluded.ProductionLine,
+WarehouseLocation=excluded.WarehouseLocation, BatchNumber=excluded.BatchNumber,
+NumberOfRollsUnits=excluded.NumberOfRollsUnits, GradeGsmWidth=excluded.GradeGsmWidth;";
+        command.Parameters.AddWithValue("$WeighmentId", details.WeighmentId);
+        command.Parameters.AddWithValue("$SlipNumber", details.SlipNumber ?? string.Empty);
+        command.Parameters.AddWithValue("$DataAreaId", details.DataAreaId ?? string.Empty);
+        command.Parameters.AddWithValue("$ProductionMovement", details.ProductionMovement ?? string.Empty);
+        command.Parameters.AddWithValue("$ProductionOrderReference", details.ProductionOrderReference ?? string.Empty);
+        command.Parameters.AddWithValue("$ProductionLine", details.ProductionLine ?? string.Empty);
+        command.Parameters.AddWithValue("$WarehouseLocation", details.WarehouseLocation ?? string.Empty);
+        command.Parameters.AddWithValue("$BatchNumber", details.BatchNumber ?? string.Empty);
+        command.Parameters.AddWithValue("$NumberOfRollsUnits", details.NumberOfRollsUnits);
+        command.Parameters.AddWithValue("$GradeGsmWidth", details.GradeGsmWidth ?? string.Empty);
+        command.ExecuteNonQuery();
+    });
+
+    public Task<WeighmentProductionDetails?> GetWeighmentProductionDetailsAsync(int weighmentId) => Task.Run(() =>
+    {
+        using var connection = CreateConnection(); connection.Open(); using var command = connection.CreateCommand();
+        command.CommandText = "SELECT * FROM WeighmentProductionDetails WHERE WeighmentId=$WeighmentId";
+        command.Parameters.AddWithValue("$WeighmentId", weighmentId); using var reader = command.ExecuteReader();
+        return reader.Read() ? MapWeighmentProductionDetails(reader) : null;
+    });
+
+    public Task SaveWeighmentReturnDetailsAsync(WeighmentReturnDetails details) => Task.Run(() =>
+    {
+        using var connection = CreateConnection(); connection.Open(); using var command = connection.CreateCommand();
+        command.CommandText = @"
+INSERT INTO WeighmentReturnDetails
+(WeighmentId, SlipNumber, DataAreaId, ReturnType, VendorAccount, VendorName, CustomerAccount, CustomerName, FromLegalEntity, ToLegalEntity, OriginalSlipNumber, ReturnReference, ReturnReason, Source, Destination)
+VALUES
+($WeighmentId, $SlipNumber, $DataAreaId, $ReturnType, $VendorAccount, $VendorName, $CustomerAccount, $CustomerName, $FromLegalEntity, $ToLegalEntity, $OriginalSlipNumber, $ReturnReference, $ReturnReason, $Source, $Destination)
+ON CONFLICT(WeighmentId) DO UPDATE SET
+SlipNumber=excluded.SlipNumber, DataAreaId=excluded.DataAreaId, ReturnType=excluded.ReturnType,
+VendorAccount=excluded.VendorAccount, VendorName=excluded.VendorName, CustomerAccount=excluded.CustomerAccount,
+CustomerName=excluded.CustomerName, FromLegalEntity=excluded.FromLegalEntity, ToLegalEntity=excluded.ToLegalEntity,
+OriginalSlipNumber=excluded.OriginalSlipNumber, ReturnReference=excluded.ReturnReference,
+ReturnReason=excluded.ReturnReason, Source=excluded.Source, Destination=excluded.Destination;";
+        command.Parameters.AddWithValue("$WeighmentId", details.WeighmentId);
+        command.Parameters.AddWithValue("$SlipNumber", details.SlipNumber ?? string.Empty);
+        command.Parameters.AddWithValue("$DataAreaId", details.DataAreaId ?? string.Empty);
+        command.Parameters.AddWithValue("$ReturnType", details.ReturnType ?? string.Empty);
+        command.Parameters.AddWithValue("$VendorAccount", details.VendorAccount ?? string.Empty);
+        command.Parameters.AddWithValue("$VendorName", details.VendorName ?? string.Empty);
+        command.Parameters.AddWithValue("$CustomerAccount", details.CustomerAccount ?? string.Empty);
+        command.Parameters.AddWithValue("$CustomerName", details.CustomerName ?? string.Empty);
+        command.Parameters.AddWithValue("$FromLegalEntity", details.FromLegalEntity ?? string.Empty);
+        command.Parameters.AddWithValue("$ToLegalEntity", details.ToLegalEntity ?? string.Empty);
+        command.Parameters.AddWithValue("$OriginalSlipNumber", details.OriginalSlipNumber ?? string.Empty);
+        command.Parameters.AddWithValue("$ReturnReference", details.ReturnReference ?? string.Empty);
+        command.Parameters.AddWithValue("$ReturnReason", details.ReturnReason ?? string.Empty);
+        command.Parameters.AddWithValue("$Source", details.Source ?? string.Empty);
+        command.Parameters.AddWithValue("$Destination", details.Destination ?? string.Empty);
+        command.ExecuteNonQuery();
+    });
+
+    public Task<WeighmentReturnDetails?> GetWeighmentReturnDetailsAsync(int weighmentId) => Task.Run(() =>
+    {
+        using var connection = CreateConnection(); connection.Open(); using var command = connection.CreateCommand();
+        command.CommandText = "SELECT * FROM WeighmentReturnDetails WHERE WeighmentId=$WeighmentId";
+        command.Parameters.AddWithValue("$WeighmentId", weighmentId); using var reader = command.ExecuteReader();
+        return reader.Read() ? MapWeighmentReturnDetails(reader) : null;
+    });
+
+    public Task SaveWeighmentDisposalDetailsAsync(WeighmentDisposalDetails details) => Task.Run(() =>
+    {
+        using var connection = CreateConnection(); connection.Open(); using var command = connection.CreateCommand();
+        command.CommandText = @"
+INSERT INTO WeighmentDisposalDetails
+(WeighmentId, SlipNumber, DataAreaId, DisposalType, Source, DisposalDestination, Reason, PermitManifestNumber, AuthorizedBy)
+VALUES
+($WeighmentId, $SlipNumber, $DataAreaId, $DisposalType, $Source, $DisposalDestination, $Reason, $PermitManifestNumber, $AuthorizedBy)
+ON CONFLICT(WeighmentId) DO UPDATE SET
+SlipNumber=excluded.SlipNumber, DataAreaId=excluded.DataAreaId, DisposalType=excluded.DisposalType,
+Source=excluded.Source, DisposalDestination=excluded.DisposalDestination, Reason=excluded.Reason,
+PermitManifestNumber=excluded.PermitManifestNumber, AuthorizedBy=excluded.AuthorizedBy;";
+        command.Parameters.AddWithValue("$WeighmentId", details.WeighmentId);
+        command.Parameters.AddWithValue("$SlipNumber", details.SlipNumber ?? string.Empty);
+        command.Parameters.AddWithValue("$DataAreaId", details.DataAreaId ?? string.Empty);
+        command.Parameters.AddWithValue("$DisposalType", details.DisposalType ?? string.Empty);
+        command.Parameters.AddWithValue("$Source", details.Source ?? string.Empty);
+        command.Parameters.AddWithValue("$DisposalDestination", details.DisposalDestination ?? string.Empty);
+        command.Parameters.AddWithValue("$Reason", details.Reason ?? string.Empty);
+        command.Parameters.AddWithValue("$PermitManifestNumber", details.PermitManifestNumber ?? string.Empty);
+        command.Parameters.AddWithValue("$AuthorizedBy", details.AuthorizedBy ?? string.Empty);
+        command.ExecuteNonQuery();
+    });
+
+    public Task<WeighmentDisposalDetails?> GetWeighmentDisposalDetailsAsync(int weighmentId) => Task.Run(() =>
+    {
+        using var connection = CreateConnection(); connection.Open(); using var command = connection.CreateCommand();
+        command.CommandText = "SELECT * FROM WeighmentDisposalDetails WHERE WeighmentId=$WeighmentId";
+        command.Parameters.AddWithValue("$WeighmentId", weighmentId); using var reader = command.ExecuteReader();
+        return reader.Read() ? MapWeighmentDisposalDetails(reader) : null;
+    });
+
+    public Task<ContractMaster?> GetContractMasterByNumberAsync(string contractNumber) => Task.Run(() =>
+    {
+        using var connection = CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT * FROM ContractMasters WHERE ContractNumber = $ContractNumber LIMIT 1";
+        command.Parameters.AddWithValue("$ContractNumber", contractNumber?.Trim() ?? string.Empty);
+        using var reader = command.ExecuteReader();
+        return reader.Read() ? new ContractMaster
+        {
+            ContractMasterId = ReadInt(reader, "ContractMasterId") ?? 0,
+            ContractNumber = ReadText(reader, "ContractNumber"),
+            Parties = ReadText(reader, "Parties"),
+            Locations = ReadText(reader, "Locations"),
+            BillingBasis = ReadText(reader, "BillingBasis"),
+            Validity = ReadText(reader, "Validity")
+        } : null;
+    });
+
     public Task CompleteSecondWeightAsync(int weighmentId, decimal secondWeight, DateTime secondWeightTime, string secondWeightBy) => Task.Run(() =>
     {
         using var connection = CreateConnection();
@@ -2944,6 +3502,97 @@ WHERE UserId = $UserId;";
     FOREIGN KEY(WeighmentId) REFERENCES Weighments(WeighmentId)
 );");
         ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_WeighmentPurchaseDetails_SlipNumber ON WeighmentPurchaseDetails(SlipNumber);");
+        ExecuteNonQuery(connection, @"CREATE TABLE IF NOT EXISTS WeighmentContractCollectionDetails (
+    ContractCollectionDetailsId INTEGER PRIMARY KEY AUTOINCREMENT,
+    WeighmentId INTEGER NOT NULL UNIQUE,
+    SlipNumber TEXT NOT NULL DEFAULT '',
+    DataAreaId TEXT NOT NULL DEFAULT 'DAT',
+    VendorAccount TEXT NOT NULL DEFAULT '',
+    VendorName TEXT NOT NULL DEFAULT '',
+    InvoiceAccount TEXT NOT NULL DEFAULT '',
+    InvoiceAccountName TEXT NOT NULL DEFAULT '',
+    ContractNumber TEXT NOT NULL DEFAULT '',
+    CollectionLocation TEXT NOT NULL DEFAULT '',
+    Destination TEXT NOT NULL DEFAULT '',
+    BillingBasis TEXT NOT NULL DEFAULT ''
+);");
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_WeighmentContractCollectionDetails_SlipNumber ON WeighmentContractCollectionDetails(SlipNumber);");
+        ExecuteNonQuery(connection, @"CREATE TABLE IF NOT EXISTS WeighmentTransferDetails (
+    TransferDetailsId INTEGER PRIMARY KEY AUTOINCREMENT,
+    WeighmentId INTEGER NOT NULL UNIQUE,
+    SlipNumber TEXT NOT NULL DEFAULT '',
+    DataAreaId TEXT NOT NULL DEFAULT 'DAT',
+    TransferDirection TEXT NOT NULL DEFAULT '',
+    FromLegalEntity TEXT NOT NULL DEFAULT '',
+    ToLegalEntity TEXT NOT NULL DEFAULT '',
+    FromLocation TEXT NOT NULL DEFAULT '',
+    ToLocation TEXT NOT NULL DEFAULT '',
+    TransferReference TEXT NOT NULL DEFAULT '',
+    SendingSlipReference TEXT NOT NULL DEFAULT ''
+);");
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_WeighmentTransferDetails_SlipNumber ON WeighmentTransferDetails(SlipNumber);");
+        ExecuteNonQuery(connection, @"CREATE TABLE IF NOT EXISTS WeighmentSalesDispatchDetails (
+    SalesDispatchDetailsId INTEGER PRIMARY KEY AUTOINCREMENT,
+    WeighmentId INTEGER NOT NULL UNIQUE,
+    SlipNumber TEXT NOT NULL DEFAULT '',
+    DataAreaId TEXT NOT NULL DEFAULT 'DAT',
+    SalesSubtype TEXT NOT NULL DEFAULT '',
+    CustomerAccount TEXT NOT NULL DEFAULT '',
+    CustomerName TEXT NOT NULL DEFAULT '',
+    WalkInCustomer TEXT NOT NULL DEFAULT '',
+    SalesReference TEXT NOT NULL DEFAULT '',
+    Source TEXT NOT NULL DEFAULT '',
+    Destination TEXT NOT NULL DEFAULT '',
+    PaymentStatus TEXT NOT NULL DEFAULT '',
+    ReceiptNumber TEXT NOT NULL DEFAULT ''
+);");
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_WeighmentSalesDispatchDetails_SlipNumber ON WeighmentSalesDispatchDetails(SlipNumber);");
+        ExecuteNonQuery(connection, @"CREATE TABLE IF NOT EXISTS WeighmentProductionDetails (
+    ProductionDetailsId INTEGER PRIMARY KEY AUTOINCREMENT,
+    WeighmentId INTEGER NOT NULL UNIQUE,
+    SlipNumber TEXT NOT NULL DEFAULT '',
+    DataAreaId TEXT NOT NULL DEFAULT 'DAT',
+    ProductionMovement TEXT NOT NULL DEFAULT '',
+    ProductionOrderReference TEXT NOT NULL DEFAULT '',
+    ProductionLine TEXT NOT NULL DEFAULT '',
+    WarehouseLocation TEXT NOT NULL DEFAULT '',
+    BatchNumber TEXT NOT NULL DEFAULT '',
+    NumberOfRollsUnits INTEGER NOT NULL DEFAULT 0,
+    GradeGsmWidth TEXT NOT NULL DEFAULT ''
+);");
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_WeighmentProductionDetails_SlipNumber ON WeighmentProductionDetails(SlipNumber);");
+        ExecuteNonQuery(connection, @"CREATE TABLE IF NOT EXISTS WeighmentReturnDetails (
+    ReturnDetailsId INTEGER PRIMARY KEY AUTOINCREMENT,
+    WeighmentId INTEGER NOT NULL UNIQUE,
+    SlipNumber TEXT NOT NULL DEFAULT '',
+    DataAreaId TEXT NOT NULL DEFAULT 'DAT',
+    ReturnType TEXT NOT NULL DEFAULT '',
+    VendorAccount TEXT NOT NULL DEFAULT '',
+    VendorName TEXT NOT NULL DEFAULT '',
+    CustomerAccount TEXT NOT NULL DEFAULT '',
+    CustomerName TEXT NOT NULL DEFAULT '',
+    FromLegalEntity TEXT NOT NULL DEFAULT '',
+    ToLegalEntity TEXT NOT NULL DEFAULT '',
+    OriginalSlipNumber TEXT NOT NULL DEFAULT '',
+    ReturnReference TEXT NOT NULL DEFAULT '',
+    ReturnReason TEXT NOT NULL DEFAULT '',
+    Source TEXT NOT NULL DEFAULT '',
+    Destination TEXT NOT NULL DEFAULT ''
+);");
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_WeighmentReturnDetails_SlipNumber ON WeighmentReturnDetails(SlipNumber);");
+        ExecuteNonQuery(connection, @"CREATE TABLE IF NOT EXISTS WeighmentDisposalDetails (
+    DisposalDetailsId INTEGER PRIMARY KEY AUTOINCREMENT,
+    WeighmentId INTEGER NOT NULL UNIQUE,
+    SlipNumber TEXT NOT NULL DEFAULT '',
+    DataAreaId TEXT NOT NULL DEFAULT 'DAT',
+    DisposalType TEXT NOT NULL DEFAULT '',
+    Source TEXT NOT NULL DEFAULT '',
+    DisposalDestination TEXT NOT NULL DEFAULT '',
+    Reason TEXT NOT NULL DEFAULT '',
+    PermitManifestNumber TEXT NOT NULL DEFAULT '',
+    AuthorizedBy TEXT NOT NULL DEFAULT ''
+);");
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_WeighmentDisposalDetails_SlipNumber ON WeighmentDisposalDetails(SlipNumber);");
         ExecuteNonQuery(connection, @"CREATE TABLE IF NOT EXISTS LocationMasters (
     LocationMasterId INTEGER PRIMARY KEY AUTOINCREMENT,
     DataAreaId TEXT NOT NULL DEFAULT 'DAT',
@@ -2997,6 +3646,18 @@ WHERE UserId = $UserId;";
 
         EnsureColumn(connection, "LocationMasters", "Warehouse", "TEXT NOT NULL DEFAULT ''");
         EnsureColumn(connection, "LocationMasters", "Site", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "WeighmentContractCollectionDetails", "ContractCollectionDetailsId", "INTEGER");
+        EnsureColumn(connection, "WeighmentContractCollectionDetails", "WeighmentId", "INTEGER NOT NULL DEFAULT 0");
+        EnsureColumn(connection, "WeighmentContractCollectionDetails", "SlipNumber", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "WeighmentContractCollectionDetails", "DataAreaId", "TEXT NOT NULL DEFAULT 'DAT'");
+        EnsureColumn(connection, "WeighmentContractCollectionDetails", "VendorAccount", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "WeighmentContractCollectionDetails", "VendorName", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "WeighmentContractCollectionDetails", "InvoiceAccount", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "WeighmentContractCollectionDetails", "InvoiceAccountName", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "WeighmentContractCollectionDetails", "ContractNumber", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "WeighmentContractCollectionDetails", "CollectionLocation", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "WeighmentContractCollectionDetails", "Destination", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "WeighmentContractCollectionDetails", "BillingBasis", "TEXT NOT NULL DEFAULT ''");
         EnsureColumn(connection, "Customers", "DataAreaId", "TEXT NOT NULL DEFAULT 'DAT'");
         EnsureColumn(connection, "Vendors", "DataAreaId", "TEXT NOT NULL DEFAULT 'DAT'");
         EnsureColumn(connection, "ItemMasters", "DataAreaId", "TEXT NOT NULL DEFAULT 'DAT'");
@@ -3037,6 +3698,59 @@ WHERE UserId = $UserId;";
             EnsureColumn(connection, tableName, "CreatedOn", "TEXT NOT NULL DEFAULT ''");
             EnsureColumn(connection, tableName, "createdonpartition", "TEXT NOT NULL DEFAULT ''");
         }
+
+        // Unit of Measure Master - synchronized/read-only master.
+        EnsureColumn(connection, "UnitOfMeasureMasters", "symbol", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "UnitOfMeasureMasters", "isbaseunit", "INTEGER NOT NULL DEFAULT 0");
+        EnsureColumn(connection, "UnitOfMeasureMasters", "issystemunit", "INTEGER NOT NULL DEFAULT 0");
+        EnsureColumn(connection, "UnitOfMeasureMasters", "systemofunits", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "UnitOfMeasureMasters", "unitofmeasureclass", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "UnitOfMeasureMasters", "sysdatastatecode", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "UnitOfMeasureMasters", "decimalprecision", "INTEGER");
+        EnsureColumn(connection, "UnitOfMeasureMasters", "Id", "TEXT");
+        EnsureColumn(connection, "UnitOfMeasureMasters", "SinkCreatedOn", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "UnitOfMeasureMasters", "SinkModifiedOn", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "UnitOfMeasureMasters", "modifieddatetime", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "UnitOfMeasureMasters", "modifiedby", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "UnitOfMeasureMasters", "modifiedtransactionid", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "UnitOfMeasureMasters", "createddatetime", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "UnitOfMeasureMasters", "createdby", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "UnitOfMeasureMasters", "createdtransactionid", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "UnitOfMeasureMasters", "dataareaid", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "UnitOfMeasureMasters", "recversion", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "UnitOfMeasureMasters", "partition", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "UnitOfMeasureMasters", "sysrowversion", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "UnitOfMeasureMasters", "recid", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "UnitOfMeasureMasters", "tableid", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "UnitOfMeasureMasters", "versionnumber", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "UnitOfMeasureMasters", "createdon", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "UnitOfMeasureMasters", "modifiedon", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "UnitOfMeasureMasters", "IsDelete", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "UnitOfMeasureMasters", "PartitionId", "TEXT NOT NULL DEFAULT ''");
+
+        EnsureColumn(connection, "productsunitofmeasureconversion", "Id", "TEXT");
+        EnsureColumn(connection, "productsunitofmeasureconversion", "SinkCreatedOn", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "productsunitofmeasureconversion", "SinkModifiedOn", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "productsunitofmeasureconversion", "mserp_rounding", "REAL");
+        EnsureColumn(connection, "productsunitofmeasureconversion", "mserp_denominator", "REAL");
+        EnsureColumn(connection, "productsunitofmeasureconversion", "mserp_factor", "REAL");
+        EnsureColumn(connection, "productsunitofmeasureconversion", "mserp_fromunitsymbol", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "productsunitofmeasureconversion", "mserp_inneroffset", "REAL");
+        EnsureColumn(connection, "productsunitofmeasureconversion", "mserp_mk_wb_ecoresproductspecificunitofmeasureconversionentityid", "TEXT");
+        EnsureColumn(connection, "productsunitofmeasureconversion", "mserp_numerator", "REAL");
+        EnsureColumn(connection, "productsunitofmeasureconversion", "mserp_outeroffset", "REAL");
+        EnsureColumn(connection, "productsunitofmeasureconversion", "mserp_primaryfield", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "productsunitofmeasureconversion", "mserp_productnumber", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "productsunitofmeasureconversion", "mserp_tounitsymbol", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "productsunitofmeasureconversion", "versionnumber", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "productsunitofmeasureconversion", "IsDelete", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "productsunitofmeasureconversion", "CreatedOn", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "productsunitofmeasureconversion", "PartitionId", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "productsunitofmeasureconversion", "CreatedAt", "TEXT NOT NULL DEFAULT ''");
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_ProductUomConversion_ProductNumber ON productsunitofmeasureconversion(mserp_productnumber);");
+        ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_ProductUomConversion_Id ON productsunitofmeasureconversion(Id) WHERE Id IS NOT NULL AND trim(Id) <> '';");
+        ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_ProductUomConversion_EntityId ON productsunitofmeasureconversion(mserp_mk_wb_ecoresproductspecificunitofmeasureconversionentityid) WHERE mserp_mk_wb_ecoresproductspecificunitofmeasureconversionentityid IS NOT NULL AND trim(mserp_mk_wb_ecoresproductspecificunitofmeasureconversionentityid) <> '';");
+
 
         // Vehicle master migration
         EnsureColumn(connection, "Vehicles", "PlateNumber", "TEXT NOT NULL DEFAULT ''");
@@ -3306,6 +4020,7 @@ WHERE trim(ifnull(DataAreaId, '')) <> ''; ");
         ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_ItemMasters_mserp_mk_wb_ecoresreleasedproductv2entityId ON ItemMasters (mserp_mk_wb_ecoresreleasedproductv2entityId);");
         ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_WarehouseMasters_mserp_mk_wbwarehousemasterId ON WarehouseMasters (mserp_mk_wbwarehousemasterId);");
         ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_LegalEntities_ID ON LegalEntities (ID);");
+        ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_UnitOfMeasureMasters_Id ON UnitOfMeasureMasters (Id) WHERE Id IS NOT NULL AND trim(Id) <> '';");
     }
 
     private static void CreatePerformanceIndexes(SqliteConnection connection)
@@ -3319,6 +4034,8 @@ WHERE trim(ifnull(DataAreaId, '')) <> ''; ");
         ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_ItemMasters_DataArea_ProductType ON ItemMasters (DataAreaId, ProductType, ProductSubtype);");
         ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_WarehouseMasters_DataArea_Name ON WarehouseMasters (DataAreaId, Name);");
         ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_WarehouseMasters_DataArea_Site_Type ON WarehouseMasters (DataAreaId, Site, Type);");
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_UnitOfMeasureMasters_Symbol ON UnitOfMeasureMasters (symbol);");
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_UnitOfMeasureMasters_System_Class ON UnitOfMeasureMasters (systemofunits, unitofmeasureclass);");
         ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_Vehicles_DataArea_Status ON Vehicles (DataAreaId, Status);");
         ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_Drivers_DataArea_Status ON Drivers (DataAreaId, Status);");
         ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_Weighments_DataArea_Status_CreatedAt ON Weighments (DataAreaId, Status, CreatedAt);");
@@ -3431,7 +4148,73 @@ INSERT OR IGNORE INTO Parties (PartyName, PartyType) VALUES ('Default Vendor', '
 INSERT OR IGNORE INTO Materials (MaterialName) VALUES ('General Material');
 INSERT OR IGNORE INTO Customers (DataAreaId, CustomerAccount, Name, CreatedAt) VALUES ('DAT', 'CUST-0001', 'Default Customer', datetime('now'));
 INSERT OR IGNORE INTO Vendors (DataAreaId, VendorAccount, Name, CreatedAt) VALUES ('DAT', 'VEND-0001', 'Default Vendor', datetime('now'));
-INSERT OR IGNORE INTO ItemMasters (DataAreaId, ItemNumber, ProductName, CreatedAt) VALUES ('DAT', 'ITEM-0001', 'General Item', datetime('now'));
+INSERT OR IGNORE INTO ItemMasters (DataAreaId, ItemNumber, ProductName, ProductType, ProductSubtype, ProductNumber, PurchaseUnit, SellUnit, BOMUnit, CostUnit, UnitSequenceGroupId, CreatedAt)
+VALUES ('DAT', 'ITEM-0001', 'General Item', 'Item', 'Product', 'PROD-0001', 'kg', 'kg', 'kg', 'kg', 'KG', datetime('now'));
+
+-- Keep existing demo databases usable: populate the seeded item only when the synchronized fields are still blank.
+UPDATE ItemMasters
+SET ProductType = CASE WHEN trim(ifnull(ProductType, '')) = '' THEN 'Item' ELSE ProductType END,
+    ProductSubtype = CASE WHEN trim(ifnull(ProductSubtype, '')) = '' THEN 'Product' ELSE ProductSubtype END,
+    ProductNumber = CASE WHEN trim(ifnull(ProductNumber, '')) = '' THEN 'PROD-0001' ELSE ProductNumber END,
+    PurchaseUnit = CASE WHEN trim(ifnull(PurchaseUnit, '')) = '' THEN 'kg' ELSE PurchaseUnit END,
+    SellUnit = CASE WHEN trim(ifnull(SellUnit, '')) = '' THEN 'kg' ELSE SellUnit END,
+    BOMUnit = CASE WHEN trim(ifnull(BOMUnit, '')) = '' THEN 'kg' ELSE BOMUnit END,
+    CostUnit = CASE WHEN trim(ifnull(CostUnit, '')) = '' THEN 'kg' ELSE CostUnit END,
+    UnitSequenceGroupId = CASE WHEN trim(ifnull(UnitSequenceGroupId, '')) = '' THEN 'KG' ELSE UnitSequenceGroupId END
+WHERE DataAreaId = 'DAT' AND ItemNumber = 'ITEM-0001';
+
+-- Unit of Measure Master demo records.
+INSERT INTO UnitOfMeasureMasters
+(symbol, isbaseunit, issystemunit, systemofunits, unitofmeasureclass, sysdatastatecode, decimalprecision, Id, versionnumber, IsDelete, CreatedOn, PartitionId, CreatedAt)
+SELECT 'kg', 1, 1, 'Metric', 'Mass', 'Active', 3, 'UOM-KG', '1', '0', datetime('now'), 'Initial', datetime('now')
+WHERE NOT EXISTS (SELECT 1 FROM UnitOfMeasureMasters WHERE lower(trim(symbol)) = 'kg');
+INSERT INTO UnitOfMeasureMasters
+(symbol, isbaseunit, issystemunit, systemofunits, unitofmeasureclass, sysdatastatecode, decimalprecision, Id, versionnumber, IsDelete, CreatedOn, PartitionId, CreatedAt)
+SELECT 'g', 0, 1, 'Metric', 'Mass', 'Active', 3, 'UOM-G', '1', '0', datetime('now'), 'Initial', datetime('now')
+WHERE NOT EXISTS (SELECT 1 FROM UnitOfMeasureMasters WHERE lower(trim(symbol)) = 'g');
+INSERT INTO UnitOfMeasureMasters
+(symbol, isbaseunit, issystemunit, systemofunits, unitofmeasureclass, sysdatastatecode, decimalprecision, Id, versionnumber, IsDelete, CreatedOn, PartitionId, CreatedAt)
+SELECT 'ton', 0, 1, 'Metric', 'Mass', 'Active', 3, 'UOM-TON', '1', '0', datetime('now'), 'Initial', datetime('now')
+WHERE NOT EXISTS (SELECT 1 FROM UnitOfMeasureMasters WHERE lower(trim(symbol)) = 'ton');
+INSERT INTO UnitOfMeasureMasters
+(symbol, isbaseunit, issystemunit, systemofunits, unitofmeasureclass, sysdatastatecode, decimalprecision, Id, versionnumber, IsDelete, CreatedOn, PartitionId, CreatedAt)
+SELECT 'lb', 0, 1, 'Imperial', 'Mass', 'Active', 3, 'UOM-LB', '1', '0', datetime('now'), 'Initial', datetime('now')
+WHERE NOT EXISTS (SELECT 1 FROM UnitOfMeasureMasters WHERE lower(trim(symbol)) = 'lb');
+INSERT INTO UnitOfMeasureMasters
+(symbol, isbaseunit, issystemunit, systemofunits, unitofmeasureclass, sysdatastatecode, decimalprecision, Id, versionnumber, IsDelete, CreatedOn, PartitionId, CreatedAt)
+SELECT 'pcs', 1, 1, 'Other', 'Quantity', 'Active', 0, 'UOM-PCS', '1', '0', datetime('now'), 'Initial', datetime('now')
+WHERE NOT EXISTS (SELECT 1 FROM UnitOfMeasureMasters WHERE lower(trim(symbol)) = 'pcs');
+
+-- Product-specific UOM conversion demo data linked to ITEM-0001 through Product Number PROD-0001.
+INSERT INTO productsunitofmeasureconversion
+(Id, mserp_rounding, mserp_denominator, mserp_factor, mserp_fromunitsymbol, mserp_inneroffset,
+ mserp_mk_wb_ecoresproductspecificunitofmeasureconversionentityid, mserp_numerator, mserp_outeroffset,
+ mserp_primaryfield, mserp_productnumber, mserp_tounitsymbol, versionnumber, IsDelete, CreatedOn, PartitionId, CreatedAt)
+SELECT 'CONV-PROD0001-KG-G', 0.001, 1, 1000, 'kg', 0,
+       'CONV-PROD0001-KG-G', 1000, 0, 'kg -> g', 'PROD-0001', 'g', '1', '0', datetime('now'), 'Initial', datetime('now')
+WHERE NOT EXISTS (SELECT 1 FROM productsunitofmeasureconversion WHERE Id = 'CONV-PROD0001-KG-G');
+INSERT INTO productsunitofmeasureconversion
+(Id, mserp_rounding, mserp_denominator, mserp_factor, mserp_fromunitsymbol, mserp_inneroffset,
+ mserp_mk_wb_ecoresproductspecificunitofmeasureconversionentityid, mserp_numerator, mserp_outeroffset,
+ mserp_primaryfield, mserp_productnumber, mserp_tounitsymbol, versionnumber, IsDelete, CreatedOn, PartitionId, CreatedAt)
+SELECT 'CONV-PROD0001-G-KG', 0.001, 1000, 0.001, 'g', 0,
+       'CONV-PROD0001-G-KG', 1, 0, 'g -> kg', 'PROD-0001', 'kg', '1', '0', datetime('now'), 'Initial', datetime('now')
+WHERE NOT EXISTS (SELECT 1 FROM productsunitofmeasureconversion WHERE Id = 'CONV-PROD0001-G-KG');
+INSERT INTO productsunitofmeasureconversion
+(Id, mserp_rounding, mserp_denominator, mserp_factor, mserp_fromunitsymbol, mserp_inneroffset,
+ mserp_mk_wb_ecoresproductspecificunitofmeasureconversionentityid, mserp_numerator, mserp_outeroffset,
+ mserp_primaryfield, mserp_productnumber, mserp_tounitsymbol, versionnumber, IsDelete, CreatedOn, PartitionId, CreatedAt)
+SELECT 'CONV-PROD0001-KG-TON', 0.001, 1000, 0.001, 'kg', 0,
+       'CONV-PROD0001-KG-TON', 1, 0, 'kg -> ton', 'PROD-0001', 'ton', '1', '0', datetime('now'), 'Initial', datetime('now')
+WHERE NOT EXISTS (SELECT 1 FROM productsunitofmeasureconversion WHERE Id = 'CONV-PROD0001-KG-TON');
+INSERT INTO productsunitofmeasureconversion
+(Id, mserp_rounding, mserp_denominator, mserp_factor, mserp_fromunitsymbol, mserp_inneroffset,
+ mserp_mk_wb_ecoresproductspecificunitofmeasureconversionentityid, mserp_numerator, mserp_outeroffset,
+ mserp_primaryfield, mserp_productnumber, mserp_tounitsymbol, versionnumber, IsDelete, CreatedOn, PartitionId, CreatedAt)
+SELECT 'CONV-PROD0001-TON-KG', 0.001, 1, 1000, 'ton', 0,
+       'CONV-PROD0001-TON-KG', 1000, 0, 'ton -> kg', 'PROD-0001', 'kg', '1', '0', datetime('now'), 'Initial', datetime('now')
+WHERE NOT EXISTS (SELECT 1 FROM productsunitofmeasureconversion WHERE Id = 'CONV-PROD0001-TON-KG');
+
 INSERT OR IGNORE INTO Vehicles (DataAreaId, VehicleNo, PlateNumber, PlateEmirate, PlateCategory, VehicleType, Status, IsActive) VALUES ('DAT', 'TEST-0001', 'TEST-0001', 'Dubai', 'Commercial', 'Truck', 'Active', 1);
 INSERT OR IGNORE INTO Drivers (DataAreaId, DriverName, MobileNumber, MobileNo, DriverType, EmployerPartyType, IdentificationType, IdentificationNumber, CNIC, DrivingLicenceNumber, LicenseNo, DrivingLicenceIssuedBy, DrivingLicenceExpiryDate, LegalEntity, Status, EffectiveFrom, IsActive) VALUES ('DAT', 'Default Driver', '0000000000', '0000000000', 'Company Driver', 'Legal Entity', 'Emirates ID', 'ID-0001', 'ID-0001', 'LIC-0001', 'LIC-0001', 'Dubai', date('now', '+1 year'), 'DAT', 'Active', date('now'), 1);
 INSERT OR IGNORE INTO WeighbridgeMasters (DataAreaId, WeighbridgeCode, WeighbridgeName, PlantSite, Warehouse, WeighbridgeType, ScaleType, ScaleCapacity, CapacityUnit, CommunicationType, ScaleIpAddress, TcpPort, ScaleComPort, BaudRate, Parity, DataBits, StopBits, OperatingStatus, EffectiveFrom, IsActive, CreatedAt) VALUES ('DAT', 'WB-001', 'Default Weighbridge', 'Default Site', 'Default Warehouse', 'Bidirectional', 'Platform Scale', 100000, 'kg', 'Mock', '192.168.1.100', 4001, 'COM1', 9600, 'None', 8, 'One', 'Active', date('now'), 1, datetime('now'));
@@ -3440,10 +4223,16 @@ INSERT OR IGNORE INTO WarehouseMasters (DataAreaId, Warehouse, Name, Site, Type,
 INSERT OR IGNORE INTO ShiftMasters (Code, StartTime, EndTime, CrossingMidnightRule) VALUES ('SHIFT-A', '08:00', '20:00', 'No');
 INSERT OR IGNORE INTO ScenarioMasters (Form, DataAreaId, Movement, Formula, PartyRule, QC, MultiItem, Print) VALUES ('Purchase / Receipt / Collection', 'DAT', 'Inbound', 'Second - First', 'Vendor', 'No', 'No', 'Yes');
 INSERT OR IGNORE INTO ReasonMasters (QcRejection, ReturnValue, Disposal, Correction, VoidValue, Conversion) VALUES ('QC Rejection', 'Return', 'Disposal', 'Correction', 'Void', 'Conversion');
-INSERT OR IGNORE INTO ContractMasters (ContractNumber, Parties, Locations, BillingBasis, Validity) VALUES ('CON-0001', 'Default Vendor', 'Default Warehouse', 'Per weight', '2026');
+INSERT OR IGNORE INTO ContractMasters (ContractNumber, Parties, Locations, BillingBasis, Validity) VALUES ('CON-0001', 'Default Vendor', 'Default Warehouse', 'Net', '2026');
 INSERT OR IGNORE INTO ToleranceMasters (AbsoluteTolerance, PercentageTolerance, AllocationTolerance, ApprovalThreshold) VALUES ('0', '0', '0', '0');
 INSERT OR IGNORE INTO ServiceChargeMasters (DataAreaId, ServiceMode, Amount, Currency, Validity) VALUES ('DAT', 'General Weighing', 0, 'PKR', '2026');
 INSERT OR IGNORE INTO TransactionTypeMasters (Type, Description, Form) VALUES ('Registered Purchase', 'Inbound registered vendor purchase', 'Purchase / Receipt / Collection');
+INSERT OR IGNORE INTO TransactionTypeMasters (Type, Description, Form) VALUES ('Contract Collection', 'Contract collection from local contract master', 'Contract Collection');
+INSERT OR IGNORE INTO TransactionTypeMasters (Type, Description, Form) VALUES ('Transfer', 'Transfer and internal movement weighment', 'Transfer Form');
+INSERT OR IGNORE INTO TransactionTypeMasters (Type, Description, Form) VALUES ('Sales / Dispatch', 'Sales and dispatch weighment', 'Sales / Dispatch');
+INSERT OR IGNORE INTO TransactionTypeMasters (Type, Description, Form) VALUES ('Production Weighing', 'Production receipt, issue, return or dispatch weighment', 'Production Weighing');
+INSERT OR IGNORE INTO TransactionTypeMasters (Type, Description, Form) VALUES ('Return', 'Purchase, sales or intercompany return weighment', 'Return');
+INSERT OR IGNORE INTO TransactionTypeMasters (Type, Description, Form) VALUES ('Disposal / Waste Movement', 'Disposal and waste movement weighment', 'Disposal / Waste Movement');
 INSERT OR IGNORE INTO LocationMasters (DataAreaId, LocationCode, LocationName, LocationType, Warehouse, Site, Status) VALUES ('DAT', 'LOC-001', 'Default Location', 'Warehouse', 'WH-001', 'SITE-001', 'Active');
 ");
 
@@ -3772,6 +4561,61 @@ ON CONFLICT(OperatorId, DataAreaId) DO UPDATE SET IsDefault = excluded.IsDefault
         command.Parameters.AddWithValue("$Purpose", warehouse.Purpose.Trim());
         command.Parameters.AddWithValue("$Id", DbValue(warehouse.Id));
         AddD365SyncParameters(command, warehouse.mserp_mk_wbwarehousemasterId, warehouse.SinkCreatedOn, warehouse.SinkModifiedOn, warehouse.mserp_dataareaid_id, warehouse.mserp_dataareaid_id_entitytype, warehouse.mserp_dataareaid, warehouse.versionnumber, warehouse.IsDelete, warehouse.CreatedOn, warehouse.createdonpartition, "mserp_mk_wbwarehousemasterId");
+    }
+
+
+    private static void AddUnitOfMeasureMasterParameters(SqliteCommand command, UnitOfMeasureMaster unit)
+    {
+        command.Parameters.AddWithValue("$symbol", DbValue(unit.symbol));
+        command.Parameters.AddWithValue("$isbaseunit", DbValue(unit.isbaseunit));
+        command.Parameters.AddWithValue("$issystemunit", DbValue(unit.issystemunit));
+        command.Parameters.AddWithValue("$systemofunits", DbValue(unit.systemofunits));
+        command.Parameters.AddWithValue("$unitofmeasureclass", DbValue(unit.unitofmeasureclass));
+        command.Parameters.AddWithValue("$sysdatastatecode", DbValue(unit.sysdatastatecode));
+        command.Parameters.AddWithValue("$decimalprecision", DbValue(unit.decimalprecision));
+        command.Parameters.AddWithValue("$Id", string.IsNullOrWhiteSpace(unit.Id) ? DBNull.Value : unit.Id.Trim());
+        command.Parameters.AddWithValue("$SinkCreatedOn", DbValue(unit.SinkCreatedOn));
+        command.Parameters.AddWithValue("$SinkModifiedOn", DbValue(unit.SinkModifiedOn));
+        command.Parameters.AddWithValue("$modifieddatetime", DbValue(unit.modifieddatetime));
+        command.Parameters.AddWithValue("$modifiedby", DbValue(unit.modifiedby));
+        command.Parameters.AddWithValue("$modifiedtransactionid", DbValue(unit.modifiedtransactionid));
+        command.Parameters.AddWithValue("$createddatetime", DbValue(unit.createddatetime));
+        command.Parameters.AddWithValue("$createdby", DbValue(unit.createdby));
+        command.Parameters.AddWithValue("$createdtransactionid", DbValue(unit.createdtransactionid));
+        command.Parameters.AddWithValue("$dataareaid", DbValue(unit.dataareaid));
+        command.Parameters.AddWithValue("$recversion", DbValue(unit.recversion));
+        command.Parameters.AddWithValue("$partition", DbValue(unit.partition));
+        command.Parameters.AddWithValue("$sysrowversion", DbValue(unit.sysrowversion));
+        command.Parameters.AddWithValue("$recid", DbValue(unit.recid));
+        command.Parameters.AddWithValue("$tableid", DbValue(unit.tableid));
+        command.Parameters.AddWithValue("$versionnumber", DbValue(unit.versionnumber));
+        command.Parameters.AddWithValue("$createdon", DbValue(unit.createdon));
+        command.Parameters.AddWithValue("$modifiedon", DbValue(unit.modifiedon));
+        command.Parameters.AddWithValue("$IsDelete", DbValue(unit.IsDelete));
+        command.Parameters.AddWithValue("$PartitionId", DbValue(unit.PartitionId));
+    }
+
+
+    private static void AddProductsUnitOfMeasureConversionParameters(SqliteCommand command, ProductsUnitOfMeasureConversion conversion)
+    {
+        command.Parameters.AddWithValue("$Id", string.IsNullOrWhiteSpace(conversion.Id) ? DBNull.Value : conversion.Id.Trim());
+        command.Parameters.AddWithValue("$SinkCreatedOn", DbValue(conversion.SinkCreatedOn));
+        command.Parameters.AddWithValue("$SinkModifiedOn", DbValue(conversion.SinkModifiedOn));
+        command.Parameters.AddWithValue("$mserp_rounding", DbValue(conversion.mserp_rounding));
+        command.Parameters.AddWithValue("$mserp_denominator", DbValue(conversion.mserp_denominator));
+        command.Parameters.AddWithValue("$mserp_factor", DbValue(conversion.mserp_factor));
+        command.Parameters.AddWithValue("$mserp_fromunitsymbol", DbValue(conversion.mserp_fromunitsymbol));
+        command.Parameters.AddWithValue("$mserp_inneroffset", DbValue(conversion.mserp_inneroffset));
+        command.Parameters.AddWithValue("$EntityId", string.IsNullOrWhiteSpace(conversion.mserp_mk_wb_ecoresproductspecificunitofmeasureconversionentityid) ? DBNull.Value : conversion.mserp_mk_wb_ecoresproductspecificunitofmeasureconversionentityid.Trim());
+        command.Parameters.AddWithValue("$mserp_numerator", DbValue(conversion.mserp_numerator));
+        command.Parameters.AddWithValue("$mserp_outeroffset", DbValue(conversion.mserp_outeroffset));
+        command.Parameters.AddWithValue("$mserp_primaryfield", DbValue(conversion.mserp_primaryfield));
+        command.Parameters.AddWithValue("$mserp_productnumber", DbValue(conversion.mserp_productnumber));
+        command.Parameters.AddWithValue("$mserp_tounitsymbol", DbValue(conversion.mserp_tounitsymbol));
+        command.Parameters.AddWithValue("$versionnumber", DbValue(conversion.versionnumber));
+        command.Parameters.AddWithValue("$IsDelete", DbValue(conversion.IsDelete));
+        command.Parameters.AddWithValue("$CreatedOn", DbValue(conversion.CreatedOn));
+        command.Parameters.AddWithValue("$PartitionId", DbValue(conversion.PartitionId));
     }
 
 
@@ -4211,6 +5055,63 @@ ON CONFLICT(OperatorId, DataAreaId) DO UPDATE SET IsDefault = excluded.IsDefault
     };
 
 
+    private static UnitOfMeasureMaster MapUnitOfMeasureMaster(SqliteDataReader reader) => new()
+    {
+        UnitOfMeasureMasterId = Convert.ToInt32(reader["UnitOfMeasureMasterId"]),
+        symbol = ReadText(reader, "symbol"),
+        isbaseunit = ReadBool(reader, "isbaseunit"),
+        issystemunit = ReadBool(reader, "issystemunit"),
+        systemofunits = ReadText(reader, "systemofunits"),
+        unitofmeasureclass = ReadText(reader, "unitofmeasureclass"),
+        sysdatastatecode = ReadText(reader, "sysdatastatecode"),
+        decimalprecision = ReadInt(reader, "decimalprecision"),
+        Id = ReadText(reader, "Id"),
+        SinkCreatedOn = ReadText(reader, "SinkCreatedOn"),
+        SinkModifiedOn = ReadText(reader, "SinkModifiedOn"),
+        modifieddatetime = ReadText(reader, "modifieddatetime"),
+        modifiedby = ReadText(reader, "modifiedby"),
+        modifiedtransactionid = ReadText(reader, "modifiedtransactionid"),
+        createddatetime = ReadText(reader, "createddatetime"),
+        createdby = ReadText(reader, "createdby"),
+        createdtransactionid = ReadText(reader, "createdtransactionid"),
+        dataareaid = ReadText(reader, "dataareaid"),
+        recversion = ReadText(reader, "recversion"),
+        partition = ReadText(reader, "partition"),
+        sysrowversion = ReadText(reader, "sysrowversion"),
+        recid = ReadText(reader, "recid"),
+        tableid = ReadText(reader, "tableid"),
+        versionnumber = ReadText(reader, "versionnumber"),
+        createdon = ReadText(reader, "createdon"),
+        modifiedon = ReadText(reader, "modifiedon"),
+        IsDelete = ReadText(reader, "IsDelete"),
+        PartitionId = ReadText(reader, "PartitionId")
+    };
+
+
+    private static ProductsUnitOfMeasureConversion MapProductsUnitOfMeasureConversion(SqliteDataReader reader) => new()
+    {
+        ProductsUnitOfMeasureConversionId = Convert.ToInt32(reader["ProductsUnitOfMeasureConversionId"]),
+        Id = ReadText(reader, "Id"),
+        SinkCreatedOn = ReadText(reader, "SinkCreatedOn"),
+        SinkModifiedOn = ReadText(reader, "SinkModifiedOn"),
+        mserp_rounding = ReadDecimal(reader, "mserp_rounding"),
+        mserp_denominator = ReadDecimal(reader, "mserp_denominator"),
+        mserp_factor = ReadDecimal(reader, "mserp_factor"),
+        mserp_fromunitsymbol = ReadText(reader, "mserp_fromunitsymbol"),
+        mserp_inneroffset = ReadDecimal(reader, "mserp_inneroffset"),
+        mserp_mk_wb_ecoresproductspecificunitofmeasureconversionentityid = ReadText(reader, "mserp_mk_wb_ecoresproductspecificunitofmeasureconversionentityid"),
+        mserp_numerator = ReadDecimal(reader, "mserp_numerator"),
+        mserp_outeroffset = ReadDecimal(reader, "mserp_outeroffset"),
+        mserp_primaryfield = ReadText(reader, "mserp_primaryfield"),
+        mserp_productnumber = ReadText(reader, "mserp_productnumber"),
+        mserp_tounitsymbol = ReadText(reader, "mserp_tounitsymbol"),
+        versionnumber = ReadText(reader, "versionnumber"),
+        IsDelete = ReadText(reader, "IsDelete"),
+        CreatedOn = ReadText(reader, "CreatedOn"),
+        PartitionId = ReadText(reader, "PartitionId")
+    };
+
+
     private static LegalEntityMaster MapLegalEntityMaster(SqliteDataReader reader) => new()
     {
         LegalEntityId = Convert.ToInt32(reader["LegalEntityId"]),
@@ -4300,6 +5201,104 @@ ON CONFLICT(OperatorId, DataAreaId) DO UPDATE SET IsDefault = excluded.IsDefault
         Warehouse = ReadText(reader, "Warehouse"),
         Site = ReadText(reader, "Site"),
         Status = ReadText(reader, "Status")
+    };
+
+    private static WeighmentContractCollectionDetails MapWeighmentContractCollectionDetails(SqliteDataReader reader) => new()
+    {
+        ContractCollectionDetailsId = ReadInt(reader, "ContractCollectionDetailsId") ?? 0,
+        WeighmentId = ReadInt(reader, "WeighmentId") ?? 0,
+        SlipNumber = ReadText(reader, "SlipNumber"),
+        DataAreaId = ReadText(reader, "DataAreaId"),
+        VendorAccount = ReadText(reader, "VendorAccount"),
+        VendorName = ReadText(reader, "VendorName"),
+        InvoiceAccount = ReadText(reader, "InvoiceAccount"),
+        InvoiceAccountName = ReadText(reader, "InvoiceAccountName"),
+        ContractNumber = ReadText(reader, "ContractNumber"),
+        CollectionLocation = ReadText(reader, "CollectionLocation"),
+        Destination = ReadText(reader, "Destination"),
+        BillingBasis = ReadText(reader, "BillingBasis")
+    };
+
+
+    private static WeighmentTransferDetails MapWeighmentTransferDetails(SqliteDataReader reader) => new()
+    {
+        TransferDetailsId = ReadInt(reader, "TransferDetailsId") ?? 0,
+        WeighmentId = ReadInt(reader, "WeighmentId") ?? 0,
+        SlipNumber = ReadText(reader, "SlipNumber"),
+        DataAreaId = ReadText(reader, "DataAreaId"),
+        TransferDirection = ReadText(reader, "TransferDirection"),
+        FromLegalEntity = ReadText(reader, "FromLegalEntity"),
+        ToLegalEntity = ReadText(reader, "ToLegalEntity"),
+        FromLocation = ReadText(reader, "FromLocation"),
+        ToLocation = ReadText(reader, "ToLocation"),
+        TransferReference = ReadText(reader, "TransferReference"),
+        SendingSlipReference = ReadText(reader, "SendingSlipReference")
+    };
+
+    private static WeighmentSalesDispatchDetails MapWeighmentSalesDispatchDetails(SqliteDataReader reader) => new()
+    {
+        SalesDispatchDetailsId = ReadInt(reader, "SalesDispatchDetailsId") ?? 0,
+        WeighmentId = ReadInt(reader, "WeighmentId") ?? 0,
+        SlipNumber = ReadText(reader, "SlipNumber"),
+        DataAreaId = ReadText(reader, "DataAreaId"),
+        SalesSubtype = ReadText(reader, "SalesSubtype"),
+        CustomerAccount = ReadText(reader, "CustomerAccount"),
+        CustomerName = ReadText(reader, "CustomerName"),
+        WalkInCustomer = ReadText(reader, "WalkInCustomer"),
+        SalesReference = ReadText(reader, "SalesReference"),
+        Source = ReadText(reader, "Source"),
+        Destination = ReadText(reader, "Destination"),
+        PaymentStatus = ReadText(reader, "PaymentStatus"),
+        ReceiptNumber = ReadText(reader, "ReceiptNumber")
+    };
+
+    private static WeighmentProductionDetails MapWeighmentProductionDetails(SqliteDataReader reader) => new()
+    {
+        ProductionDetailsId = ReadInt(reader, "ProductionDetailsId") ?? 0,
+        WeighmentId = ReadInt(reader, "WeighmentId") ?? 0,
+        SlipNumber = ReadText(reader, "SlipNumber"),
+        DataAreaId = ReadText(reader, "DataAreaId"),
+        ProductionMovement = ReadText(reader, "ProductionMovement"),
+        ProductionOrderReference = ReadText(reader, "ProductionOrderReference"),
+        ProductionLine = ReadText(reader, "ProductionLine"),
+        WarehouseLocation = ReadText(reader, "WarehouseLocation"),
+        BatchNumber = ReadText(reader, "BatchNumber"),
+        NumberOfRollsUnits = ReadInt(reader, "NumberOfRollsUnits") ?? 0,
+        GradeGsmWidth = ReadText(reader, "GradeGsmWidth")
+    };
+
+    private static WeighmentReturnDetails MapWeighmentReturnDetails(SqliteDataReader reader) => new()
+    {
+        ReturnDetailsId = ReadInt(reader, "ReturnDetailsId") ?? 0,
+        WeighmentId = ReadInt(reader, "WeighmentId") ?? 0,
+        SlipNumber = ReadText(reader, "SlipNumber"),
+        DataAreaId = ReadText(reader, "DataAreaId"),
+        ReturnType = ReadText(reader, "ReturnType"),
+        VendorAccount = ReadText(reader, "VendorAccount"),
+        VendorName = ReadText(reader, "VendorName"),
+        CustomerAccount = ReadText(reader, "CustomerAccount"),
+        CustomerName = ReadText(reader, "CustomerName"),
+        FromLegalEntity = ReadText(reader, "FromLegalEntity"),
+        ToLegalEntity = ReadText(reader, "ToLegalEntity"),
+        OriginalSlipNumber = ReadText(reader, "OriginalSlipNumber"),
+        ReturnReference = ReadText(reader, "ReturnReference"),
+        ReturnReason = ReadText(reader, "ReturnReason"),
+        Source = ReadText(reader, "Source"),
+        Destination = ReadText(reader, "Destination")
+    };
+
+    private static WeighmentDisposalDetails MapWeighmentDisposalDetails(SqliteDataReader reader) => new()
+    {
+        DisposalDetailsId = ReadInt(reader, "DisposalDetailsId") ?? 0,
+        WeighmentId = ReadInt(reader, "WeighmentId") ?? 0,
+        SlipNumber = ReadText(reader, "SlipNumber"),
+        DataAreaId = ReadText(reader, "DataAreaId"),
+        DisposalType = ReadText(reader, "DisposalType"),
+        Source = ReadText(reader, "Source"),
+        DisposalDestination = ReadText(reader, "DisposalDestination"),
+        Reason = ReadText(reader, "Reason"),
+        PermitManifestNumber = ReadText(reader, "PermitManifestNumber"),
+        AuthorizedBy = ReadText(reader, "AuthorizedBy")
     };
 
     private static WeighmentPurchaseDetails MapWeighmentPurchaseDetails(SqliteDataReader reader) => new()

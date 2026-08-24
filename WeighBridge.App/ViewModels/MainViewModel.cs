@@ -19,10 +19,12 @@ public class MainViewModel : BaseViewModel
     private int _vendorPageIndex;
     private int _itemMasterPageIndex;
     private int _warehousePageIndex;
+    private int _unitOfMeasurePageIndex;
     private bool _isLoadingCustomerPage;
     private bool _isLoadingVendorPage;
     private bool _isLoadingItemMasterPage;
     private bool _isLoadingWarehousePage;
+    private bool _isLoadingUnitOfMeasurePage;
 
     private DeviceSettings _settings = new();
     private decimal _liveWeight;
@@ -114,6 +116,10 @@ public class MainViewModel : BaseViewModel
     private string _warehouseNameFilter = string.Empty;
     private string _warehouseSiteFilter = string.Empty;
     private string _warehouseTypeFilter = string.Empty;
+    private string _unitOfMeasureSymbolFilter = string.Empty;
+    private string _unitOfMeasureSystemFilter = string.Empty;
+    private string _unitOfMeasureClassFilter = string.Empty;
+    private string _unitOfMeasureStateFilter = string.Empty;
     private string _vehicleIdFilter = string.Empty;
     private string _vehicleNoFilter = string.Empty;
     private string _vehicleEmirateFilter = string.Empty;
@@ -162,6 +168,12 @@ public class MainViewModel : BaseViewModel
     private LocationMaster? _selectedLocationMaster;
     private LocationMaster _locationMasterForm = new();
     private WeighmentPurchaseDetails _purchaseDetailsForm = new();
+    private WeighmentContractCollectionDetails _contractCollectionDetailsForm = new();
+    private WeighmentTransferDetails _transferDetailsForm = new();
+    private WeighmentSalesDispatchDetails _salesDispatchDetailsForm = new();
+    private WeighmentProductionDetails _productionDetailsForm = new();
+    private WeighmentReturnDetails _returnDetailsForm = new();
+    private WeighmentDisposalDetails _disposalDetailsForm = new();
     private GatePass? _selectedGatePass;
     private GatePass? _selectedWeighmentGatePass;
     private GatePass _gatePassForm = new();
@@ -175,6 +187,8 @@ public class MainViewModel : BaseViewModel
     private ItemMaster _itemMasterForm = new();
     private WarehouseMaster? _selectedWarehouseMaster;
     private WarehouseMaster _warehouseMasterForm = new();
+    private UnitOfMeasureMaster? _selectedUnitOfMeasureMaster;
+    private UnitOfMeasureMaster _unitOfMeasureMasterForm = new();
     private AppUser? _selectedUser;
     private int? _editingUserId;
     private string _userUsername = string.Empty;
@@ -224,6 +238,19 @@ public class MainViewModel : BaseViewModel
             "Collection Source",
             "Other"
         };
+        BillingBasisValues = new ObservableCollection<string>
+        {
+            "Net",
+            "Accepted Quantity",
+            "Trip",
+            "Fixed Fee"
+        };
+        TransferDirectionValues = new ObservableCollection<string> { "Transfer In", "Transfer Out", "Return" };
+        SalesSubtypeValues = new ObservableCollection<string> { "Credit", "Cash", "Dispatch-only" };
+        PaymentStatusValues = new ObservableCollection<string> { "Unpaid", "Paid", "Credit" };
+        ProductionMovementValues = new ObservableCollection<string> { "Receipt", "Issue", "Return", "Dispatch" };
+        ReturnTypeValues = new ObservableCollection<string> { "Purchase Return", "Sales Return", "Intercompany Return" };
+        DisposalTypeValues = new ObservableCollection<string> { "Landfill", "Rejected Material Disposal", "Internal Waste Movement" };
 
         ConnectCommand = new RelayCommand(ConnectAsync, () => !IsConnected);
         DisconnectCommand = new RelayCommand(DisconnectAsync, () => IsConnected);
@@ -265,6 +292,7 @@ public class MainViewModel : BaseViewModel
         ClearVendorFormCommand = new RelayCommand(ClearVendorForm);
         SaveItemMasterCommand = new RelayCommand(SaveItemMasterAsync);
         ClearItemMasterFormCommand = new RelayCommand(ClearItemMasterForm);
+        OpenItemUnitConversionsCommand = new RelayCommand(OpenItemUnitConversions, () => SelectedItemMaster != null && !string.IsNullOrWhiteSpace(SelectedItemMaster.ProductNumber));
         SaveWarehouseMasterCommand = new RelayCommand(SaveWarehouseMasterAsync);
         ClearWarehouseMasterFormCommand = new RelayCommand(ClearWarehouseMasterForm);
         CustomerPreviousPageCommand = new RelayCommand(async () => { if (_customerPageIndex > 0) _customerPageIndex--; await LoadCustomerPageAsync(); }, () => _customerPageIndex > 0 && !_isLoadingCustomerPage);
@@ -275,6 +303,8 @@ public class MainViewModel : BaseViewModel
         ItemMasterNextPageCommand = new RelayCommand(async () => { _itemMasterPageIndex++; await LoadItemMasterPageAsync(); }, () => !_isLoadingItemMasterPage);
         WarehousePreviousPageCommand = new RelayCommand(async () => { if (_warehousePageIndex > 0) _warehousePageIndex--; await LoadWarehousePageAsync(); }, () => _warehousePageIndex > 0 && !_isLoadingWarehousePage);
         WarehouseNextPageCommand = new RelayCommand(async () => { _warehousePageIndex++; await LoadWarehousePageAsync(); }, () => !_isLoadingWarehousePage);
+        UnitOfMeasurePreviousPageCommand = new RelayCommand(async () => { if (_unitOfMeasurePageIndex > 0) _unitOfMeasurePageIndex--; await LoadUnitOfMeasurePageAsync(); }, () => _unitOfMeasurePageIndex > 0 && !_isLoadingUnitOfMeasurePage);
+        UnitOfMeasureNextPageCommand = new RelayCommand(async () => { _unitOfMeasurePageIndex++; await LoadUnitOfMeasurePageAsync(); }, () => !_isLoadingUnitOfMeasurePage);
         SaveVehicleMasterCommand = new RelayCommand(SaveVehicleMasterAsync);
         ClearVehicleMasterFormCommand = new RelayCommand(ClearVehicleMasterForm);
         SaveDriverMasterCommand = new RelayCommand(SaveDriverMasterAsync);
@@ -308,6 +338,22 @@ public class MainViewModel : BaseViewModel
         OpenPurchaseVendorLookupCommand = new RelayCommand(OpenPurchaseVendorLookupAsync, () => IsPurchaseVendorSelectable);
         OpenPurchaseSourceLookupCommand = new RelayCommand(OpenPurchaseSourceLookupAsync, () => IsPurchaseDetailsEditable);
         OpenPurchaseDestinationLookupCommand = new RelayCommand(OpenPurchaseDestinationLookupAsync, () => IsPurchaseDetailsEditable);
+        OpenContractCollectionVendorLookupCommand = new RelayCommand(OpenContractCollectionVendorLookupAsync, () => IsContractCollectionDetailsEditable);
+        OpenContractCollectionInvoiceAccountLookupCommand = new RelayCommand(OpenContractCollectionInvoiceAccountLookupAsync, () => IsContractCollectionDetailsEditable);
+        OpenContractCollectionContractLookupCommand = new RelayCommand(OpenContractCollectionContractLookupAsync, () => IsContractCollectionDetailsEditable);
+        OpenContractCollectionLocationLookupCommand = new RelayCommand(OpenContractCollectionLocationLookupAsync, () => IsContractCollectionDetailsEditable);
+        OpenContractCollectionDestinationLookupCommand = new RelayCommand(OpenContractCollectionDestinationLookupAsync, () => IsContractCollectionDetailsEditable);
+        OpenTransferFromLocationLookupCommand = new RelayCommand(OpenTransferFromLocationLookupAsync, () => IsTransferDetailsEditable);
+        OpenTransferToLocationLookupCommand = new RelayCommand(OpenTransferToLocationLookupAsync, () => IsTransferDetailsEditable);
+        OpenSalesCustomerLookupCommand = new RelayCommand(OpenSalesCustomerLookupAsync, () => IsSalesDispatchDetailsEditable);
+        OpenSalesSourceLookupCommand = new RelayCommand(OpenSalesSourceLookupAsync, () => IsSalesDispatchDetailsEditable);
+        OpenProductionWarehouseLocationLookupCommand = new RelayCommand(OpenProductionWarehouseLocationLookupAsync, () => IsProductionDetailsEditable);
+        OpenReturnVendorLookupCommand = new RelayCommand(OpenReturnVendorLookupAsync, () => IsReturnDetailsEditable);
+        OpenReturnCustomerLookupCommand = new RelayCommand(OpenReturnCustomerLookupAsync, () => IsReturnDetailsEditable);
+        OpenReturnSourceLookupCommand = new RelayCommand(OpenReturnSourceLookupAsync, () => IsReturnDetailsEditable);
+        OpenReturnDestinationLookupCommand = new RelayCommand(OpenReturnDestinationLookupAsync, () => IsReturnDetailsEditable);
+        OpenDisposalSourceLookupCommand = new RelayCommand(OpenDisposalSourceLookupAsync, () => IsDisposalDetailsEditable);
+        OpenDisposalDestinationLookupCommand = new RelayCommand(OpenDisposalDestinationLookupAsync, () => IsDisposalDetailsEditable);
         SaveGatePassCommand = new RelayCommand(SaveGatePassAsync);
         ClearGatePassCommand = new RelayCommand(ClearGatePassForm);
         CloseGatePassCommand = new RelayCommand(CloseGatePassAsync);
@@ -319,6 +365,7 @@ public class MainViewModel : BaseViewModel
         OpenGatePassItemLookupCommand = new RelayCommand(OpenGatePassItemLookupAsync);
 
         PurchaseDetailsForm.PropertyChanged += PurchaseDetailsForm_PropertyChanged;
+        ContractCollectionDetailsForm.PropertyChanged += ContractCollectionDetailsForm_PropertyChanged;
     }
 
     public ObservableCollection<string> ConnectionTypes { get; }
@@ -336,10 +383,14 @@ public class MainViewModel : BaseViewModel
     public ObservableCollection<Vendor> Vendors { get; } = new();
     public ObservableCollection<ItemMaster> ItemMasters { get; } = new();
     public ObservableCollection<WarehouseMaster> WarehouseMasters { get; } = new();
+    public ObservableCollection<UnitOfMeasureMaster> UnitOfMeasureMasters { get; } = new();
+    // Complete UOM list used by Material Lines. This is separate from the paged UOM master grid.
+    public ObservableCollection<string> MaterialLineUomSymbols { get; } = new();
     public ObservableCollection<Customer> FilteredCustomers { get; } = new();
     public ObservableCollection<Vendor> FilteredVendors { get; } = new();
     public ObservableCollection<ItemMaster> FilteredItemMasters { get; } = new();
     public ObservableCollection<WarehouseMaster> FilteredWarehouseMasters { get; } = new();
+    public ObservableCollection<UnitOfMeasureMaster> FilteredUnitOfMeasureMasters { get; } = new();
     public ObservableCollection<Vehicle> FilteredVehicles { get; } = new();
     public ObservableCollection<Driver> FilteredDrivers { get; } = new();
     public ObservableCollection<WeighbridgeMaster> WeighbridgeMasters { get; } = new();
@@ -373,6 +424,13 @@ public class MainViewModel : BaseViewModel
     public ObservableCollection<string> GatePassStatuses { get; }
     public ObservableCollection<string> TransactionFormValues { get; }
     public ObservableCollection<string> LocationTypeValues { get; }
+    public ObservableCollection<string> BillingBasisValues { get; }
+    public ObservableCollection<string> TransferDirectionValues { get; }
+    public ObservableCollection<string> SalesSubtypeValues { get; }
+    public ObservableCollection<string> PaymentStatusValues { get; }
+    public ObservableCollection<string> ProductionMovementValues { get; }
+    public ObservableCollection<string> ReturnTypeValues { get; }
+    public ObservableCollection<string> DisposalTypeValues { get; }
 
     public RelayCommand ConnectCommand { get; }
     public RelayCommand DisconnectCommand { get; }
@@ -414,6 +472,7 @@ public class MainViewModel : BaseViewModel
     public RelayCommand ClearVendorFormCommand { get; }
     public RelayCommand SaveItemMasterCommand { get; }
     public RelayCommand ClearItemMasterFormCommand { get; }
+    public RelayCommand OpenItemUnitConversionsCommand { get; }
     public RelayCommand SaveWarehouseMasterCommand { get; }
     public RelayCommand ClearWarehouseMasterFormCommand { get; }
     public RelayCommand CustomerPreviousPageCommand { get; }
@@ -424,6 +483,8 @@ public class MainViewModel : BaseViewModel
     public RelayCommand ItemMasterNextPageCommand { get; }
     public RelayCommand WarehousePreviousPageCommand { get; }
     public RelayCommand WarehouseNextPageCommand { get; }
+    public RelayCommand UnitOfMeasurePreviousPageCommand { get; }
+    public RelayCommand UnitOfMeasureNextPageCommand { get; }
     public RelayCommand SaveVehicleMasterCommand { get; }
     public RelayCommand ClearVehicleMasterFormCommand { get; }
     public RelayCommand SaveDriverMasterCommand { get; }
@@ -457,6 +518,22 @@ public class MainViewModel : BaseViewModel
     public RelayCommand OpenPurchaseVendorLookupCommand { get; }
     public RelayCommand OpenPurchaseSourceLookupCommand { get; }
     public RelayCommand OpenPurchaseDestinationLookupCommand { get; }
+    public RelayCommand OpenContractCollectionVendorLookupCommand { get; }
+    public RelayCommand OpenContractCollectionInvoiceAccountLookupCommand { get; }
+    public RelayCommand OpenContractCollectionContractLookupCommand { get; }
+    public RelayCommand OpenContractCollectionLocationLookupCommand { get; }
+    public RelayCommand OpenContractCollectionDestinationLookupCommand { get; }
+    public RelayCommand OpenTransferFromLocationLookupCommand { get; }
+    public RelayCommand OpenTransferToLocationLookupCommand { get; }
+    public RelayCommand OpenSalesCustomerLookupCommand { get; }
+    public RelayCommand OpenSalesSourceLookupCommand { get; }
+    public RelayCommand OpenProductionWarehouseLocationLookupCommand { get; }
+    public RelayCommand OpenReturnVendorLookupCommand { get; }
+    public RelayCommand OpenReturnCustomerLookupCommand { get; }
+    public RelayCommand OpenReturnSourceLookupCommand { get; }
+    public RelayCommand OpenReturnDestinationLookupCommand { get; }
+    public RelayCommand OpenDisposalSourceLookupCommand { get; }
+    public RelayCommand OpenDisposalDestinationLookupCommand { get; }
     public RelayCommand SaveGatePassCommand { get; }
     public RelayCommand ClearGatePassCommand { get; }
     public RelayCommand CloseGatePassCommand { get; }
@@ -484,10 +561,23 @@ public class MainViewModel : BaseViewModel
                 OnPropertyChanged(nameof(TransactionTypeDisplay));
                 OnPropertyChanged(nameof(SelectedTransactionForm));
                 OnPropertyChanged(nameof(IsPurchaseReceiptCollectionForm));
+                OnPropertyChanged(nameof(IsContractCollectionForm));
+                OnPropertyChanged(nameof(IsTransferForm));
+                OnPropertyChanged(nameof(IsSalesDispatchForm));
+                OnPropertyChanged(nameof(IsProductionWeighingForm));
+                OnPropertyChanged(nameof(IsReturnForm));
+                OnPropertyChanged(nameof(IsDisposalWasteMovementForm));
                 OnPropertyChanged(nameof(IsPurchaseDetailsEditable));
                 OnPropertyChanged(nameof(IsPurchaseDetailsReadOnly));
                 OnPropertyChanged(nameof(IsPurchaseVendorSelectable));
                 OnPropertyChanged(nameof(IsPurchaseRateAmountEditable));
+                OnPropertyChanged(nameof(IsContractCollectionDetailsEditable));
+                OnPropertyChanged(nameof(IsContractCollectionDetailsReadOnly));
+                OnPropertyChanged(nameof(IsTransferDetailsEditable));
+                OnPropertyChanged(nameof(IsSalesDispatchDetailsEditable));
+                OnPropertyChanged(nameof(IsProductionDetailsEditable));
+                OnPropertyChanged(nameof(IsReturnDetailsEditable));
+                OnPropertyChanged(nameof(IsDisposalDetailsEditable));
                 System.Windows.Input.CommandManager.InvalidateRequerySuggested();
             }
         }
@@ -496,8 +586,21 @@ public class MainViewModel : BaseViewModel
     public string TransactionTypeDisplay => SelectedTransactionTypeMaster?.Type ?? string.Empty;
     public string SelectedTransactionForm => SelectedTransactionTypeMaster?.Form ?? string.Empty;
     public bool IsPurchaseReceiptCollectionForm => string.Equals(SelectedTransactionForm, "Purchase / Receipt / Collection", StringComparison.OrdinalIgnoreCase);
+    public bool IsContractCollectionForm => string.Equals(SelectedTransactionForm, "Contract Collection", StringComparison.OrdinalIgnoreCase);
+    public bool IsTransferForm => string.Equals(SelectedTransactionForm, "Transfer Form", StringComparison.OrdinalIgnoreCase);
+    public bool IsSalesDispatchForm => string.Equals(SelectedTransactionForm, "Sales / Dispatch", StringComparison.OrdinalIgnoreCase);
+    public bool IsProductionWeighingForm => string.Equals(SelectedTransactionForm, "Production Weighing", StringComparison.OrdinalIgnoreCase);
+    public bool IsReturnForm => string.Equals(SelectedTransactionForm, "Return", StringComparison.OrdinalIgnoreCase);
+    public bool IsDisposalWasteMovementForm => string.Equals(SelectedTransactionForm, "Disposal / Waste Movement", StringComparison.OrdinalIgnoreCase);
     public bool IsPurchaseDetailsEditable => IsHeaderAndLinesEditable && IsPurchaseReceiptCollectionForm;
     public bool IsPurchaseDetailsReadOnly => !IsPurchaseDetailsEditable;
+    public bool IsContractCollectionDetailsEditable => IsHeaderAndLinesEditable && IsContractCollectionForm;
+    public bool IsContractCollectionDetailsReadOnly => !IsContractCollectionDetailsEditable;
+    public bool IsTransferDetailsEditable => IsHeaderAndLinesEditable && IsTransferForm;
+    public bool IsSalesDispatchDetailsEditable => IsHeaderAndLinesEditable && IsSalesDispatchForm;
+    public bool IsProductionDetailsEditable => IsHeaderAndLinesEditable && IsProductionWeighingForm;
+    public bool IsReturnDetailsEditable => IsHeaderAndLinesEditable && IsReturnForm;
+    public bool IsDisposalDetailsEditable => IsHeaderAndLinesEditable && IsDisposalWasteMovementForm;
 
     public ScenarioMaster? SelectedScenarioMaster
     {
@@ -547,6 +650,12 @@ public class MainViewModel : BaseViewModel
     public LocationMaster? SelectedLocationMaster { get => _selectedLocationMaster; set { if (SetProperty(ref _selectedLocationMaster, value) && value != null) LocationMasterForm = new LocationMaster { LocationMasterId = value.LocationMasterId, DataAreaId = value.DataAreaId, LocationCode = value.LocationCode, LocationName = value.LocationName, LocationType = value.LocationType, Warehouse = value.Warehouse, Site = value.Site, Status = value.Status }; } }
     public LocationMaster LocationMasterForm { get => _locationMasterForm; set => SetProperty(ref _locationMasterForm, value); }
 
+    public WeighmentTransferDetails TransferDetailsForm { get => _transferDetailsForm; set => SetProperty(ref _transferDetailsForm, value); }
+    public WeighmentSalesDispatchDetails SalesDispatchDetailsForm { get => _salesDispatchDetailsForm; set => SetProperty(ref _salesDispatchDetailsForm, value); }
+    public WeighmentProductionDetails ProductionDetailsForm { get => _productionDetailsForm; set => SetProperty(ref _productionDetailsForm, value); }
+    public WeighmentReturnDetails ReturnDetailsForm { get => _returnDetailsForm; set => SetProperty(ref _returnDetailsForm, value); }
+    public WeighmentDisposalDetails DisposalDetailsForm { get => _disposalDetailsForm; set => SetProperty(ref _disposalDetailsForm, value); }
+
     public WeighmentPurchaseDetails PurchaseDetailsForm
     {
         get => _purchaseDetailsForm;
@@ -595,6 +704,60 @@ public class MainViewModel : BaseViewModel
         OnPropertyChanged(nameof(PurchaseDestinationDisplay));
         OnPropertyChanged(nameof(IsPurchaseVendorSelectable));
         OnPropertyChanged(nameof(IsPurchaseRateAmountEditable));
+        System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+    }
+
+    public WeighmentContractCollectionDetails ContractCollectionDetailsForm
+    {
+        get => _contractCollectionDetailsForm;
+        set
+        {
+            if (ReferenceEquals(_contractCollectionDetailsForm, value))
+                return;
+
+            if (_contractCollectionDetailsForm != null)
+                _contractCollectionDetailsForm.PropertyChanged -= ContractCollectionDetailsForm_PropertyChanged;
+
+            if (SetProperty(ref _contractCollectionDetailsForm, value))
+            {
+                if (_contractCollectionDetailsForm != null)
+                    _contractCollectionDetailsForm.PropertyChanged += ContractCollectionDetailsForm_PropertyChanged;
+
+                RaiseContractCollectionDetailsDependentProperties();
+            }
+        }
+    }
+
+    public string ContractCollectionVendorDisplay => BuildMergedDisplay(ContractCollectionDetailsForm.VendorAccount, ContractCollectionDetailsForm.VendorName);
+    public string ContractCollectionInvoiceAccountDisplay => BuildMergedDisplay(ContractCollectionDetailsForm.InvoiceAccount, ContractCollectionDetailsForm.InvoiceAccountName);
+    public string ContractCollectionContractDisplay => ContractCollectionDetailsForm.ContractNumber;
+    public string ContractCollectionLocationDisplay => ContractCollectionDetailsForm.CollectionLocation;
+    public string ContractCollectionDestinationDisplay => ContractCollectionDetailsForm.Destination;
+
+    private void ContractCollectionDetailsForm_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(WeighmentContractCollectionDetails.VendorAccount) ||
+            e.PropertyName == nameof(WeighmentContractCollectionDetails.VendorName) ||
+            e.PropertyName == nameof(WeighmentContractCollectionDetails.InvoiceAccount) ||
+            e.PropertyName == nameof(WeighmentContractCollectionDetails.InvoiceAccountName) ||
+            e.PropertyName == nameof(WeighmentContractCollectionDetails.ContractNumber) ||
+            e.PropertyName == nameof(WeighmentContractCollectionDetails.CollectionLocation) ||
+            e.PropertyName == nameof(WeighmentContractCollectionDetails.Destination) ||
+            e.PropertyName == nameof(WeighmentContractCollectionDetails.BillingBasis))
+        {
+            RaiseContractCollectionDetailsDependentProperties();
+        }
+    }
+
+    private void RaiseContractCollectionDetailsDependentProperties()
+    {
+        OnPropertyChanged(nameof(ContractCollectionVendorDisplay));
+        OnPropertyChanged(nameof(ContractCollectionInvoiceAccountDisplay));
+        OnPropertyChanged(nameof(ContractCollectionContractDisplay));
+        OnPropertyChanged(nameof(ContractCollectionLocationDisplay));
+        OnPropertyChanged(nameof(ContractCollectionDestinationDisplay));
+        OnPropertyChanged(nameof(IsContractCollectionDetailsEditable));
+        OnPropertyChanged(nameof(IsContractCollectionDetailsReadOnly));
         System.Windows.Input.CommandManager.InvalidateRequerySuggested();
     }
 
@@ -682,6 +845,7 @@ public class MainViewModel : BaseViewModel
     public string VendorPageText => $"Page {_vendorPageIndex + 1} | Loaded {FilteredVendors.Count:N0} rows | Page size {MasterPageSize:N0}";
     public string ItemMasterPageText => $"Page {_itemMasterPageIndex + 1} | Loaded {FilteredItemMasters.Count:N0} rows | Page size {MasterPageSize:N0}";
     public string WarehousePageText => $"Page {_warehousePageIndex + 1} | Loaded {FilteredWarehouseMasters.Count:N0} rows | Page size {MasterPageSize:N0}";
+    public string UnitOfMeasurePageText => $"Page {_unitOfMeasurePageIndex + 1} | Loaded {FilteredUnitOfMeasureMasters.Count:N0} rows | Page size {MasterPageSize:N0}";
 
     public string SelectedLegalEntityDataAreaId
     {
@@ -1434,6 +1598,46 @@ public class MainViewModel : BaseViewModel
         }
     }
 
+    public string UnitOfMeasureSymbolFilter
+    {
+        get => _unitOfMeasureSymbolFilter;
+        set
+        {
+            if (SetProperty(ref _unitOfMeasureSymbolFilter, value))
+                _ = LoadUnitOfMeasurePageAsync(resetPage: true);
+        }
+    }
+
+    public string UnitOfMeasureSystemFilter
+    {
+        get => _unitOfMeasureSystemFilter;
+        set
+        {
+            if (SetProperty(ref _unitOfMeasureSystemFilter, value))
+                _ = LoadUnitOfMeasurePageAsync(resetPage: true);
+        }
+    }
+
+    public string UnitOfMeasureClassFilter
+    {
+        get => _unitOfMeasureClassFilter;
+        set
+        {
+            if (SetProperty(ref _unitOfMeasureClassFilter, value))
+                _ = LoadUnitOfMeasurePageAsync(resetPage: true);
+        }
+    }
+
+    public string UnitOfMeasureStateFilter
+    {
+        get => _unitOfMeasureStateFilter;
+        set
+        {
+            if (SetProperty(ref _unitOfMeasureStateFilter, value))
+                _ = LoadUnitOfMeasurePageAsync(resetPage: true);
+        }
+    }
+
     public string VehicleIdFilter
     {
         get => _vehicleIdFilter;
@@ -1786,6 +1990,23 @@ public class MainViewModel : BaseViewModel
         {
             if (SetProperty(ref _selectedWarehouseMaster, value))
                 LoadSelectedWarehouseMasterToForm();
+        }
+    }
+
+
+    public UnitOfMeasureMaster UnitOfMeasureMasterForm
+    {
+        get => _unitOfMeasureMasterForm;
+        set => SetProperty(ref _unitOfMeasureMasterForm, value);
+    }
+
+    public UnitOfMeasureMaster? SelectedUnitOfMeasureMaster
+    {
+        get => _selectedUnitOfMeasureMaster;
+        set
+        {
+            if (SetProperty(ref _selectedUnitOfMeasureMaster, value))
+                LoadSelectedUnitOfMeasureMasterToForm();
         }
     }
 
@@ -2150,6 +2371,110 @@ public class MainViewModel : BaseViewModel
                 };
                 await _databaseService.SaveWeighmentPurchaseDetailsAsync(purchaseDetailsSnapshot);
             }
+            if (IsContractCollectionForm)
+            {
+                var contractCollectionDetailsSnapshot = new WeighmentContractCollectionDetails
+                {
+                    WeighmentId = savedWeighmentId,
+                    SlipNumber = savedSlipNumber,
+                    DataAreaId = CurrentUserCompany,
+                    VendorAccount = ContractCollectionDetailsForm.VendorAccount?.Trim() ?? string.Empty,
+                    VendorName = ContractCollectionDetailsForm.VendorName?.Trim() ?? string.Empty,
+                    InvoiceAccount = ContractCollectionDetailsForm.InvoiceAccount?.Trim() ?? string.Empty,
+                    InvoiceAccountName = ContractCollectionDetailsForm.InvoiceAccountName?.Trim() ?? string.Empty,
+                    ContractNumber = ContractCollectionDetailsForm.ContractNumber?.Trim() ?? string.Empty,
+                    CollectionLocation = ContractCollectionDetailsForm.CollectionLocation?.Trim() ?? string.Empty,
+                    Destination = ContractCollectionDetailsForm.Destination?.Trim() ?? string.Empty,
+                    BillingBasis = ContractCollectionDetailsForm.BillingBasis?.Trim() ?? string.Empty
+                };
+                await _databaseService.SaveWeighmentContractCollectionDetailsAsync(contractCollectionDetailsSnapshot);
+            }
+            if (IsTransferForm)
+            {
+                await _databaseService.SaveWeighmentTransferDetailsAsync(new WeighmentTransferDetails
+                {
+                    WeighmentId = savedWeighmentId,
+                    SlipNumber = savedSlipNumber,
+                    DataAreaId = CurrentUserCompany,
+                    TransferDirection = TransferDetailsForm.TransferDirection?.Trim() ?? string.Empty,
+                    FromLegalEntity = TransferDetailsForm.FromLegalEntity?.Trim() ?? string.Empty,
+                    ToLegalEntity = TransferDetailsForm.ToLegalEntity?.Trim() ?? string.Empty,
+                    FromLocation = TransferDetailsForm.FromLocation?.Trim() ?? string.Empty,
+                    ToLocation = TransferDetailsForm.ToLocation?.Trim() ?? string.Empty,
+                    TransferReference = TransferDetailsForm.TransferReference?.Trim() ?? string.Empty,
+                    SendingSlipReference = TransferDetailsForm.SendingSlipReference?.Trim() ?? string.Empty
+                });
+            }
+            if (IsSalesDispatchForm)
+            {
+                await _databaseService.SaveWeighmentSalesDispatchDetailsAsync(new WeighmentSalesDispatchDetails
+                {
+                    WeighmentId = savedWeighmentId,
+                    SlipNumber = savedSlipNumber,
+                    DataAreaId = CurrentUserCompany,
+                    SalesSubtype = SalesDispatchDetailsForm.SalesSubtype?.Trim() ?? string.Empty,
+                    CustomerAccount = SalesDispatchDetailsForm.CustomerAccount?.Trim() ?? string.Empty,
+                    CustomerName = SalesDispatchDetailsForm.CustomerName?.Trim() ?? string.Empty,
+                    WalkInCustomer = SalesDispatchDetailsForm.WalkInCustomer?.Trim() ?? string.Empty,
+                    SalesReference = SalesDispatchDetailsForm.SalesReference?.Trim() ?? string.Empty,
+                    Source = SalesDispatchDetailsForm.Source?.Trim() ?? string.Empty,
+                    Destination = SalesDispatchDetailsForm.Destination?.Trim() ?? string.Empty,
+                    PaymentStatus = SalesDispatchDetailsForm.PaymentStatus?.Trim() ?? string.Empty,
+                    ReceiptNumber = SalesDispatchDetailsForm.ReceiptNumber?.Trim() ?? string.Empty
+                });
+            }
+            if (IsProductionWeighingForm)
+            {
+                await _databaseService.SaveWeighmentProductionDetailsAsync(new WeighmentProductionDetails
+                {
+                    WeighmentId = savedWeighmentId,
+                    SlipNumber = savedSlipNumber,
+                    DataAreaId = CurrentUserCompany,
+                    ProductionMovement = ProductionDetailsForm.ProductionMovement?.Trim() ?? string.Empty,
+                    ProductionOrderReference = ProductionDetailsForm.ProductionOrderReference?.Trim() ?? string.Empty,
+                    ProductionLine = ProductionDetailsForm.ProductionLine?.Trim() ?? string.Empty,
+                    WarehouseLocation = ProductionDetailsForm.WarehouseLocation?.Trim() ?? string.Empty,
+                    BatchNumber = ProductionDetailsForm.BatchNumber?.Trim() ?? string.Empty,
+                    NumberOfRollsUnits = Math.Max(0, ProductionDetailsForm.NumberOfRollsUnits),
+                    GradeGsmWidth = ProductionDetailsForm.GradeGsmWidth?.Trim() ?? string.Empty
+                });
+            }
+            if (IsReturnForm)
+            {
+                await _databaseService.SaveWeighmentReturnDetailsAsync(new WeighmentReturnDetails
+                {
+                    WeighmentId = savedWeighmentId,
+                    SlipNumber = savedSlipNumber,
+                    DataAreaId = CurrentUserCompany,
+                    ReturnType = ReturnDetailsForm.ReturnType?.Trim() ?? string.Empty,
+                    VendorAccount = ReturnDetailsForm.VendorAccount?.Trim() ?? string.Empty,
+                    VendorName = ReturnDetailsForm.VendorName?.Trim() ?? string.Empty,
+                    CustomerAccount = ReturnDetailsForm.CustomerAccount?.Trim() ?? string.Empty,
+                    CustomerName = ReturnDetailsForm.CustomerName?.Trim() ?? string.Empty,
+                    FromLegalEntity = ReturnDetailsForm.FromLegalEntity?.Trim() ?? string.Empty,
+                    ToLegalEntity = ReturnDetailsForm.ToLegalEntity?.Trim() ?? string.Empty,
+                    OriginalSlipNumber = ReturnDetailsForm.OriginalSlipNumber?.Trim() ?? string.Empty,
+                    ReturnReference = ReturnDetailsForm.ReturnReference?.Trim() ?? string.Empty,
+                    ReturnReason = ReturnDetailsForm.ReturnReason?.Trim() ?? string.Empty,
+                    Source = ReturnDetailsForm.Source?.Trim() ?? string.Empty,
+                    Destination = ReturnDetailsForm.Destination?.Trim() ?? string.Empty
+                });
+            }
+            if (IsDisposalWasteMovementForm)
+            {
+                await _databaseService.SaveWeighmentDisposalDetailsAsync(new WeighmentDisposalDetails
+                {
+                    WeighmentId = savedWeighmentId,
+                    SlipNumber = savedSlipNumber,
+                    DataAreaId = CurrentUserCompany,
+                    DisposalType = DisposalDetailsForm.DisposalType?.Trim() ?? string.Empty,
+                    Source = DisposalDetailsForm.Source?.Trim() ?? string.Empty,
+                    DisposalDestination = DisposalDetailsForm.DisposalDestination?.Trim() ?? string.Empty,
+                    Reason = DisposalDetailsForm.Reason?.Trim() ?? string.Empty,
+                    PermitManifestNumber = DisposalDetailsForm.PermitManifestNumber?.Trim() ?? string.Empty,
+                    AuthorizedBy = DisposalDetailsForm.AuthorizedBy?.Trim() ?? string.Empty
+                });
+            }
             if (!string.IsNullOrWhiteSpace(weighment.GatePassNumber))
                 await _databaseService.LinkGatePassAsync(weighment.GatePassNumber, savedSlipNumber);
             await _databaseService.AddVehicleAsync(weighment.VehicleNo);
@@ -2271,6 +2596,18 @@ public class MainViewModel : BaseViewModel
 
         var savedPurchaseDetails = _databaseService.GetWeighmentPurchaseDetailsAsync(SelectedOpenWeighment.WeighmentId).GetAwaiter().GetResult();
         PurchaseDetailsForm = savedPurchaseDetails ?? new WeighmentPurchaseDetails { WeighmentId = SelectedOpenWeighment.WeighmentId, SlipNumber = SlipNumber, DataAreaId = CurrentUserCompany };
+        var savedContractCollectionDetails = _databaseService.GetWeighmentContractCollectionDetailsAsync(SelectedOpenWeighment.WeighmentId).GetAwaiter().GetResult();
+        ContractCollectionDetailsForm = savedContractCollectionDetails ?? new WeighmentContractCollectionDetails { WeighmentId = SelectedOpenWeighment.WeighmentId, SlipNumber = SlipNumber, DataAreaId = CurrentUserCompany };
+        var savedTransferDetails = _databaseService.GetWeighmentTransferDetailsAsync(SelectedOpenWeighment.WeighmentId).GetAwaiter().GetResult();
+        TransferDetailsForm = savedTransferDetails ?? new WeighmentTransferDetails { WeighmentId = SelectedOpenWeighment.WeighmentId, SlipNumber = SlipNumber, DataAreaId = CurrentUserCompany };
+        var savedSalesDispatchDetails = _databaseService.GetWeighmentSalesDispatchDetailsAsync(SelectedOpenWeighment.WeighmentId).GetAwaiter().GetResult();
+        SalesDispatchDetailsForm = savedSalesDispatchDetails ?? new WeighmentSalesDispatchDetails { WeighmentId = SelectedOpenWeighment.WeighmentId, SlipNumber = SlipNumber, DataAreaId = CurrentUserCompany };
+        var savedProductionDetails = _databaseService.GetWeighmentProductionDetailsAsync(SelectedOpenWeighment.WeighmentId).GetAwaiter().GetResult();
+        ProductionDetailsForm = savedProductionDetails ?? new WeighmentProductionDetails { WeighmentId = SelectedOpenWeighment.WeighmentId, SlipNumber = SlipNumber, DataAreaId = CurrentUserCompany };
+        var savedReturnDetails = _databaseService.GetWeighmentReturnDetailsAsync(SelectedOpenWeighment.WeighmentId).GetAwaiter().GetResult();
+        ReturnDetailsForm = savedReturnDetails ?? new WeighmentReturnDetails { WeighmentId = SelectedOpenWeighment.WeighmentId, SlipNumber = SlipNumber, DataAreaId = CurrentUserCompany };
+        var savedDisposalDetails = _databaseService.GetWeighmentDisposalDetailsAsync(SelectedOpenWeighment.WeighmentId).GetAwaiter().GetResult();
+        DisposalDetailsForm = savedDisposalDetails ?? new WeighmentDisposalDetails { WeighmentId = SelectedOpenWeighment.WeighmentId, SlipNumber = SlipNumber, DataAreaId = CurrentUserCompany };
 
         OnPropertyChanged(nameof(IsHeaderAndLinesEditable));
         OnPropertyChanged(nameof(IsHeaderAndLinesLocked));
@@ -2278,6 +2615,13 @@ public class MainViewModel : BaseViewModel
         OnPropertyChanged(nameof(IsPurchaseDetailsReadOnly));
         OnPropertyChanged(nameof(IsPurchaseVendorSelectable));
         OnPropertyChanged(nameof(IsPurchaseRateAmountEditable));
+        OnPropertyChanged(nameof(IsContractCollectionDetailsEditable));
+        OnPropertyChanged(nameof(IsContractCollectionDetailsReadOnly));
+        OnPropertyChanged(nameof(IsTransferDetailsEditable));
+        OnPropertyChanged(nameof(IsSalesDispatchDetailsEditable));
+        OnPropertyChanged(nameof(IsProductionDetailsEditable));
+        OnPropertyChanged(nameof(IsReturnDetailsEditable));
+        OnPropertyChanged(nameof(IsDisposalDetailsEditable));
         System.Windows.Input.CommandManager.InvalidateRequerySuggested();
         StatusMessage = $"Open slip loaded: {SlipNumber}";
     }
@@ -2430,6 +2774,8 @@ public class MainViewModel : BaseViewModel
         var serviceChargeMasters = await _databaseService.GetServiceChargeMastersAsync(currentDataAreaId);
         var transactionTypeMasters = await _databaseService.GetTransactionTypeMastersAsync();
         var locationMasters = await _databaseService.GetLocationMastersAsync(currentDataAreaId);
+        // Load the complete global UOM master for the Material Lines drop-down.
+        var materialLineUoms = await _databaseService.GetUnitOfMeasureMastersAsync();
         var gatePasses = CanAccessGatePass ? await _databaseService.GetGatePassesAsync(currentDataAreaId) : new List<GatePass>();
 
         ReplaceCollection(LegalEntities, legalEntities);
@@ -2442,6 +2788,13 @@ public class MainViewModel : BaseViewModel
         ReplaceCollection(ServiceChargeMasters, serviceChargeMasters);
         ReplaceCollection(TransactionTypeMasters, transactionTypeMasters);
         ReplaceCollection(LocationMasters, locationMasters);
+        ReplaceCollection(MaterialLineUomSymbols, materialLineUoms
+            .Where(x => !string.IsNullOrWhiteSpace(x.symbol)
+                && !string.Equals(x.IsDelete?.Trim(), "1", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(x.IsDelete?.Trim(), "true", StringComparison.OrdinalIgnoreCase))
+            .Select(x => x.symbol.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase));
         ReplaceCollection(GatePasses, gatePasses);
         ReplaceCollection(OpenGatePasses, gatePasses.Where(x => string.Equals(x.Status, "Open", StringComparison.OrdinalIgnoreCase)));
 
@@ -2479,6 +2832,7 @@ public class MainViewModel : BaseViewModel
         _vendorPageIndex = 0;
         _itemMasterPageIndex = 0;
         _warehousePageIndex = 0;
+        _unitOfMeasurePageIndex = 0;
     }
 
     private async Task LoadLargeMasterPagesAsync(bool resetPages)
@@ -2487,6 +2841,7 @@ public class MainViewModel : BaseViewModel
         await LoadVendorPageAsync(resetPages);
         await LoadItemMasterPageAsync(resetPages);
         await LoadWarehousePageAsync(resetPages);
+        await LoadUnitOfMeasurePageAsync(resetPages);
     }
 
     private async Task LoadCustomerPageAsync(bool resetPage = false)
@@ -2577,6 +2932,30 @@ public class MainViewModel : BaseViewModel
         finally
         {
             _isLoadingWarehousePage = false;
+            System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+        }
+    }
+
+    private async Task LoadUnitOfMeasurePageAsync(bool resetPage = false)
+    {
+        if (_isLoadingUnitOfMeasurePage)
+            return;
+
+        try
+        {
+            _isLoadingUnitOfMeasurePage = true;
+            if (resetPage)
+                _unitOfMeasurePageIndex = 0;
+
+            // Unit of Measure is a global synchronized master; do not filter it by the selected legal entity.
+            var rows = await _databaseService.GetUnitOfMeasureMastersPageAsync(UnitOfMeasureSymbolFilter, UnitOfMeasureSystemFilter, UnitOfMeasureClassFilter, UnitOfMeasureStateFilter, MasterPageSize, _unitOfMeasurePageIndex * MasterPageSize);
+            ReplaceCollection(UnitOfMeasureMasters, rows);
+            ReplaceCollection(FilteredUnitOfMeasureMasters, rows);
+            OnPropertyChanged(nameof(UnitOfMeasurePageText));
+        }
+        finally
+        {
+            _isLoadingUnitOfMeasurePage = false;
             System.Windows.Input.CommandManager.InvalidateRequerySuggested();
         }
     }
@@ -3143,6 +3522,31 @@ public class MainViewModel : BaseViewModel
         StatusMessage = $"Vendor opened: {VendorForm.VendorAccount}";
     }
 
+    private void OpenItemUnitConversions()
+    {
+        if (SelectedItemMaster == null)
+        {
+            StatusMessage = "Select an item first.";
+            return;
+        }
+
+        var productNumber = SelectedItemMaster.ProductNumber?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(productNumber))
+        {
+            StatusMessage = "The selected item does not have a Product Number, so unit conversions cannot be linked.";
+            return;
+        }
+
+        var window = new WeightBridgeApp.ProductUnitOfMeasureConversionWindow(
+            _databaseService,
+            SelectedItemMaster.ItemNumber,
+            productNumber)
+        {
+            Owner = Application.Current?.MainWindow
+        };
+        window.ShowDialog();
+    }
+
     private async Task SaveItemMasterAsync()
     {
         try
@@ -3280,6 +3684,45 @@ public class MainViewModel : BaseViewModel
             Purpose = SelectedWarehouseMaster.Purpose
         };
         StatusMessage = $"Warehouse opened: {WarehouseMasterForm.Warehouse}";
+    }
+
+    private void LoadSelectedUnitOfMeasureMasterToForm()
+    {
+        if (SelectedUnitOfMeasureMaster == null)
+            return;
+
+        UnitOfMeasureMasterForm = new UnitOfMeasureMaster
+        {
+            UnitOfMeasureMasterId = SelectedUnitOfMeasureMaster.UnitOfMeasureMasterId,
+            symbol = SelectedUnitOfMeasureMaster.symbol,
+            isbaseunit = SelectedUnitOfMeasureMaster.isbaseunit,
+            issystemunit = SelectedUnitOfMeasureMaster.issystemunit,
+            systemofunits = SelectedUnitOfMeasureMaster.systemofunits,
+            unitofmeasureclass = SelectedUnitOfMeasureMaster.unitofmeasureclass,
+            sysdatastatecode = SelectedUnitOfMeasureMaster.sysdatastatecode,
+            decimalprecision = SelectedUnitOfMeasureMaster.decimalprecision,
+            Id = SelectedUnitOfMeasureMaster.Id,
+            SinkCreatedOn = SelectedUnitOfMeasureMaster.SinkCreatedOn,
+            SinkModifiedOn = SelectedUnitOfMeasureMaster.SinkModifiedOn,
+            modifieddatetime = SelectedUnitOfMeasureMaster.modifieddatetime,
+            modifiedby = SelectedUnitOfMeasureMaster.modifiedby,
+            modifiedtransactionid = SelectedUnitOfMeasureMaster.modifiedtransactionid,
+            createddatetime = SelectedUnitOfMeasureMaster.createddatetime,
+            createdby = SelectedUnitOfMeasureMaster.createdby,
+            createdtransactionid = SelectedUnitOfMeasureMaster.createdtransactionid,
+            dataareaid = SelectedUnitOfMeasureMaster.dataareaid,
+            recversion = SelectedUnitOfMeasureMaster.recversion,
+            partition = SelectedUnitOfMeasureMaster.partition,
+            sysrowversion = SelectedUnitOfMeasureMaster.sysrowversion,
+            recid = SelectedUnitOfMeasureMaster.recid,
+            tableid = SelectedUnitOfMeasureMaster.tableid,
+            versionnumber = SelectedUnitOfMeasureMaster.versionnumber,
+            createdon = SelectedUnitOfMeasureMaster.createdon,
+            modifiedon = SelectedUnitOfMeasureMaster.modifiedon,
+            IsDelete = SelectedUnitOfMeasureMaster.IsDelete,
+            PartitionId = SelectedUnitOfMeasureMaster.PartitionId
+        };
+        StatusMessage = $"Unit of Measure opened: {UnitOfMeasureMasterForm.symbol}";
     }
 
     private async Task LoadUsersAsync()
@@ -3460,6 +3903,12 @@ public class MainViewModel : BaseViewModel
         SelectedTransactionTypeMaster = null;
         SelectedScenarioMaster = null;
         PurchaseDetailsForm = new WeighmentPurchaseDetails { DataAreaId = CurrentUserCompany };
+        ContractCollectionDetailsForm = new WeighmentContractCollectionDetails { DataAreaId = CurrentUserCompany };
+        TransferDetailsForm = new WeighmentTransferDetails { DataAreaId = CurrentUserCompany, FromLegalEntity = CurrentUserCompany };
+        SalesDispatchDetailsForm = new WeighmentSalesDispatchDetails { DataAreaId = CurrentUserCompany };
+        ProductionDetailsForm = new WeighmentProductionDetails { DataAreaId = CurrentUserCompany };
+        ReturnDetailsForm = new WeighmentReturnDetails { DataAreaId = CurrentUserCompany, FromLegalEntity = CurrentUserCompany };
+        DisposalDetailsForm = new WeighmentDisposalDetails { DataAreaId = CurrentUserCompany };
         GatePassNumber = string.Empty;
         SelectedWeighmentGatePass = null;
         ExternalReference = string.Empty;
@@ -3485,6 +3934,13 @@ public class MainViewModel : BaseViewModel
         OnPropertyChanged(nameof(IsPurchaseDetailsReadOnly));
         OnPropertyChanged(nameof(IsPurchaseVendorSelectable));
         OnPropertyChanged(nameof(IsPurchaseRateAmountEditable));
+        OnPropertyChanged(nameof(IsContractCollectionDetailsEditable));
+        OnPropertyChanged(nameof(IsContractCollectionDetailsReadOnly));
+        OnPropertyChanged(nameof(IsTransferDetailsEditable));
+        OnPropertyChanged(nameof(IsSalesDispatchDetailsEditable));
+        OnPropertyChanged(nameof(IsProductionDetailsEditable));
+        OnPropertyChanged(nameof(IsReturnDetailsEditable));
+        OnPropertyChanged(nameof(IsDisposalDetailsEditable));
         System.Windows.Input.CommandManager.InvalidateRequerySuggested();
     }
 
@@ -3541,6 +3997,93 @@ public class MainViewModel : BaseViewModel
 
             if (PurchaseDetailsForm.WalkInVendor && string.IsNullOrWhiteSpace(PurchaseDetailsForm.SupplierDriverName))
                 missingFields.Add("Supplier / Driver Name");
+        }
+
+        if (IsContractCollectionForm)
+        {
+            if (string.IsNullOrWhiteSpace(ContractCollectionDetailsForm.VendorAccount))
+                missingFields.Add("Contract Collection Vendor Account");
+
+            if (string.IsNullOrWhiteSpace(ContractCollectionDetailsForm.ContractNumber))
+                missingFields.Add("Contract Number");
+
+            if (string.IsNullOrWhiteSpace(ContractCollectionDetailsForm.CollectionLocation))
+                missingFields.Add("Collection Location");
+
+            if (string.IsNullOrWhiteSpace(ContractCollectionDetailsForm.Destination))
+                missingFields.Add("Destination");
+
+            if (string.IsNullOrWhiteSpace(ContractCollectionDetailsForm.BillingBasis))
+                missingFields.Add("Billing Basis");
+        }
+
+        if (IsTransferForm)
+        {
+            if (string.IsNullOrWhiteSpace(TransferDetailsForm.TransferDirection)) missingFields.Add("Transfer Direction");
+            if (string.IsNullOrWhiteSpace(TransferDetailsForm.FromLegalEntity)) missingFields.Add("From Legal Entity");
+            if (string.IsNullOrWhiteSpace(TransferDetailsForm.ToLegalEntity)) missingFields.Add("To Legal Entity");
+            if (string.IsNullOrWhiteSpace(TransferDetailsForm.FromLocation)) missingFields.Add("From Location");
+            if (string.IsNullOrWhiteSpace(TransferDetailsForm.ToLocation)) missingFields.Add("To Location");
+            if (!string.IsNullOrWhiteSpace(TransferDetailsForm.FromLegalEntity) &&
+                string.Equals(TransferDetailsForm.FromLegalEntity, TransferDetailsForm.ToLegalEntity, StringComparison.OrdinalIgnoreCase))
+                missingFields.Add("Different From/To Legal Entity");
+        }
+
+        if (IsSalesDispatchForm)
+        {
+            if (string.IsNullOrWhiteSpace(SalesDispatchDetailsForm.SalesSubtype)) missingFields.Add("Sales Subtype");
+            if (string.IsNullOrWhiteSpace(SalesDispatchDetailsForm.Source)) missingFields.Add("Sales Source");
+
+            var isCashSale = string.Equals(SalesDispatchDetailsForm.SalesSubtype, "Cash", StringComparison.OrdinalIgnoreCase);
+            if (isCashSale)
+            {
+                if (string.IsNullOrWhiteSpace(SalesDispatchDetailsForm.CustomerAccount) && string.IsNullOrWhiteSpace(SalesDispatchDetailsForm.WalkInCustomer))
+                    missingFields.Add("Customer / Walk-in Customer");
+                if (string.IsNullOrWhiteSpace(SalesDispatchDetailsForm.PaymentStatus))
+                    missingFields.Add("Payment Status");
+                if (string.Equals(SalesDispatchDetailsForm.PaymentStatus, "Paid", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(SalesDispatchDetailsForm.ReceiptNumber))
+                    missingFields.Add("Receipt Number");
+            }
+            else if (string.IsNullOrWhiteSpace(SalesDispatchDetailsForm.CustomerAccount))
+            {
+                missingFields.Add("Customer");
+            }
+        }
+
+        if (IsProductionWeighingForm)
+        {
+            if (string.IsNullOrWhiteSpace(ProductionDetailsForm.ProductionMovement)) missingFields.Add("Production Movement");
+            if (string.IsNullOrWhiteSpace(ProductionDetailsForm.ProductionOrderReference)) missingFields.Add("Production Order Reference");
+            if (string.IsNullOrWhiteSpace(ProductionDetailsForm.WarehouseLocation)) missingFields.Add("Warehouse / Location");
+            if (ProductionDetailsForm.NumberOfRollsUnits < 0) missingFields.Add("Number of Rolls / Units must be >= 0");
+        }
+
+        if (IsReturnForm)
+        {
+            if (string.IsNullOrWhiteSpace(ReturnDetailsForm.ReturnType)) missingFields.Add("Return Type");
+            if (string.IsNullOrWhiteSpace(ReturnDetailsForm.ReturnReason)) missingFields.Add("Return Reason");
+            if (string.IsNullOrWhiteSpace(ReturnDetailsForm.Source)) missingFields.Add("Return Source");
+
+            if (string.Equals(ReturnDetailsForm.ReturnType, "Purchase Return", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(ReturnDetailsForm.VendorAccount))
+                missingFields.Add("Vendor");
+            if (string.Equals(ReturnDetailsForm.ReturnType, "Sales Return", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(ReturnDetailsForm.CustomerAccount))
+                missingFields.Add("Customer");
+            if (string.Equals(ReturnDetailsForm.ReturnType, "Intercompany Return", StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.IsNullOrWhiteSpace(ReturnDetailsForm.FromLegalEntity)) missingFields.Add("From Legal Entity");
+                if (string.IsNullOrWhiteSpace(ReturnDetailsForm.ToLegalEntity)) missingFields.Add("To Legal Entity");
+                if (!string.IsNullOrWhiteSpace(ReturnDetailsForm.FromLegalEntity) && string.Equals(ReturnDetailsForm.FromLegalEntity, ReturnDetailsForm.ToLegalEntity, StringComparison.OrdinalIgnoreCase))
+                    missingFields.Add("Different From/To Legal Entity");
+                if (string.IsNullOrWhiteSpace(ReturnDetailsForm.Destination)) missingFields.Add("Return Destination");
+            }
+        }
+
+        if (IsDisposalWasteMovementForm)
+        {
+            if (string.IsNullOrWhiteSpace(DisposalDetailsForm.DisposalType)) missingFields.Add("Disposal Type");
+            if (string.IsNullOrWhiteSpace(DisposalDetailsForm.Source)) missingFields.Add("Disposal Source");
+            if (string.IsNullOrWhiteSpace(DisposalDetailsForm.DisposalDestination)) missingFields.Add("Disposal Destination");
+            if (string.IsNullOrWhiteSpace(DisposalDetailsForm.Reason)) missingFields.Add("Disposal Reason");
         }
 
         if (missingFields.Count > 0)
@@ -4648,6 +5191,201 @@ public class MainViewModel : BaseViewModel
     }
 
 
+    private Task OpenContractCollectionVendorLookupAsync()
+    {
+        if (!IsContractCollectionDetailsEditable)
+            return Task.CompletedTask;
+
+        var lookupWindow = new WeightBridgeApp.PartyLookupWindow(_databaseService, CurrentUserCompany, "Vendor")
+        {
+            Owner = System.Windows.Application.Current.MainWindow
+        };
+
+        if (lookupWindow.ShowDialog() == true && lookupWindow.SelectedParty != null)
+        {
+            ContractCollectionDetailsForm.VendorAccount = lookupWindow.SelectedParty.PartyAccount;
+            ContractCollectionDetailsForm.VendorName = lookupWindow.SelectedParty.PartyName;
+            OnPropertyChanged(nameof(ContractCollectionDetailsForm));
+            RaiseContractCollectionDetailsDependentProperties();
+            StatusMessage = $"Selected contract vendor: {ContractCollectionVendorDisplay}";
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task OpenContractCollectionInvoiceAccountLookupAsync()
+    {
+        if (!IsContractCollectionDetailsEditable)
+            return Task.CompletedTask;
+
+        var lookupWindow = new WeightBridgeApp.PartyLookupWindow(_databaseService, CurrentUserCompany, "Customer")
+        {
+            Owner = System.Windows.Application.Current.MainWindow
+        };
+
+        if (lookupWindow.ShowDialog() == true && lookupWindow.SelectedParty != null)
+        {
+            ContractCollectionDetailsForm.InvoiceAccount = lookupWindow.SelectedParty.PartyAccount;
+            ContractCollectionDetailsForm.InvoiceAccountName = lookupWindow.SelectedParty.PartyName;
+            OnPropertyChanged(nameof(ContractCollectionDetailsForm));
+            RaiseContractCollectionDetailsDependentProperties();
+            StatusMessage = $"Selected invoice account: {ContractCollectionInvoiceAccountDisplay}";
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task OpenContractCollectionContractLookupAsync()
+    {
+        if (!IsContractCollectionDetailsEditable)
+            return Task.CompletedTask;
+
+        var lookupWindow = new WeightBridgeApp.ContractLookupWindow(_databaseService)
+        {
+            Owner = System.Windows.Application.Current.MainWindow
+        };
+
+        if (lookupWindow.ShowDialog() == true && lookupWindow.SelectedContract != null)
+        {
+            ContractCollectionDetailsForm.ContractNumber = lookupWindow.SelectedContract.ContractNumber;
+            ContractCollectionDetailsForm.BillingBasis = lookupWindow.SelectedContract.BillingBasis;
+            OnPropertyChanged(nameof(ContractCollectionDetailsForm));
+            RaiseContractCollectionDetailsDependentProperties();
+            StatusMessage = $"Selected contract: {ContractCollectionDetailsForm.ContractNumber}";
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task OpenContractCollectionLocationLookupAsync()
+    {
+        if (!IsContractCollectionDetailsEditable)
+            return Task.CompletedTask;
+
+        var lookupWindow = new WeightBridgeApp.LocationLookupWindow(_databaseService, CurrentUserCompany)
+        {
+            Owner = System.Windows.Application.Current.MainWindow
+        };
+
+        if (lookupWindow.ShowDialog() == true && lookupWindow.SelectedLocation != null)
+        {
+            ContractCollectionDetailsForm.CollectionLocation = BuildMergedDisplay(lookupWindow.SelectedLocation.LocationCode, lookupWindow.SelectedLocation.LocationName);
+            OnPropertyChanged(nameof(ContractCollectionDetailsForm));
+            RaiseContractCollectionDetailsDependentProperties();
+            StatusMessage = $"Selected collection location: {ContractCollectionDetailsForm.CollectionLocation}";
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task OpenContractCollectionDestinationLookupAsync()
+    {
+        if (!IsContractCollectionDetailsEditable)
+            return Task.CompletedTask;
+
+        var lookupWindow = new WeightBridgeApp.LocationLookupWindow(_databaseService, CurrentUserCompany)
+        {
+            Owner = System.Windows.Application.Current.MainWindow
+        };
+
+        if (lookupWindow.ShowDialog() == true && lookupWindow.SelectedLocation != null)
+        {
+            ContractCollectionDetailsForm.Destination = BuildMergedDisplay(lookupWindow.SelectedLocation.LocationCode, lookupWindow.SelectedLocation.LocationName);
+            OnPropertyChanged(nameof(ContractCollectionDetailsForm));
+            RaiseContractCollectionDetailsDependentProperties();
+            StatusMessage = $"Selected contract destination: {ContractCollectionDetailsForm.Destination}";
+        }
+
+        return Task.CompletedTask;
+    }
+
+
+    private Task OpenDetailLocationLookupAsync(string? dataAreaId, Action<string> applySelection, string label)
+    {
+        var effectiveDataAreaId = string.IsNullOrWhiteSpace(dataAreaId) ? CurrentUserCompany : dataAreaId.Trim();
+        var lookupWindow = new WeightBridgeApp.LocationLookupWindow(_databaseService, effectiveDataAreaId)
+        {
+            Owner = System.Windows.Application.Current.MainWindow
+        };
+
+        if (lookupWindow.ShowDialog() == true && lookupWindow.SelectedLocation != null)
+        {
+            applySelection(BuildMergedDisplay(lookupWindow.SelectedLocation.LocationCode, lookupWindow.SelectedLocation.LocationName));
+            StatusMessage = $"Selected {label}: {lookupWindow.SelectedLocation.LocationCode} - {lookupWindow.SelectedLocation.LocationName}";
+        }
+        return Task.CompletedTask;
+    }
+
+    private Task OpenTransferFromLocationLookupAsync() =>
+        OpenDetailLocationLookupAsync(TransferDetailsForm.FromLegalEntity, x => TransferDetailsForm.FromLocation = x, "from location");
+
+    private Task OpenTransferToLocationLookupAsync() =>
+        OpenDetailLocationLookupAsync(TransferDetailsForm.ToLegalEntity, x => TransferDetailsForm.ToLocation = x, "to location");
+
+    private Task OpenSalesCustomerLookupAsync()
+    {
+        var lookupWindow = new WeightBridgeApp.PartyLookupWindow(_databaseService, CurrentUserCompany, "Customer")
+        {
+            Owner = System.Windows.Application.Current.MainWindow
+        };
+        if (lookupWindow.ShowDialog() == true && lookupWindow.SelectedParty != null)
+        {
+            SalesDispatchDetailsForm.CustomerAccount = lookupWindow.SelectedParty.PartyAccount;
+            SalesDispatchDetailsForm.CustomerName = lookupWindow.SelectedParty.PartyName;
+            StatusMessage = $"Selected sales customer: {SalesDispatchDetailsForm.CustomerAccount} - {SalesDispatchDetailsForm.CustomerName}";
+        }
+        return Task.CompletedTask;
+    }
+
+    private Task OpenSalesSourceLookupAsync() =>
+        OpenDetailLocationLookupAsync(CurrentUserCompany, x => SalesDispatchDetailsForm.Source = x, "sales source");
+
+    private Task OpenProductionWarehouseLocationLookupAsync() =>
+        OpenDetailLocationLookupAsync(CurrentUserCompany, x => ProductionDetailsForm.WarehouseLocation = x, "warehouse / location");
+
+    private Task OpenReturnVendorLookupAsync()
+    {
+        var lookupWindow = new WeightBridgeApp.PartyLookupWindow(_databaseService, CurrentUserCompany, "Vendor")
+        {
+            Owner = System.Windows.Application.Current.MainWindow
+        };
+        if (lookupWindow.ShowDialog() == true && lookupWindow.SelectedParty != null)
+        {
+            ReturnDetailsForm.VendorAccount = lookupWindow.SelectedParty.PartyAccount;
+            ReturnDetailsForm.VendorName = lookupWindow.SelectedParty.PartyName;
+            StatusMessage = $"Selected return vendor: {ReturnDetailsForm.VendorAccount} - {ReturnDetailsForm.VendorName}";
+        }
+        return Task.CompletedTask;
+    }
+
+    private Task OpenReturnCustomerLookupAsync()
+    {
+        var lookupWindow = new WeightBridgeApp.PartyLookupWindow(_databaseService, CurrentUserCompany, "Customer")
+        {
+            Owner = System.Windows.Application.Current.MainWindow
+        };
+        if (lookupWindow.ShowDialog() == true && lookupWindow.SelectedParty != null)
+        {
+            ReturnDetailsForm.CustomerAccount = lookupWindow.SelectedParty.PartyAccount;
+            ReturnDetailsForm.CustomerName = lookupWindow.SelectedParty.PartyName;
+            StatusMessage = $"Selected return customer: {ReturnDetailsForm.CustomerAccount} - {ReturnDetailsForm.CustomerName}";
+        }
+        return Task.CompletedTask;
+    }
+
+    private Task OpenReturnSourceLookupAsync() =>
+        OpenDetailLocationLookupAsync(ReturnDetailsForm.FromLegalEntity, x => ReturnDetailsForm.Source = x, "return source");
+
+    private Task OpenReturnDestinationLookupAsync() =>
+        OpenDetailLocationLookupAsync(ReturnDetailsForm.ToLegalEntity, x => ReturnDetailsForm.Destination = x, "return destination");
+
+    private Task OpenDisposalSourceLookupAsync() =>
+        OpenDetailLocationLookupAsync(CurrentUserCompany, x => DisposalDetailsForm.Source = x, "disposal source");
+
+    private Task OpenDisposalDestinationLookupAsync() =>
+        OpenDetailLocationLookupAsync(CurrentUserCompany, x => DisposalDetailsForm.DisposalDestination = x, "disposal destination");
+
+
     private async Task SaveGatePassAsync()
     {
         try
@@ -4965,6 +5703,8 @@ public class MainViewModel : BaseViewModel
         OnPropertyChanged(nameof(IsPurchaseDetailsReadOnly));
         OnPropertyChanged(nameof(IsPurchaseVendorSelectable));
         OnPropertyChanged(nameof(IsPurchaseRateAmountEditable));
+        OnPropertyChanged(nameof(IsContractCollectionDetailsEditable));
+        OnPropertyChanged(nameof(IsContractCollectionDetailsReadOnly));
         System.Windows.Input.CommandManager.InvalidateRequerySuggested();
     }
 
@@ -4978,6 +5718,8 @@ public class MainViewModel : BaseViewModel
         OnPropertyChanged(nameof(IsPurchaseDetailsReadOnly));
         OnPropertyChanged(nameof(IsPurchaseVendorSelectable));
         OnPropertyChanged(nameof(IsPurchaseRateAmountEditable));
+        OnPropertyChanged(nameof(IsContractCollectionDetailsEditable));
+        OnPropertyChanged(nameof(IsContractCollectionDetailsReadOnly));
     }
 
     private static void ReplaceCollection<T>(ObservableCollection<T> target, IEnumerable<T> source)
