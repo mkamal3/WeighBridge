@@ -70,6 +70,11 @@ public static class SlipService
         sb.AppendLine("           BRIDGEONE SLIP             ");
         sb.AppendLine("========================================");
         sb.AppendLine($"Slip Number   : {w.SlipNumber}");
+        if (w.IsCorrected)
+        {
+            sb.AppendLine($"Correction    : {w.LastCorrectionNumber}");
+            sb.AppendLine($"Version       : {w.CorrectionVersion}");
+        }
         sb.AppendLine($"Company       : {w.CompanyName}");
         sb.AppendLine($"Vehicle No    : {w.VehicleNo}");
         sb.AppendLine($"Driver Name   : {w.DriverName}");
@@ -215,9 +220,20 @@ public static class SlipService
         page.Children.Add(line);
     }
 
-    private static List<(string Label, string Value)> GetSlipRows(Weighment w) => new()
+    private static List<(string Label, string Value)> GetSlipRows(Weighment w)
     {
-        ("Slip Number", w.SlipNumber),
+        var rows = new List<(string Label, string Value)>
+        {
+            ("Slip Number", w.SlipNumber)
+        };
+        if (w.IsCorrected)
+        {
+            rows.Add(("Correction Status", $"CORRECTED - Version {w.CorrectionVersion}"));
+            rows.Add(("Last Correction", w.LastCorrectionNumber));
+            rows.Add(("Last Corrected By", w.LastCorrectedBy));
+        }
+        rows.AddRange(new[]
+        {
         ("Company", w.CompanyName),
         ("Vehicle No", w.VehicleNo),
         ("Driver Name", w.DriverName),
@@ -232,7 +248,9 @@ public static class SlipService
         ("Status", w.Status),
         ("Remarks", w.Remarks),
         ("Printed At", FormatDate(DateTime.Now))
-    };
+        });
+        return rows;
+    }
 
     private static byte[] BuildSlipPdf(Weighment w)
     {

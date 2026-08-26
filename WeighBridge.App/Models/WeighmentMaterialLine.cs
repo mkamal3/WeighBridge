@@ -14,5 +14,8 @@ public class WeighmentMaterialLine
     public string Uom { get; set; } = string.Empty;
     public string Remarks { get; set; } = string.Empty;
     public string CreatedBy { get; set; } = string.Empty;
+    public bool IsActive { get; set; } = true;
+    public bool IsCorrected { get; set; }
+    public string LastCorrectionNumber { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 }

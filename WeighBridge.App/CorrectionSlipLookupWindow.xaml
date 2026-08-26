@@ -1,0 +1,69 @@
+<Window x:Class="WeightBridgeApp.CorrectionSlipLookupWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Completed Slip Lookup - Correction" Height="470" Width="920"
+        WindowStartupLocation="CenterOwner" Loaded="Window_Loaded">
+    <Window.Resources>
+        <Style TargetType="{x:Type DataGrid}">
+            <Setter Property="AutoGenerateColumns" Value="False" />
+            <Setter Property="IsReadOnly" Value="True" />
+            <Setter Property="CanUserAddRows" Value="False" />
+            <Setter Property="CanUserDeleteRows" Value="False" />
+            <Setter Property="EnableRowVirtualization" Value="True" />
+            <Setter Property="EnableColumnVirtualization" Value="True" />
+            <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
+            <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
+        </Style>
+    </Window.Resources>
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,10">
+            <TextBlock Text="Completed Slip Lookup" FontSize="18" FontWeight="SemiBold" Foreground="#202A44" />
+            <TextBlock Text="Select a completed transaction. Transactions with an active Draft/Submitted correction are excluded." Foreground="#667085" Margin="0,3,0,0" />
+        </StackPanel>
+
+        <Grid Grid.Row="1" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="Slip Number" FontWeight="SemiBold" />
+                <TextBox x:Name="SlipFilterTextBox" TextChanged="FilterTextBox_TextChanged" Height="30" />
+            </StackPanel>
+            <StackPanel Grid.Column="2">
+                <TextBlock Text="Vehicle" FontWeight="SemiBold" />
+                <TextBox x:Name="VehicleFilterTextBox" TextChanged="FilterTextBox_TextChanged" Height="30" />
+            </StackPanel>
+        </Grid>
+
+        <DataGrid x:Name="LookupDataGrid" Grid.Row="2" ItemsSource="{Binding LookupRows}" SelectedItem="{Binding SelectedWeighment, Mode=TwoWay}" MouseDoubleClick="LookupDataGrid_MouseDoubleClick">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Slip Number" Binding="{Binding SlipNumber}" Width="150" />
+                <DataGridTextColumn Header="Type" Binding="{Binding TransactionType}" Width="125" />
+                <DataGridTextColumn Header="Gate Pass" Binding="{Binding GatePassNumber}" Width="120" />
+                <DataGridTextColumn Header="Vehicle" Binding="{Binding VehicleNo}" Width="110" />
+                <DataGridTextColumn Header="Driver" Binding="{Binding DriverName}" Width="125" />
+                <DataGridTextColumn Header="Item" Binding="{Binding ItemNumber}" Width="115" />
+                <DataGridTextColumn Header="Correction Version" Binding="{Binding CorrectionVersion}" Width="120" />
+                <DataGridTextColumn Header="Last Correction" Binding="{Binding LastCorrectionNumber}" Width="155" />
+                <DataGridTextColumn Header="Date/Time" Binding="{Binding TransactionDateTime}" Width="145" />
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <DockPanel Grid.Row="3" Margin="0,10,0,0" LastChildFill="False">
+            <TextBlock x:Name="StatusTextBlock" DockPanel.Dock="Left" VerticalAlignment="Center" Foreground="#202A44" />
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <Button Content="Select" Width="90" Margin="0,0,8,0" Click="SelectButton_Click" />
+                <Button Content="Cancel" Width="90" Click="CancelButton_Click" />
+            </StackPanel>
+        </DockPanel>
+    </Grid>
+</Window>
