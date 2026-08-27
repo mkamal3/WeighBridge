@@ -32,6 +32,13 @@ public class Weighment
     public string SecondWeightByDisplay { get; set; } = string.Empty;
     public decimal? NetWeight { get; set; }
     public string Status { get; set; } = "Open";
+    public string CancellationVoidNumber { get; set; } = string.Empty;
+    public string CancellationVoidStatus { get; set; } = string.Empty;
+    public bool IsCorrected { get; set; }
+    public int CorrectionVersion { get; set; }
+    public string LastCorrectionNumber { get; set; } = string.Empty;
+    public DateTime? LastCorrectedDateTime { get; set; }
+    public string LastCorrectedBy { get; set; } = string.Empty;
     public string Remarks { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 }

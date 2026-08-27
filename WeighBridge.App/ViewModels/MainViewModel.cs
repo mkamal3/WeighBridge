@@ -75,7 +75,9 @@ public class MainViewModel : BaseViewModel
     private string _transactionPartyTypeFilter = string.Empty;
     private string _transactionItemFilter = string.Empty;
     private string _transactionStatusFilter = string.Empty;
+    private int _selectedMainTabIndex;
     private Weighment? _selectedTransactionWeighment;
+    private string _selectedTransactionReviewForm = string.Empty;
     private string _newPartyName = string.Empty;
     private string _newPartyType = "Customer";
     private string _newMaterialName = string.Empty;
@@ -177,6 +179,11 @@ public class MainViewModel : BaseViewModel
     private GatePass? _selectedGatePass;
     private GatePass? _selectedWeighmentGatePass;
     private GatePass _gatePassForm = new();
+    private CancellationVoidRequest? _selectedCancellationVoidRequest;
+    private CancellationVoidRequest _cancellationVoidForm = new();
+    private WeighmentCorrection? _selectedCorrectionRequest;
+    private string _selectedCancellationVoidType = "Cancel";
+    private string _selectedCancellationReason = string.Empty;
     private LegalEntityMaster? _selectedOperatorLegalEntityToAdd;
     private OperatorLegalEntityAssignment? _selectedOperatorLegalEntityAssignment;
     private Customer? _selectedCustomer;
@@ -208,6 +215,16 @@ public class MainViewModel : BaseViewModel
     {
         _databaseService = databaseService;
         _currentUser = currentUser;
+        CorrectionWorkspace = new CorrectionWorkspaceViewModel(
+            _databaseService,
+            _currentUser,
+            () => CurrentUserCompany,
+            async () =>
+            {
+                await RefreshWeighmentsAsync();
+                if (CanAccessTransactions) await LoadTransactionsAsync();
+                if (CanAccessReports) await LoadReportAsync();
+            });
 
         ConnectionTypes = new ObservableCollection<string> { "Mock", "TCP/IP", "Serial", "USB", "OPC", "API" };
         ParityOptions = new ObservableCollection<string> { "None", "Odd", "Even", "Mark", "Space" };
@@ -251,6 +268,7 @@ public class MainViewModel : BaseViewModel
         ProductionMovementValues = new ObservableCollection<string> { "Receipt", "Issue", "Return", "Dispatch" };
         ReturnTypeValues = new ObservableCollection<string> { "Purchase Return", "Sales Return", "Intercompany Return" };
         DisposalTypeValues = new ObservableCollection<string> { "Landfill", "Rejected Material Disposal", "Internal Waste Movement" };
+        CancellationVoidTypes = new ObservableCollection<string> { "Cancel", "Void", "Reverse" };
 
         ConnectCommand = new RelayCommand(ConnectAsync, () => !IsConnected);
         DisconnectCommand = new RelayCommand(DisconnectAsync, () => IsConnected);
@@ -284,6 +302,9 @@ public class MainViewModel : BaseViewModel
         ClearTransactionFiltersCommand = new RelayCommand(ClearTransactionFilters);
         CorrectTransactionCommand = new RelayCommand(CorrectTransactionAsync);
         CancelTransactionCommand = new RelayCommand(CancelTransactionAsync);
+        StartCancellationFromTransactionCommand = new RelayCommand(StartCancellationFromSelectedTransactionAsync, () => CanInitiateCancellationFromTransaction);
+        NewCorrectionCommand = new RelayCommand(NewCorrectionAsync);
+        OpenSelectedCorrectionCommand = new RelayCommand(OpenSelectedCorrectionAsync, () => CanOpenSelectedCorrection);
         SaveUserCommand = new RelayCommand(SaveUserAsync);
         ClearUserFormCommand = new RelayCommand(ClearUserForm);
         SaveCustomerCommand = new RelayCommand(SaveCustomerAsync);
@@ -363,6 +384,11 @@ public class MainViewModel : BaseViewModel
         OpenGatePassDriverLookupCommand = new RelayCommand(OpenGatePassDriverLookupAsync);
         OpenGatePassPartyLookupCommand = new RelayCommand(OpenGatePassPartyLookupAsync);
         OpenGatePassItemLookupCommand = new RelayCommand(OpenGatePassItemLookupAsync);
+        OpenCancellationSlipLookupCommand = new RelayCommand(OpenCancellationSlipLookupAsync, () => IsCancellationVoidFormEditable);
+        SubmitCancellationVoidCommand = new RelayCommand(SubmitCancellationVoidAsync, () => CanSubmitCancellationVoid);
+        ApproveCancellationVoidCommand = new RelayCommand(ApproveCancellationVoidAsync, () => CanApproveCancellationVoid);
+        RejectCancellationVoidCommand = new RelayCommand(RejectCancellationVoidAsync, () => CanRejectCancellationVoid);
+        NewCancellationVoidCommand = new RelayCommand(NewCancellationVoidAsync, () => CanCreateCancellationVoidRequest);
 
         PurchaseDetailsForm.PropertyChanged += PurchaseDetailsForm_PropertyChanged;
         ContractCollectionDetailsForm.PropertyChanged += ContractCollectionDetailsForm_PropertyChanged;
@@ -409,6 +435,9 @@ public class MainViewModel : BaseViewModel
     public ObservableCollection<Weighment> FilteredReportRows { get; } = new();
     public ObservableCollection<Weighment> TransactionRows { get; } = new();
     public ObservableCollection<Weighment> FilteredTransactionRows { get; } = new();
+    public ObservableCollection<TransactionReviewField> TransactionReviewCommonFields { get; } = new();
+    public ObservableCollection<TransactionReviewField> TransactionReviewDynamicFields { get; } = new();
+    public ObservableCollection<WeighmentMaterialLine> TransactionReviewMaterialLines { get; } = new();
     public ObservableCollection<AppUser> Users { get; } = new();
     public ObservableCollection<ShiftMaster> ShiftMasters { get; } = new();
     public ObservableCollection<ScenarioMaster> ScenarioMasters { get; } = new();
@@ -420,6 +449,11 @@ public class MainViewModel : BaseViewModel
     public ObservableCollection<LocationMaster> LocationMasters { get; } = new();
     public ObservableCollection<GatePass> GatePasses { get; } = new();
     public ObservableCollection<GatePass> OpenGatePasses { get; } = new();
+    public ObservableCollection<CancellationVoidRequest> CancellationVoidRequests { get; } = new();
+    public ObservableCollection<WeighmentCorrection> CorrectionRequests { get; } = new();
+    public CorrectionWorkspaceViewModel CorrectionWorkspace { get; }
+    public ObservableCollection<string> CancellationVoidTypes { get; }
+    public ObservableCollection<string> CancellationReasons { get; } = new();
     public ObservableCollection<string> GatePassTypes { get; }
     public ObservableCollection<string> GatePassStatuses { get; }
     public ObservableCollection<string> TransactionFormValues { get; }
@@ -463,7 +497,10 @@ public class MainViewModel : BaseViewModel
     public RelayCommand LoadTransactionsCommand { get; }
     public RelayCommand ClearTransactionFiltersCommand { get; }
     public RelayCommand CorrectTransactionCommand { get; }
-    public RelayCommand CancelTransactionCommand { get; }
+    public RelayCommand CancelTransactionCommand { get; } // legacy; direct cancellation is no longer exposed
+    public RelayCommand StartCancellationFromTransactionCommand { get; }
+    public RelayCommand NewCorrectionCommand { get; }
+    public RelayCommand OpenSelectedCorrectionCommand { get; }
     public RelayCommand SaveUserCommand { get; }
     public RelayCommand ClearUserFormCommand { get; }
     public RelayCommand SaveCustomerCommand { get; }
@@ -543,6 +580,11 @@ public class MainViewModel : BaseViewModel
     public RelayCommand OpenGatePassDriverLookupCommand { get; }
     public RelayCommand OpenGatePassPartyLookupCommand { get; }
     public RelayCommand OpenGatePassItemLookupCommand { get; }
+    public RelayCommand OpenCancellationSlipLookupCommand { get; }
+    public RelayCommand SubmitCancellationVoidCommand { get; }
+    public RelayCommand ApproveCancellationVoidCommand { get; }
+    public RelayCommand RejectCancellationVoidCommand { get; }
+    public RelayCommand NewCancellationVoidCommand { get; }
 
 
     public string SlipNumber
@@ -636,7 +678,7 @@ public class MainViewModel : BaseViewModel
     public ShiftMaster ShiftMasterForm { get => _shiftMasterForm; set => SetProperty(ref _shiftMasterForm, value); }
     public ScenarioMaster? SelectedScenarioConfig { get => _selectedScenarioConfig; set { if (SetProperty(ref _selectedScenarioConfig, value) && value != null) ScenarioMasterForm = new ScenarioMaster { ScenarioMasterId = value.ScenarioMasterId, Form = value.Form, DataAreaId = value.DataAreaId, Movement = value.Movement, Formula = value.Formula, PartyRule = value.PartyRule, QC = value.QC, MultiItem = value.MultiItem, Print = value.Print }; } }
     public ScenarioMaster ScenarioMasterForm { get => _scenarioMasterForm; set => SetProperty(ref _scenarioMasterForm, value); }
-    public ReasonMaster? SelectedReasonMaster { get => _selectedReasonMaster; set { if (SetProperty(ref _selectedReasonMaster, value) && value != null) ReasonMasterForm = new ReasonMaster { ReasonMasterId = value.ReasonMasterId, QcRejection = value.QcRejection, Return = value.Return, Disposal = value.Disposal, Correction = value.Correction, Void = value.Void, Conversion = value.Conversion }; } }
+    public ReasonMaster? SelectedReasonMaster { get => _selectedReasonMaster; set { if (SetProperty(ref _selectedReasonMaster, value) && value != null) ReasonMasterForm = new ReasonMaster { ReasonMasterId = value.ReasonMasterId, Code = value.Code, Description = value.Description }; } }
     public ReasonMaster ReasonMasterForm { get => _reasonMasterForm; set => SetProperty(ref _reasonMasterForm, value); }
     public ContractMaster? SelectedContractMaster { get => _selectedContractMaster; set { if (SetProperty(ref _selectedContractMaster, value) && value != null) ContractMasterForm = new ContractMaster { ContractMasterId = value.ContractMasterId, ContractNumber = value.ContractNumber, Parties = value.Parties, Locations = value.Locations, BillingBasis = value.BillingBasis, Validity = value.Validity }; } }
     public ContractMaster ContractMasterForm { get => _contractMasterForm; set => SetProperty(ref _contractMasterForm, value); }
@@ -847,6 +889,12 @@ public class MainViewModel : BaseViewModel
     public string WarehousePageText => $"Page {_warehousePageIndex + 1} | Loaded {FilteredWarehouseMasters.Count:N0} rows | Page size {MasterPageSize:N0}";
     public string UnitOfMeasurePageText => $"Page {_unitOfMeasurePageIndex + 1} | Loaded {FilteredUnitOfMeasureMasters.Count:N0} rows | Page size {MasterPageSize:N0}";
 
+    public int SelectedMainTabIndex
+    {
+        get => _selectedMainTabIndex;
+        set => SetProperty(ref _selectedMainTabIndex, value);
+    }
+
     public string SelectedLegalEntityDataAreaId
     {
         get => _selectedLegalEntityDataAreaId;
@@ -866,14 +914,36 @@ public class MainViewModel : BaseViewModel
     public bool CanAccessReports => _currentUser.CanAccessReports;
     public bool CanAccessTransactions => _currentUser.CanAccessTransactions;
     public bool CanAccessGatePass => _currentUser.CanAccessGatePass;
+    public bool CanAccessCancellationVoid => _currentUser.CanAccessCancellationVoid;
+    public bool CanAccessCorrection => _currentUser.CanAccessCorrection;
     public bool CanAccessUserManagement => false;
-    public bool CanCorrectTransactions => _currentUser.CanCorrectTransactions;
-    public bool CanEditCompletedTransaction => CanCorrectTransactions;
-    public bool CanCancelTransactions => _currentUser.CanCancelTransactions;
-    public bool CanDeleteCompletedTransaction => CanCancelTransactions;
-    public bool CanCorrectSelectedTransaction => CanCorrectTransactions && SelectedTransactionWeighment != null && !string.Equals(SelectedTransactionWeighment.Status, "Cancelled", StringComparison.OrdinalIgnoreCase);
-    public bool CanCancelSelectedTransaction => CanCancelTransactions && SelectedTransactionWeighment != null && !string.Equals(SelectedTransactionWeighment.Status, "Cancelled", StringComparison.OrdinalIgnoreCase);
-    public bool IsCompletedGridReadOnly => !_currentUser.CanCorrectTransactions;
+    public bool CanCorrectTransactions => CanAccessCorrection && (_currentUser.CanSubmitCorrection || _currentUser.CanApproveRejectCorrection);
+    public bool CanEditCompletedTransaction => false;
+
+    // Legacy direct-cancel authorization is intentionally disabled.
+    public bool CanCancelTransactions => false;
+    public bool CanDeleteCompletedTransaction => false;
+    public bool CanCorrectSelectedTransaction => CanCorrectTransactions && SelectedTransactionWeighment != null && string.Equals(SelectedTransactionWeighment.Status, "Completed", StringComparison.OrdinalIgnoreCase);
+    public bool CanCancelSelectedTransaction => false;
+    public bool CanCreateCorrectionRequest => CanAccessCorrection && _currentUser.CanSubmitCorrection;
+    public bool CanOpenSelectedCorrection => CanAccessCorrection && SelectedCorrectionRequest != null;
+
+    public bool CanCreateCancellationVoidRequest => CanAccessCancellationVoid && _currentUser.CanSubmitCancellationVoid;
+    public bool CanApproveRejectCancellationVoidAccess => CanAccessCancellationVoid && _currentUser.CanApproveRejectCancellationVoid;
+    public bool IsCancellationVoidFormEditable => CanCreateCancellationVoidRequest && CancellationVoidForm.CancellationVoidId == 0;
+    public bool CanSubmitCancellationVoid => IsCancellationVoidFormEditable && CancellationVoidForm.WeighmentId > 0;
+    public bool CanApproveCancellationVoid => CanAccessCancellationVoid
+                                              && _currentUser.CanApproveRejectCancellationVoid
+                                              && CancellationVoidForm.CancellationVoidId > 0
+                                              && string.Equals(CancellationVoidForm.Status, "Draft", StringComparison.OrdinalIgnoreCase);
+    public bool CanRejectCancellationVoid => CanApproveCancellationVoid;
+    public bool CanInitiateCancellationFromTransaction => CanCreateCancellationVoidRequest
+                                                         && SelectedTransactionWeighment != null
+                                                         && (string.Equals(SelectedTransactionWeighment.Status, "Open", StringComparison.OrdinalIgnoreCase)
+                                                             || string.Equals(SelectedTransactionWeighment.Status, "Completed", StringComparison.OrdinalIgnoreCase))
+                                                         && !string.Equals(SelectedTransactionWeighment.CancellationVoidStatus, "Draft", StringComparison.OrdinalIgnoreCase)
+                                                         && !string.Equals(SelectedTransactionWeighment.CancellationVoidStatus, "Approved", StringComparison.OrdinalIgnoreCase);
+    public bool IsCompletedGridReadOnly => true;
 
     public bool CanSaveFirstWeight => CanAccessWeighment && _currentUser.CanCaptureFirstWeight && _loadedOpenWeighmentId == null && !FirstWeight.HasValue;
     public bool CanSaveSecondWeight => CanAccessWeighment && _currentUser.CanCaptureSecondWeight && _loadedOpenWeighmentId.HasValue && FirstWeight.HasValue && !SecondWeight.HasValue;
@@ -1124,6 +1194,101 @@ public class MainViewModel : BaseViewModel
             {
                 OnPropertyChanged(nameof(CanCorrectSelectedTransaction));
                 OnPropertyChanged(nameof(CanCancelSelectedTransaction));
+                OnPropertyChanged(nameof(CanInitiateCancellationFromTransaction));
+                OnPropertyChanged(nameof(HasSelectedTransactionReview));
+                System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+                if (value != null)
+                    _ = LoadTransactionReviewAsync(value);
+                else
+                    ClearTransactionReview();
+            }
+        }
+    }
+
+    public string SelectedTransactionReviewForm
+    {
+        get => _selectedTransactionReviewForm;
+        private set => SetProperty(ref _selectedTransactionReviewForm, value);
+    }
+
+    public bool HasSelectedTransactionReview => SelectedTransactionWeighment != null;
+
+    public WeighmentCorrection? SelectedCorrectionRequest
+    {
+        get => _selectedCorrectionRequest;
+        set
+        {
+            if (SetProperty(ref _selectedCorrectionRequest, value))
+            {
+                OnPropertyChanged(nameof(CanOpenSelectedCorrection));
+                System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+                if (value != null)
+                    StatusMessage = $"Correction selected: {value.CorrectionNumber}";
+            }
+        }
+    }
+
+    public CancellationVoidRequest? SelectedCancellationVoidRequest
+    {
+        get => _selectedCancellationVoidRequest;
+        set
+        {
+            if (SetProperty(ref _selectedCancellationVoidRequest, value) && value != null)
+            {
+                CancellationVoidForm = CloneCancellationVoidRequest(value);
+                StatusMessage = $"Cancellation/Void request selected: {value.CancellationVoidNumber}";
+            }
+        }
+    }
+
+    public CancellationVoidRequest CancellationVoidForm
+    {
+        get => _cancellationVoidForm;
+        set
+        {
+            if (SetProperty(ref _cancellationVoidForm, value))
+            {
+                // Keep the ComboBox selection properties explicitly synchronized with the form.
+                // Reason is intentionally not defaulted: the user must select a Reason Master code.
+                _selectedCancellationVoidType = value?.Type?.Trim() ?? string.Empty;
+                var formReason = value?.Reason?.Trim() ?? string.Empty;
+                _selectedCancellationReason = formReason;
+                OnPropertyChanged(nameof(SelectedCancellationVoidType));
+                OnPropertyChanged(nameof(SelectedCancellationReason));
+                OnPropertyChanged(nameof(IsCancellationVoidFormEditable));
+                OnPropertyChanged(nameof(CanCreateCancellationVoidRequest));
+                OnPropertyChanged(nameof(CanSubmitCancellationVoid));
+                OnPropertyChanged(nameof(CanApproveCancellationVoid));
+                OnPropertyChanged(nameof(CanRejectCancellationVoid));
+                System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+            }
+        }
+    }
+
+    public string SelectedCancellationVoidType
+    {
+        get => _selectedCancellationVoidType;
+        set
+        {
+            var normalized = value?.Trim() ?? string.Empty;
+            if (SetProperty(ref _selectedCancellationVoidType, normalized))
+            {
+                CancellationVoidForm.Type = normalized;
+                OnPropertyChanged(nameof(CanSubmitCancellationVoid));
+            }
+        }
+    }
+
+    public string SelectedCancellationReason
+    {
+        get => _selectedCancellationReason;
+        set
+        {
+            var normalized = value?.Trim() ?? string.Empty;
+            if (SetProperty(ref _selectedCancellationReason, normalized))
+            {
+                CancellationVoidForm.Reason = normalized;
+                OnPropertyChanged(nameof(CanSubmitCancellationVoid));
             }
         }
     }
@@ -2138,6 +2303,17 @@ public class MainViewModel : BaseViewModel
             await LoadMastersAsync();
             SelectSettingsWeighbridgeFromSavedSettings();
             await RefreshWeighmentsAsync();
+            if (CanAccessCancellationVoid)
+            {
+                await LoadCancellationVoidRequestsAsync();
+                if (CanCreateCancellationVoidRequest)
+                    await PrepareNewCancellationVoidAsync();
+            }
+            if (CanAccessCorrection)
+            {
+                await LoadCorrectionRequestsAsync();
+                await CorrectionWorkspace.InitializeAsync();
+            }
             if (CanAccessReports)
                 await LoadReportAsync();
             StatusMessage = $"Application loaded. Database: {DatabaseFolderPath}. Use Mock mode first, then test Serial/TCP with your indicator.";
@@ -2642,6 +2818,10 @@ public class MainViewModel : BaseViewModel
                 await LoadReportAsync();
             if (CanAccessTransactions)
                 await LoadTransactionsAsync();
+            if (CanAccessCancellationVoid)
+                await LoadCancellationVoidRequestsAsync();
+            if (CanAccessCorrection)
+                await LoadCorrectionRequestsAsync();
             StatusMessage = $"Data refreshed successfully for Legal Entity {CurrentUserCompany}.";
         }
         finally
@@ -2664,6 +2844,17 @@ public class MainViewModel : BaseViewModel
                 await LoadReportAsync();
             if (CanAccessTransactions)
                 await LoadTransactionsAsync();
+            if (CanAccessCancellationVoid)
+            {
+                await LoadCancellationVoidRequestsAsync();
+                if (CanCreateCancellationVoidRequest)
+                    await PrepareNewCancellationVoidAsync();
+            }
+            if (CanAccessCorrection)
+            {
+                await LoadCorrectionRequestsAsync();
+                await CorrectionWorkspace.RefreshForCompanyAsync();
+            }
             StatusMessage = $"Legal Entity changed to {CurrentUserCompany}.";
         }
         catch (Exception ex)
@@ -2783,6 +2974,11 @@ public class MainViewModel : BaseViewModel
         ReplaceCollection(ShiftMasters, shiftMasters);
         ReplaceCollection(ScenarioMasters, scenarioMasters);
         ReplaceCollection(ReasonMasters, reasonMasters);
+        ReplaceCollection(CancellationReasons, reasonMasters
+            .Select(x => x.Code?.Trim() ?? string.Empty)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase));
         ReplaceCollection(ContractMasters, contractMasters);
         ReplaceCollection(ToleranceMasters, toleranceMasters);
         ReplaceCollection(ServiceChargeMasters, serviceChargeMasters);
@@ -3143,30 +3339,11 @@ public class MainViewModel : BaseViewModel
         await SaveCompletedTransactionEditAsync(SelectedReportWeighment);
     }
 
-    private async Task SaveCompletedTransactionEditAsync(Weighment? weighment)
+    private Task SaveCompletedTransactionEditAsync(Weighment? weighment)
     {
-        try
-        {
-            if (!CanCorrectTransactions)
-            {
-                StatusMessage = "You do not have correction access for completed transactions.";
-                return;
-            }
-
-            if (weighment == null)
-            {
-                StatusMessage = "Please select a completed transaction first.";
-                return;
-            }
-
-            await _databaseService.UpdateCompletedWeighmentAsync(weighment);
-            await RefreshAllAsync();
-            StatusMessage = $"Completed transaction updated: {weighment.SlipNumber}";
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = "Completed transaction edit error: " + ex.Message;
-        }
+        // Completed transactions are immutable outside the controlled Correction workflow.
+        StatusMessage = "Completed transactions cannot be edited directly. Use Create / View Correction.";
+        return Task.CompletedTask;
     }
 
     private async Task DeleteCompletedAsync()
@@ -3179,56 +3356,628 @@ public class MainViewModel : BaseViewModel
         await DeleteCompletedTransactionAsync(SelectedReportWeighment);
     }
 
-    private async Task DeleteCompletedTransactionAsync(Weighment? weighment)
+    private Task DeleteCompletedTransactionAsync(Weighment? weighment)
+    {
+        // Completed transactions are never directly deleted/cancelled. Use Cancellation / Void.
+        StatusMessage = "Completed transactions cannot be cancelled directly. Use Create Cancellation / Void.";
+        return Task.CompletedTask;
+    }
+
+    private async Task LoadCorrectionRequestsAsync()
     {
         try
         {
-            if (!CanCancelTransactions)
+            if (!CanAccessCorrection)
+                return;
+
+            var selectedId = SelectedCorrectionRequest?.CorrectionId ?? 0;
+            var rows = await _databaseService.GetWeighmentCorrectionsAsync(CurrentUserCompany);
+            ReplaceCollection(CorrectionRequests, rows);
+
+            if (selectedId > 0)
+                SelectedCorrectionRequest = CorrectionRequests.FirstOrDefault(x => x.CorrectionId == selectedId);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Correction load error: " + ex.Message;
+        }
+    }
+
+    private async Task NewCorrectionAsync()
+    {
+        try
+        {
+            if (!CanCreateCorrectionRequest)
             {
-                StatusMessage = "You do not have cancel access for completed transactions.";
+                StatusMessage = "You do not have permission to create/submit corrections.";
                 return;
             }
 
+            SelectedMainTabIndex = 6;
+            var lookup = new WeightBridgeApp.CorrectionSlipLookupWindow(_databaseService, CurrentUserCompany)
+            {
+                Owner = System.Windows.Application.Current.MainWindow
+            };
+
+            if (lookup.ShowDialog() != true || lookup.SelectedWeighment == null)
+                return;
+
+            await OpenCorrectionWindowAsync(lookup.SelectedWeighment);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "New correction error: " + ex.Message;
+        }
+    }
+
+    private async Task OpenSelectedCorrectionAsync()
+    {
+        try
+        {
+            if (!CanAccessCorrection)
+            {
+                StatusMessage = "You do not have access to corrections.";
+                return;
+            }
+
+            var request = SelectedCorrectionRequest;
+            if (request == null)
+            {
+                StatusMessage = "Please select a correction request first.";
+                return;
+            }
+
+            var weighment = await _databaseService.GetWeighmentByIdAsync(request.WeighmentId, CurrentUserCompany);
             if (weighment == null)
+            {
+                StatusMessage = "The original transaction for this correction could not be found.";
+                return;
+            }
+
+            await OpenCorrectionWindowAsync(weighment, request);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Open correction error: " + ex.Message;
+        }
+    }
+
+    private async Task OpenCorrectionWindowAsync(Weighment transaction, WeighmentCorrection? correctionToOpen = null)
+    {
+        if (!string.Equals(transaction.Status, "Completed", StringComparison.OrdinalIgnoreCase))
+        {
+            StatusMessage = "Correction workflow is available only for Completed transactions.";
+            return;
+        }
+
+        var window = new WeightBridgeApp.TransactionCorrectionWindow(_databaseService, _currentUser, transaction, correctionToOpen)
+        {
+            Owner = System.Windows.Application.Current.MainWindow
+        };
+
+        window.ShowDialog();
+
+        await RefreshWeighmentsAsync();
+        await LoadCorrectionRequestsAsync();
+        if (CanAccessTransactions)
+            await LoadTransactionsAsync();
+
+        var correctionId = correctionToOpen?.CorrectionId ?? 0;
+        if (correctionId > 0)
+            SelectedCorrectionRequest = CorrectionRequests.FirstOrDefault(x => x.CorrectionId == correctionId);
+        else
+            SelectedCorrectionRequest = CorrectionRequests.FirstOrDefault(x => x.WeighmentId == transaction.WeighmentId);
+
+        StatusMessage = $"Correction screen closed for {(string.IsNullOrWhiteSpace(transaction.SlipNumber) ? transaction.TicketNo : transaction.SlipNumber)}.";
+    }
+
+    private async Task LoadCancellationVoidRequestsAsync()
+    {
+        try
+        {
+            if (!CanAccessCancellationVoid)
+                return;
+
+            var rows = await _databaseService.GetCancellationVoidRequestsAsync(CurrentUserCompany);
+            ReplaceCollection(CancellationVoidRequests, rows);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Cancellation/Void load error: " + ex.Message;
+        }
+    }
+
+    private async Task PrepareNewCancellationVoidAsync()
+    {
+        SelectedCancellationVoidRequest = null;
+        CancellationVoidForm = new CancellationVoidRequest
+        {
+            DataAreaId = CurrentUserCompany,
+            Type = "Cancel",
+            Reason = string.Empty,
+            Status = "Draft",
+            CancellationVoidNumber = await _databaseService.GenerateCancellationVoidNumberAsync(CurrentUserCompany)
+        };
+
+        // Reason must be explicitly selected from Reason Master.
+        SelectedCancellationReason = string.Empty;
+    }
+
+    private async Task NewCancellationVoidAsync()
+    {
+        if (!CanCreateCancellationVoidRequest)
+        {
+            StatusMessage = "You do not have permission to submit Cancellation/Void requests.";
+            return;
+        }
+
+        await PrepareNewCancellationVoidAsync();
+        SelectedMainTabIndex = 5;
+        StatusMessage = "New Cancellation/Void request ready.";
+    }
+
+    private async Task StartCancellationFromSelectedTransactionAsync()
+    {
+        try
+        {
+            if (!CanCreateCancellationVoidRequest)
+            {
+                StatusMessage = "You do not have permission to submit Cancellation/Void requests.";
+                return;
+            }
+
+            var selected = SelectedTransactionWeighment;
+            if (selected == null)
             {
                 StatusMessage = "Please select a completed transaction first.";
                 return;
             }
 
-            if (string.Equals(weighment.Status, "Cancelled", StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(selected.Status, "Open", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(selected.Status, "Completed", StringComparison.OrdinalIgnoreCase))
             {
-                StatusMessage = "This transaction is already cancelled.";
+                StatusMessage = "Cancellation/Void requests can only be created for Open or Completed transactions.";
                 return;
             }
 
-            var ticketNo = string.IsNullOrWhiteSpace(weighment.SlipNumber) ? weighment.TicketNo : weighment.SlipNumber;
-            var weighmentId = weighment.WeighmentId;
+            if (string.Equals(selected.CancellationVoidStatus, "Draft", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(selected.CancellationVoidStatus, "Approved", StringComparison.OrdinalIgnoreCase))
+            {
+                StatusMessage = $"This transaction is already linked to Cancellation/Void request {selected.CancellationVoidNumber}.";
+                return;
+            }
+
+            await PrepareNewCancellationVoidAsync();
+            CancellationVoidForm.WeighmentId = selected.WeighmentId;
+            CancellationVoidForm.SlipNumber = string.IsNullOrWhiteSpace(selected.SlipNumber) ? selected.TicketNo : selected.SlipNumber;
+            CancellationVoidForm.GatePassNumber = selected.GatePassNumber ?? string.Empty;
+
+            OnPropertyChanged(nameof(CancellationVoidForm));
+            OnPropertyChanged(nameof(CanSubmitCancellationVoid));
+            System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+
+            SelectedMainTabIndex = 5;
+            StatusMessage = $"Cancellation/Void request started for {selected.Status} slip {CancellationVoidForm.SlipNumber}.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Cancellation/Void request start error: " + ex.Message;
+        }
+    }
+
+    private async Task OpenCancellationSlipLookupAsync()
+    {
+        try
+        {
+            if (!IsCancellationVoidFormEditable)
+            {
+                StatusMessage = "Approved/rejected/submitted requests are read-only. Click New to create another request.";
+                return;
+            }
+
+            var window = new WeightBridgeApp.CancellationSlipLookupWindow(_databaseService, CurrentUserCompany)
+            {
+                Owner = System.Windows.Application.Current.MainWindow
+            };
+
+            if (window.ShowDialog() != true || window.SelectedWeighment == null)
+                return;
+
+            var selected = window.SelectedWeighment;
+            CancellationVoidForm.WeighmentId = selected.WeighmentId;
+            CancellationVoidForm.SlipNumber = string.IsNullOrWhiteSpace(selected.SlipNumber) ? selected.TicketNo : selected.SlipNumber;
+            CancellationVoidForm.GatePassNumber = selected.GatePassNumber ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(CancellationVoidForm.CancellationVoidNumber))
+                CancellationVoidForm.CancellationVoidNumber = await _databaseService.GenerateCancellationVoidNumberAsync(CurrentUserCompany);
+
+            OnPropertyChanged(nameof(CancellationVoidForm));
+            OnPropertyChanged(nameof(CanSubmitCancellationVoid));
+            System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+            StatusMessage = $"Original slip selected: {CancellationVoidForm.SlipNumber}";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Original slip lookup error: " + ex.Message;
+        }
+    }
+
+    private async Task SubmitCancellationVoidAsync()
+    {
+        try
+        {
+            if (!CanCreateCancellationVoidRequest)
+            {
+                StatusMessage = "You do not have permission to submit cancellation/void requests.";
+                return;
+            }
+
+            if (CancellationVoidForm.WeighmentId <= 0 || string.IsNullOrWhiteSpace(CancellationVoidForm.SlipNumber))
+            {
+                StatusMessage = "Please select the original slip.";
+                return;
+            }
+
+            // Explicitly synchronize the selected Reason Master code before validation.
+            CancellationVoidForm.Type = SelectedCancellationVoidType?.Trim() ?? string.Empty;
+
+            var effectiveReason = SelectedCancellationReason?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(effectiveReason))
+                effectiveReason = CancellationVoidForm.Reason?.Trim() ?? string.Empty;
+
+            CancellationVoidForm.Reason = effectiveReason;
+            if (!string.Equals(_selectedCancellationReason, effectiveReason, StringComparison.Ordinal))
+            {
+                _selectedCancellationReason = effectiveReason;
+                OnPropertyChanged(nameof(SelectedCancellationReason));
+            }
+
+            if (string.IsNullOrWhiteSpace(CancellationVoidForm.Type))
+            {
+                StatusMessage = "Type is mandatory.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(CancellationVoidForm.Reason))
+            {
+                StatusMessage = "Reason is mandatory.";
+                return;
+            }
+
+            CancellationVoidForm.DataAreaId = CurrentUserCompany;
+            CancellationVoidForm.Status = "Draft";
+            CancellationVoidForm.SubmittedBy = CurrentUsername;
+            CancellationVoidForm.SubmittedDateTime = DateTime.Now;
+            CancellationVoidForm.ApprovedRejectedBy = string.Empty;
+            CancellationVoidForm.ApprovalRejectedDateTime = null;
+            CancellationVoidForm.CreatedAt = DateTime.Now;
+            if (string.IsNullOrWhiteSpace(CancellationVoidForm.CancellationVoidNumber))
+                CancellationVoidForm.CancellationVoidNumber = await _databaseService.GenerateCancellationVoidNumberAsync(CurrentUserCompany);
+
+            CancellationVoidForm.CancellationVoidId = await _databaseService.SubmitCancellationVoidAsync(CancellationVoidForm);
+            await LoadCancellationVoidRequestsAsync();
+            var saved = CancellationVoidRequests.FirstOrDefault(x => x.CancellationVoidId == CancellationVoidForm.CancellationVoidId);
+            if (saved != null)
+                SelectedCancellationVoidRequest = saved;
+            else
+                CancellationVoidForm = CloneCancellationVoidRequest(CancellationVoidForm);
+
+            OnPropertyChanged(nameof(IsCancellationVoidFormEditable));
+            OnPropertyChanged(nameof(CanSubmitCancellationVoid));
+            OnPropertyChanged(nameof(CanApproveCancellationVoid));
+            OnPropertyChanged(nameof(CanRejectCancellationVoid));
+            System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+            StatusMessage = $"Cancellation/Void request submitted: {CancellationVoidForm.CancellationVoidNumber}";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Cancellation/Void submit error: " + ex.Message;
+        }
+    }
+
+    private async Task ApproveCancellationVoidAsync()
+    {
+        try
+        {
+            if (!CanApproveCancellationVoid)
+            {
+                StatusMessage = "Please select a submitted Draft cancellation/void request.";
+                return;
+            }
 
             var confirm = System.Windows.MessageBox.Show(
-                $"Cancel completed slip {ticketNo}?",
-                "Confirm Cancel",
+                $"Approve {CancellationVoidForm.Type} request {CancellationVoidForm.CancellationVoidNumber} for slip {CancellationVoidForm.SlipNumber}?\n\nThe original transaction will be cancelled and its linked Gate Pass will be closed.",
+                "Approve Cancellation / Void",
                 System.Windows.MessageBoxButton.YesNo,
                 System.Windows.MessageBoxImage.Warning);
 
             if (confirm != System.Windows.MessageBoxResult.Yes)
                 return;
 
-            await _databaseService.CancelWeighmentAsync(weighmentId, CurrentUsername);
-            SelectedCompletedWeighment = null;
-            SelectedReportWeighment = null;
-            SelectedTransactionWeighment = null;
-            await RefreshAllAsync();
-            StatusMessage = $"Completed transaction cancelled: {ticketNo}";
-        }
-        catch (InvalidOperationException ex)
-        {
-            StatusMessage = ex.Message;
+            var id = CancellationVoidForm.CancellationVoidId;
+            await _databaseService.ApproveCancellationVoidAsync(id, CurrentUsername);
+            await RefreshWeighmentsAsync();
+            await LoadCancellationVoidRequestsAsync();
+            if (CanAccessTransactions)
+                await LoadTransactionsAsync();
+            await LoadMastersAsync();
+
+            var approved = CancellationVoidRequests.FirstOrDefault(x => x.CancellationVoidId == id);
+            if (approved != null)
+                SelectedCancellationVoidRequest = approved;
+
+            StatusMessage = $"Cancellation/Void request approved. Slip {CancellationVoidForm.SlipNumber} is cancelled and the linked Gate Pass is closed.";
         }
         catch (Exception ex)
         {
-            StatusMessage = "Completed transaction cancel error: " + ex.Message;
+            StatusMessage = "Cancellation/Void approval error: " + ex.Message;
         }
     }
+
+    private async Task RejectCancellationVoidAsync()
+    {
+        try
+        {
+            if (!CanRejectCancellationVoid)
+            {
+                StatusMessage = "Please select a submitted Draft cancellation/void request.";
+                return;
+            }
+
+            var confirm = System.Windows.MessageBox.Show(
+                $"Reject cancellation/void request {CancellationVoidForm.CancellationVoidNumber}?",
+                "Reject Cancellation / Void",
+                System.Windows.MessageBoxButton.YesNo,
+                System.Windows.MessageBoxImage.Question);
+
+            if (confirm != System.Windows.MessageBoxResult.Yes)
+                return;
+
+            var id = CancellationVoidForm.CancellationVoidId;
+            await _databaseService.RejectCancellationVoidAsync(id, CurrentUsername);
+            await LoadCancellationVoidRequestsAsync();
+            var rejected = CancellationVoidRequests.FirstOrDefault(x => x.CancellationVoidId == id);
+            if (rejected != null)
+                SelectedCancellationVoidRequest = rejected;
+            StatusMessage = $"Cancellation/Void request rejected: {CancellationVoidForm.CancellationVoidNumber}";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Cancellation/Void rejection error: " + ex.Message;
+        }
+    }
+
+    private static CancellationVoidRequest CloneCancellationVoidRequest(CancellationVoidRequest source) => new()
+    {
+        CancellationVoidId = source.CancellationVoidId,
+        DataAreaId = source.DataAreaId,
+        WeighmentId = source.WeighmentId,
+        SlipNumber = source.SlipNumber,
+        GatePassNumber = source.GatePassNumber,
+        CancellationVoidNumber = source.CancellationVoidNumber,
+        Type = source.Type,
+        Reason = source.Reason,
+        Comment = source.Comment,
+        Status = source.Status,
+        SubmittedBy = source.SubmittedBy,
+        SubmittedDateTime = source.SubmittedDateTime,
+        ApprovedRejectedBy = source.ApprovedRejectedBy,
+        ApprovalRejectedDateTime = source.ApprovalRejectedDateTime,
+        CreatedAt = source.CreatedAt
+    };
+
+    private void ClearTransactionReview()
+    {
+        SelectedTransactionReviewForm = string.Empty;
+        TransactionReviewCommonFields.Clear();
+        TransactionReviewDynamicFields.Clear();
+        TransactionReviewMaterialLines.Clear();
+    }
+
+    private async Task LoadTransactionReviewAsync(Weighment transaction)
+    {
+        try
+        {
+            var selectedId = transaction.WeighmentId;
+            var transactionConfig = TransactionTypeMasters.FirstOrDefault(x =>
+                string.Equals(x.Type?.Trim(), transaction.TransactionType?.Trim(), StringComparison.OrdinalIgnoreCase));
+            var form = transactionConfig?.Form?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(form))
+                form = transaction.TransactionType?.Trim() ?? string.Empty;
+
+            var common = new List<TransactionReviewField>
+            {
+                ReviewField("Slip Number", transaction.SlipNumber),
+                ReviewField("Status", transaction.Status),
+                ReviewField("Transaction Type", transaction.TransactionType),
+                ReviewField("Mapped Form", form),
+                ReviewField("Scenario", transaction.Scenario),
+                ReviewField("Legal Entity", transaction.DataAreaId),
+                ReviewField("Company", transaction.CompanyName),
+                ReviewField("Transaction Date/Time", transaction.TransactionDateTime),
+                ReviewField("Gate Pass", transaction.GatePassNumber),
+                ReviewField("Weighbridge", transaction.WeighbridgeCode),
+                ReviewField("Shift", transaction.ShiftCode),
+                ReviewField("Vehicle", transaction.VehicleNo),
+                ReviewField("Driver", transaction.DriverName),
+                ReviewField("Item Number", transaction.ItemNumber),
+                ReviewField("Item Name", transaction.ItemName),
+                ReviewField("Operator", transaction.OperatorUsername),
+                ReviewField("First Weight", transaction.FirstWeight),
+                ReviewField("First Weight Date/Time", transaction.FirstWeightTime),
+                ReviewField("First Weight By", string.IsNullOrWhiteSpace(transaction.FirstWeightByDisplay) ? transaction.FirstWeightBy : transaction.FirstWeightByDisplay),
+                ReviewField("Second Weight", transaction.SecondWeight),
+                ReviewField("Second Weight Date/Time", transaction.SecondWeightTime),
+                ReviewField("Second Weight By", string.IsNullOrWhiteSpace(transaction.SecondWeightByDisplay) ? transaction.SecondWeightBy : transaction.SecondWeightByDisplay),
+                ReviewField("Net Weight", transaction.NetWeight),
+                ReviewField("External Reference", transaction.ExternalReference),
+                ReviewField("Operator Remarks", transaction.OperatorRemarks),
+                ReviewField("Remarks", transaction.Remarks),
+                ReviewField("Corrected", transaction.IsCorrected),
+                ReviewField("Correction Version", transaction.CorrectionVersion),
+                ReviewField("Last Correction", transaction.LastCorrectionNumber),
+                ReviewField("Last Corrected Date/Time", transaction.LastCorrectedDateTime),
+                ReviewField("Last Corrected By", transaction.LastCorrectedBy),
+                ReviewField("Cancellation/Void Number", transaction.CancellationVoidNumber),
+                ReviewField("Cancellation/Void Status", transaction.CancellationVoidStatus)
+            };
+
+            var dynamicFields = new List<TransactionReviewField>();
+            switch (form)
+            {
+                case "Purchase / Receipt / Collection":
+                {
+                    var d = await _databaseService.GetWeighmentPurchaseDetailsAsync(selectedId);
+                    if (d != null)
+                    {
+                        dynamicFields.Add(ReviewField("Purchase Subtype", d.PurchaseSubtype));
+                        dynamicFields.Add(ReviewField("Vendor Account", d.VendorAccount));
+                        dynamicFields.Add(ReviewField("Vendor Name", d.VendorName));
+                        dynamicFields.Add(ReviewField("Walk-in Vendor", d.WalkInVendor));
+                        dynamicFields.Add(ReviewField("Supplier Driver Name", d.SupplierDriverName));
+                        dynamicFields.Add(ReviewField("Purchase Contract Reference", d.PurchaseContractReference));
+                        dynamicFields.Add(ReviewField("Source", d.Source));
+                        dynamicFields.Add(ReviewField("Destination", d.Destination));
+                        dynamicFields.Add(ReviewField("FOC", d.FocFlag));
+                        dynamicFields.Add(ReviewField("Rate Amount", d.RateAmount));
+                    }
+                    break;
+                }
+                case "Contract Collection":
+                {
+                    var d = await _databaseService.GetWeighmentContractCollectionDetailsAsync(selectedId);
+                    if (d != null)
+                    {
+                        dynamicFields.Add(ReviewField("Vendor Account", d.VendorAccount));
+                        dynamicFields.Add(ReviewField("Vendor Name", d.VendorName));
+                        dynamicFields.Add(ReviewField("Invoice Account", d.InvoiceAccount));
+                        dynamicFields.Add(ReviewField("Invoice Account Name", d.InvoiceAccountName));
+                        dynamicFields.Add(ReviewField("Contract Number", d.ContractNumber));
+                        dynamicFields.Add(ReviewField("Collection Location", d.CollectionLocation));
+                        dynamicFields.Add(ReviewField("Destination", d.Destination));
+                        dynamicFields.Add(ReviewField("Billing Basis", d.BillingBasis));
+                    }
+                    break;
+                }
+                case "Transfer Form":
+                {
+                    var d = await _databaseService.GetWeighmentTransferDetailsAsync(selectedId);
+                    if (d != null)
+                    {
+                        dynamicFields.Add(ReviewField("Transfer Direction", d.TransferDirection));
+                        dynamicFields.Add(ReviewField("From Legal Entity", d.FromLegalEntity));
+                        dynamicFields.Add(ReviewField("To Legal Entity", d.ToLegalEntity));
+                        dynamicFields.Add(ReviewField("From Location", d.FromLocation));
+                        dynamicFields.Add(ReviewField("To Location", d.ToLocation));
+                        dynamicFields.Add(ReviewField("Transfer Reference", d.TransferReference));
+                        dynamicFields.Add(ReviewField("Sending Slip Reference", d.SendingSlipReference));
+                    }
+                    break;
+                }
+                case "Sales / Dispatch":
+                {
+                    var d = await _databaseService.GetWeighmentSalesDispatchDetailsAsync(selectedId);
+                    if (d != null)
+                    {
+                        dynamicFields.Add(ReviewField("Sales Subtype", d.SalesSubtype));
+                        dynamicFields.Add(ReviewField("Customer Account", d.CustomerAccount));
+                        dynamicFields.Add(ReviewField("Customer Name", d.CustomerName));
+                        dynamicFields.Add(ReviewField("Walk-in Customer", d.WalkInCustomer));
+                        dynamicFields.Add(ReviewField("Sales Reference", d.SalesReference));
+                        dynamicFields.Add(ReviewField("Source", d.Source));
+                        dynamicFields.Add(ReviewField("Destination", d.Destination));
+                        dynamicFields.Add(ReviewField("Payment Status", d.PaymentStatus));
+                        dynamicFields.Add(ReviewField("Receipt Number", d.ReceiptNumber));
+                    }
+                    break;
+                }
+                case "Production Weighing":
+                {
+                    var d = await _databaseService.GetWeighmentProductionDetailsAsync(selectedId);
+                    if (d != null)
+                    {
+                        dynamicFields.Add(ReviewField("Production Movement", d.ProductionMovement));
+                        dynamicFields.Add(ReviewField("Production Order Reference", d.ProductionOrderReference));
+                        dynamicFields.Add(ReviewField("Production Line", d.ProductionLine));
+                        dynamicFields.Add(ReviewField("Warehouse Location", d.WarehouseLocation));
+                        dynamicFields.Add(ReviewField("Batch Number", d.BatchNumber));
+                        dynamicFields.Add(ReviewField("Number of Rolls / Units", d.NumberOfRollsUnits));
+                        dynamicFields.Add(ReviewField("Grade / GSM / Width", d.GradeGsmWidth));
+                    }
+                    break;
+                }
+                case "Return":
+                {
+                    var d = await _databaseService.GetWeighmentReturnDetailsAsync(selectedId);
+                    if (d != null)
+                    {
+                        dynamicFields.Add(ReviewField("Return Type", d.ReturnType));
+                        dynamicFields.Add(ReviewField("Vendor Account", d.VendorAccount));
+                        dynamicFields.Add(ReviewField("Vendor Name", d.VendorName));
+                        dynamicFields.Add(ReviewField("Customer Account", d.CustomerAccount));
+                        dynamicFields.Add(ReviewField("Customer Name", d.CustomerName));
+                        dynamicFields.Add(ReviewField("From Legal Entity", d.FromLegalEntity));
+                        dynamicFields.Add(ReviewField("To Legal Entity", d.ToLegalEntity));
+                        dynamicFields.Add(ReviewField("Original Slip Number", d.OriginalSlipNumber));
+                        dynamicFields.Add(ReviewField("Return Reference", d.ReturnReference));
+                        dynamicFields.Add(ReviewField("Return Reason", d.ReturnReason));
+                        dynamicFields.Add(ReviewField("Source", d.Source));
+                        dynamicFields.Add(ReviewField("Destination", d.Destination));
+                    }
+                    break;
+                }
+                case "Disposal / Waste Movement":
+                {
+                    var d = await _databaseService.GetWeighmentDisposalDetailsAsync(selectedId);
+                    if (d != null)
+                    {
+                        dynamicFields.Add(ReviewField("Disposal Type", d.DisposalType));
+                        dynamicFields.Add(ReviewField("Source", d.Source));
+                        dynamicFields.Add(ReviewField("Disposal Destination", d.DisposalDestination));
+                        dynamicFields.Add(ReviewField("Reason", d.Reason));
+                        dynamicFields.Add(ReviewField("Permit / Manifest Number", d.PermitManifestNumber));
+                        dynamicFields.Add(ReviewField("Authorized By", d.AuthorizedBy));
+                    }
+                    break;
+                }
+            }
+
+            if (dynamicFields.Count == 0)
+                dynamicFields.Add(ReviewField("Information", "No transaction-specific detail record is available."));
+
+            var materialLines = await _databaseService.GetWeighmentMaterialLinesAsync(selectedId);
+            if (SelectedTransactionWeighment?.WeighmentId != selectedId)
+                return;
+
+            SelectedTransactionReviewForm = form;
+            ReplaceCollection(TransactionReviewCommonFields, common);
+            ReplaceCollection(TransactionReviewDynamicFields, dynamicFields);
+            ReplaceCollection(TransactionReviewMaterialLines, materialLines);
+            StatusMessage = $"Reviewing transaction {transaction.SlipNumber}.";
+        }
+        catch (Exception ex)
+        {
+            if (SelectedTransactionWeighment?.WeighmentId == transaction.WeighmentId)
+            {
+                ClearTransactionReview();
+                StatusMessage = "Transaction review load error: " + ex.Message;
+            }
+        }
+    }
+
+    private static TransactionReviewField ReviewField(string label, object? value)
+    {
+        string text = value switch
+        {
+            null => string.Empty,
+            DateTime dt => dt.ToString("yyyy-MM-dd HH:mm:ss"),
+            decimal number => number.ToString("0.###"),
+            double number => number.ToString("0.###"),
+            bool flag => flag ? "Yes" : "No",
+            _ => Convert.ToString(value) ?? string.Empty
+        };
+        return new TransactionReviewField { Label = label, Value = text };
+    }
+
     private async Task LoadTransactionsAsync()
     {
         try
@@ -3247,6 +3996,7 @@ public class MainViewModel : BaseViewModel
 
             var rows = (await _databaseService.SearchWeighmentsAsync(TransactionFrom, TransactionTo))
                 .Where(x => IsSameDataArea(x.DataAreaId, CurrentUserCompany));
+            SelectedTransactionWeighment = null;
             ReplaceCollection(TransactionRows, rows);
             ApplyTransactionFilter();
             StatusMessage = $"Transactions loaded. Rows: {FilteredTransactionRows.Count} of {TransactionRows.Count}";
@@ -3274,36 +4024,26 @@ public class MainViewModel : BaseViewModel
     {
         try
         {
-            if (!CanCorrectTransactions)
+            if (!CanAccessCorrection || (!_currentUser.CanSubmitCorrection && !_currentUser.CanApproveRejectCorrection))
             {
-                StatusMessage = "You do not have permission to correct transactions.";
+                StatusMessage = "You do not have permission to access transaction corrections.";
                 return;
             }
 
             if (SelectedTransactionWeighment == null)
             {
-                StatusMessage = "Please select a transaction first.";
+                StatusMessage = "Please select a completed transaction first.";
                 return;
             }
 
-            if (string.Equals(SelectedTransactionWeighment.Status, "Cancelled", StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(SelectedTransactionWeighment.Status, "Completed", StringComparison.OrdinalIgnoreCase))
             {
-                StatusMessage = "Cancelled transactions cannot be corrected.";
+                StatusMessage = "Correction workflow is available only for Completed transactions.";
                 return;
             }
 
-            var editable = CloneWeighment(SelectedTransactionWeighment);
-            var window = new WeightBridgeApp.TransactionCorrectionWindow(editable)
-            {
-                Owner = System.Windows.Application.Current.MainWindow
-            };
-
-            if (window.ShowDialog() != true)
-                return;
-
-            await _databaseService.UpdateWeighmentCorrectionAsync(editable);
-            await RefreshAllAsync();
-            StatusMessage = $"Transaction corrected: {(string.IsNullOrWhiteSpace(editable.SlipNumber) ? editable.TicketNo : editable.SlipNumber)}";
+            SelectedMainTabIndex = 6;
+            await CorrectionWorkspace.StartForTransactionAsync(SelectedTransactionWeighment);
         }
         catch (Exception ex)
         {
@@ -3311,88 +4051,12 @@ public class MainViewModel : BaseViewModel
         }
     }
 
-    private async Task CancelTransactionAsync()
+    private Task CancelTransactionAsync()
     {
-        try
-        {
-            if (!CanCancelTransactions)
-            {
-                StatusMessage = "You do not have permission to cancel transactions.";
-                return;
-            }
-
-            var selected = SelectedTransactionWeighment;
-            if (selected == null)
-            {
-                StatusMessage = "Please select a transaction first.";
-                return;
-            }
-
-            if (string.Equals(selected.Status, "Cancelled", StringComparison.OrdinalIgnoreCase))
-            {
-                StatusMessage = "This transaction is already cancelled.";
-                return;
-            }
-
-            var ticketNo = string.IsNullOrWhiteSpace(selected.SlipNumber) ? selected.TicketNo : selected.SlipNumber;
-            var weighmentId = selected.WeighmentId;
-
-            var confirm = System.Windows.MessageBox.Show(
-                $"Cancel slip {ticketNo}?",
-                "Confirm Cancel",
-                System.Windows.MessageBoxButton.YesNo,
-                System.Windows.MessageBoxImage.Warning);
-
-            if (confirm != System.Windows.MessageBoxResult.Yes)
-                return;
-
-            await _databaseService.CancelWeighmentAsync(weighmentId, CurrentUsername);
-            SelectedTransactionWeighment = null;
-            SelectedCompletedWeighment = null;
-            SelectedReportWeighment = null;
-            await RefreshAllAsync();
-            StatusMessage = $"Transaction cancelled: {ticketNo}";
-        }
-        catch (InvalidOperationException ex)
-        {
-            StatusMessage = ex.Message;
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = "Transaction cancel error: " + ex.Message;
-        }
+        // Direct cancellation is intentionally blocked. Use the controlled Cancellation / Void workflow.
+        StatusMessage = "Transactions cannot be cancelled directly. Use Create Cancellation / Void.";
+        return Task.CompletedTask;
     }
-
-    private static Weighment CloneWeighment(Weighment source)
-    {
-        return new Weighment
-        {
-            WeighmentId = source.WeighmentId,
-            DataAreaId = source.DataAreaId,
-            TicketNo = source.TicketNo,
-            CompanyName = source.CompanyName,
-            VehicleNo = source.VehicleNo,
-            DriverName = source.DriverName,
-            MaterialId = source.MaterialId,
-            ItemNumber = source.ItemNumber,
-            ItemName = source.ItemName,
-            MaterialName = source.MaterialName,
-            FirstWeight = source.FirstWeight,
-            FirstWeightTime = source.FirstWeightTime,
-            FirstWeightBy = source.FirstWeightBy,
-            FirstWeightByDisplay = source.FirstWeightByDisplay,
-            SecondWeight = source.SecondWeight,
-            SecondWeightTime = source.SecondWeightTime,
-            SecondWeightBy = source.SecondWeightBy,
-            SecondWeightByDisplay = source.SecondWeightByDisplay,
-            NetWeight = source.NetWeight,
-            Status = source.Status,
-            Remarks = source.Remarks,
-            CreatedAt = source.CreatedAt
-        };
-    }
-
-
 
     private async Task SaveCustomerAsync()
     {
@@ -3845,6 +4509,9 @@ public class MainViewModel : BaseViewModel
         OnPropertyChanged(nameof(CanAccessSettings));
         OnPropertyChanged(nameof(CanAccessMasters));
         OnPropertyChanged(nameof(CanAccessReports));
+        OnPropertyChanged(nameof(CanAccessCorrection));
+        OnPropertyChanged(nameof(CanCreateCorrectionRequest));
+        OnPropertyChanged(nameof(CanOpenSelectedCorrection));
         OnPropertyChanged(nameof(CanAccessUserManagement));
         OnPropertyChanged(nameof(CanCorrectTransactions));
         OnPropertyChanged(nameof(CanCancelTransactions));
@@ -4235,12 +4902,6 @@ public class MainViewModel : BaseViewModel
         if (lookupWindow.ShowDialog() == true && lookupWindow.SelectedItemMaster != null)
         {
             var selectedItem = lookupWindow.SelectedItemMaster;
-            if (MaterialLines.Any(x => string.Equals(x.ItemNumber, selectedItem.ItemNumber, StringComparison.OrdinalIgnoreCase)))
-            {
-                StatusMessage = "This item is already added in material lines.";
-                return Task.CompletedTask;
-            }
-
             var uom = !string.IsNullOrWhiteSpace(selectedItem.PurchaseUnit)
                 ? selectedItem.PurchaseUnit
                 : !string.IsNullOrWhiteSpace(selectedItem.SellUnit)
@@ -4569,6 +5230,13 @@ public class MainViewModel : BaseViewModel
             }
 
             NormalizeOperatorLegalEntityAssignmentsForSave();
+
+            // Workflow action permissions require access to their corresponding screen.
+            if (OperatorMasterForm.CanSubmitCancellationVoid || OperatorMasterForm.CanApproveRejectCancellationVoid)
+                OperatorMasterForm.CanAccessCancellationVoid = true;
+            if (OperatorMasterForm.CanSubmitCorrection || OperatorMasterForm.CanApproveRejectCorrection || OperatorMasterForm.CanCorrectWeight)
+                OperatorMasterForm.CanAccessCorrection = true;
+
             await _databaseService.SaveOperatorMasterAsync(OperatorMasterForm);
             var savedOperator = await _databaseService.GetOperatorByUsernameAsync(OperatorMasterForm.Username);
             if (savedOperator == null)
@@ -4640,12 +5308,18 @@ public class MainViewModel : BaseViewModel
             CanAccessMasters = SelectedOperatorMaster.CanAccessMasters,
             CanAccessReports = SelectedOperatorMaster.CanAccessReports,
             CanAccessTransactions = SelectedOperatorMaster.CanAccessTransactions,
+            CanAccessGatePass = SelectedOperatorMaster.CanAccessGatePass,
+            CanAccessCancellationVoid = SelectedOperatorMaster.CanAccessCancellationVoid,
+            CanAccessCorrection = SelectedOperatorMaster.CanAccessCorrection,
             CanAccessSettings = SelectedOperatorMaster.CanAccessSettings,
             CanCaptureFirstWeight = SelectedOperatorMaster.CanCaptureFirstWeight,
             CanCaptureSecondWeight = SelectedOperatorMaster.CanCaptureSecondWeight,
-            CanPerformManualWeightEntry = SelectedOperatorMaster.CanPerformManualWeightEntry,
             CanCorrectTransactions = SelectedOperatorMaster.CanCorrectTransactions,
-            CanCancelTransactions = SelectedOperatorMaster.CanCancelTransactions,
+            CanSubmitCorrection = SelectedOperatorMaster.CanSubmitCorrection,
+            CanApproveRejectCorrection = SelectedOperatorMaster.CanApproveRejectCorrection,
+            CanCorrectWeight = SelectedOperatorMaster.CanCorrectWeight,
+            CanSubmitCancellationVoid = SelectedOperatorMaster.CanSubmitCancellationVoid,
+            CanApproveRejectCancellationVoid = SelectedOperatorMaster.CanApproveRejectCancellationVoid,
             LastLogin = SelectedOperatorMaster.LastLogin,
             Status = SelectedOperatorMaster.Status,
             EffectiveFrom = SelectedOperatorMaster.EffectiveFrom,

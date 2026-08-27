@@ -17,6 +17,48 @@
             <Setter Property="Padding" Value="10,6" />
             <Setter Property="MinWidth" Value="95" />
         </Style>
+        <Style x:Key="PrimaryActionButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="#202A44" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderBrush" Value="#202A44" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="#E5E7EB" />
+                    <Setter Property="Foreground" Value="#475467" />
+                    <Setter Property="BorderBrush" Value="#C7CED8" />
+                    <Setter Property="Opacity" Value="1" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="ApproveActionButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="#2F6B4F" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderBrush" Value="#2F6B4F" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="#E5E7EB" />
+                    <Setter Property="Foreground" Value="#475467" />
+                    <Setter Property="BorderBrush" Value="#C7CED8" />
+                    <Setter Property="Opacity" Value="1" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="RejectActionButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="#A13D3D" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderBrush" Value="#A13D3D" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="#E5E7EB" />
+                    <Setter Property="Foreground" Value="#475467" />
+                    <Setter Property="BorderBrush" Value="#C7CED8" />
+                    <Setter Property="Opacity" Value="1" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
         <Style TargetType="Label">
             <Setter Property="Margin" Value="4" />
             <Setter Property="VerticalAlignment" Value="Center" />

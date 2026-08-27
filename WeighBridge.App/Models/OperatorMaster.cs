@@ -27,11 +27,21 @@ public class OperatorMaster
     public bool CanAccessReports { get; set; } = true;
     public bool CanAccessTransactions { get; set; }
     public bool CanAccessGatePass { get; set; }
+    public bool CanAccessCancellationVoid { get; set; }
+    public bool CanAccessCorrection { get; set; }
     public bool CanAccessSettings { get; set; }
     public bool CanCaptureFirstWeight { get; set; } = true;
     public bool CanCaptureSecondWeight { get; set; } = true;
+    public bool CanCorrectTransactions { get; set; } // legacy compatibility
+    public bool CanSubmitCorrection { get; set; }
+    public bool CanApproveRejectCorrection { get; set; }
+    public bool CanCorrectWeight { get; set; }
+    public bool CanSubmitCancellationVoid { get; set; }
+    public bool CanApproveRejectCancellationVoid { get; set; }
+
+    // Legacy fields retained only for compatibility with existing databases.
+    // They are no longer exposed in Operator Master and are not used for cancellation workflow authorization.
     public bool CanPerformManualWeightEntry { get; set; }
-    public bool CanCorrectTransactions { get; set; }
     public bool CanCancelTransactions { get; set; }
     public DateTime? LastLogin { get; set; }
     public string Status { get; set; } = "Active";
