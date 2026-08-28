@@ -28,31 +28,9 @@ public class Driver
     public string PassportAttachment { get; set; } = string.Empty;
     public string DrivingLicenceAttachment { get; set; } = string.Empty;
     public string DataAreaId { get; set; } = string.Empty;
-    public string LegalEntity { get => DataAreaId; set => DataAreaId = value; }
     public string Status { get; set; } = "Active";
     public bool Blacklisted { get; set; }
     public string BlacklistReason { get; set; } = string.Empty;
     public DateTime? EffectiveFrom { get; set; } = DateTime.Today;
-    // Availability is controlled by Status. Kept only for backward compatibility with old databases.
-    public bool IsActive { get => string.Equals(Status, "Active", StringComparison.OrdinalIgnoreCase); set { } }
     public string Remarks { get; set; } = string.Empty;
-
-    // Backward-compatible aliases used by old UI/filter bindings.
-    public string CNIC
-    {
-        get => IdentificationNumber;
-        set => IdentificationNumber = value;
-    }
-
-    public string MobileNo
-    {
-        get => MobileNumber;
-        set => MobileNumber = value;
-    }
-
-    public string LicenseNo
-    {
-        get => DrivingLicenceNumber;
-        set => DrivingLicenceNumber = value;
-    }
 }

@@ -69,3 +69,13 @@ Correction **Approve** and **Reject** actions are controlled by Operator Master 
 - Each line remains independent by Line Number / MaterialLineId, including UOM, Expected Qty and Remarks.
 - Correction processing continues to identify material lines by OriginalMaterialLineId / LineNo rather than by Item Number.
 
+
+## 2026-08-27 - Schema and model cleanup
+- Standardized Operator, Vehicle and Driver company ownership on `DataAreaId`; removed the duplicate `LegalEntity` field.
+- Removed `DefaultLegalEntity` from Operator Master. Operator company assignments/default selection continue through `OperatorLegalEntities`.
+- Removed Driver legacy fields `CNIC`, `MobileNo` and `LicenseNo`; current fields are `IdentificationNumber`, `MobileNumber` and `DrivingLicenceNumber`.
+- Removed legacy `IsActive` fields from Operator, Vehicle, Driver and Weighbridge masters. `Status` / `OperatingStatus` is the single source of truth.
+- Removed obsolete Operator permission/compatibility fields superseded by the Correction and Cancellation/Void workflow permissions.
+- Removed obsolete standalone `Users`, `Materials` and `Parties` SQLite tables and their old model/CRUD infrastructure. Customer/Vendor party lookup still uses the lightweight `Party` result model; material selection uses Item Master.
+- Existing databases are migrated before obsolete columns/tables are removed, preserving legacy company values, driver identification/contact/licence values, status and workflow permissions.
+- `VehicleNo` is intentionally retained as a compatibility alias for `PlateNumber` because existing weighment/lookup code still uses it.

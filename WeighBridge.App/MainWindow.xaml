@@ -447,7 +447,7 @@
                                 <Label Grid.Row="5" Grid.Column="0" Content="Permit / Manifest No" />
                                 <TextBox Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding DisposalDetailsForm.PermitManifestNumber, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsDisposalDetailsEditable}" />
                                 <Label Grid.Row="6" Grid.Column="0" Content="Authorized By" />
-                                <ComboBox Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding OperatorMasters}" DisplayMemberPath="FullName" SelectedValuePath="Username" SelectedValue="{Binding DisposalDetailsForm.AuthorizedBy, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsDisposalDetailsEditable}" />
+                                <ComboBox Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding OperatorMasters}" DisplayMemberPath="OperatorName" SelectedValuePath="Username" SelectedValue="{Binding DisposalDetailsForm.AuthorizedBy, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsDisposalDetailsEditable}" />
                             </Grid>
                         </ScrollViewer>
                     </Border>
@@ -1808,7 +1808,7 @@
                                             </StackPanel>
                                             <StackPanel Width="160" Margin="0,0,8,6">
                                                 <TextBlock Text="Identification No" />
-                                                <TextBox Text="{Binding DriverCnicFilter, UpdateSourceTrigger=PropertyChanged}" />
+                                                <TextBox Text="{Binding DriverIdentificationFilter, UpdateSourceTrigger=PropertyChanged}" />
                                             </StackPanel>
                                             <StackPanel Width="160" Margin="0,0,8,6">
                                                 <TextBlock Text="Licence No" />
@@ -1830,7 +1830,7 @@
                                                 <DataGridTextColumn Header="Driving Licence Number" Binding="{Binding DrivingLicenceNumber}" Width="170" />
                                                 <DataGridTextColumn Header="Driving Licence Expiry Date" Binding="{Binding DrivingLicenceExpiryDate, StringFormat=d}" Width="180" />
                                                 <DataGridTextColumn Header="Default Vehicle" Binding="{Binding DefaultVehicle}" Width="140" />
-                                                <DataGridTextColumn Header="Legal Entity" Binding="{Binding LegalEntity}" Width="140" />
+                                                <DataGridTextColumn Header="Legal Entity" Binding="{Binding DataAreaId}" Width="140" />
                                                 <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="120" />
                                                 <DataGridCheckBoxColumn Header="Blacklisted" Binding="{Binding Blacklisted}" Width="110" />
                                             </DataGrid.Columns>
