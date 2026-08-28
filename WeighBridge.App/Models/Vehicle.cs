@@ -4,7 +4,7 @@ public class Vehicle
 {
     public int VehicleId { get; set; }
 
-    // Backward-compatible alias used by existing weighment lookup code.
+    // Compatibility alias used by existing weighment/lookup code. The persisted master field is PlateNumber.
     public string VehicleNo
     {
         get => PlateNumber;
@@ -22,8 +22,5 @@ public class Vehicle
     public string DefaultDriver { get; set; } = string.Empty;
     public DateTime? RegistrationExpiryDate { get; set; }
     public string DataAreaId { get; set; } = string.Empty;
-    public string LegalEntity { get => DataAreaId; set => DataAreaId = value; }
     public string Status { get; set; } = "Active";
-    // Availability is controlled by Status. Kept only for backward compatibility with old databases.
-    public bool IsActive { get => string.Equals(Status, "Active", StringComparison.OrdinalIgnoreCase); set { } }
 }

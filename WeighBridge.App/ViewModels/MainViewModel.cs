@@ -47,8 +47,6 @@ public class MainViewModel : BaseViewModel
     private string _gatePassNumber = string.Empty;
     private string _externalReference = string.Empty;
     private string _operatorRemarks = string.Empty;
-    private Party? _selectedParty;
-    private Material? _selectedMaterial;
     private Weighment? _selectedOpenWeighment;
     private Weighment? _selectedCompletedWeighment;
     private Weighment? _selectedReportWeighment;
@@ -78,9 +76,6 @@ public class MainViewModel : BaseViewModel
     private int _selectedMainTabIndex;
     private Weighment? _selectedTransactionWeighment;
     private string _selectedTransactionReviewForm = string.Empty;
-    private string _newPartyName = string.Empty;
-    private string _newPartyType = "Customer";
-    private string _newMaterialName = string.Empty;
     private string _newVehicleNo = string.Empty;
     private string _selectedPartyType = "Customer";
     private Party? _selectedWeighmentParty;
@@ -131,7 +126,7 @@ public class MainViewModel : BaseViewModel
     private string _vehicleContactFilter = string.Empty;
     private string _driverIdFilter = string.Empty;
     private string _driverNameFilter = string.Empty;
-    private string _driverCnicFilter = string.Empty;
+    private string _driverIdentificationFilter = string.Empty;
     private string _driverMobileFilter = string.Empty;
     private string _driverTypeFilter = string.Empty;
     private string _driverEmployerFilter = string.Empty;
@@ -196,20 +191,6 @@ public class MainViewModel : BaseViewModel
     private WarehouseMaster _warehouseMasterForm = new();
     private UnitOfMeasureMaster? _selectedUnitOfMeasureMaster;
     private UnitOfMeasureMaster _unitOfMeasureMasterForm = new();
-    private AppUser? _selectedUser;
-    private int? _editingUserId;
-    private string _userUsername = string.Empty;
-    private string _userFullName = string.Empty;
-    private string _userCompanyName = string.Empty;
-    private string _userPassword = string.Empty;
-    private bool _userIsActive = true;
-    private bool _userCanAccessWeighment = true;
-    private bool _userCanAccessSettings;
-    private bool _userCanAccessMasters;
-    private bool _userCanAccessReports = true;
-    private bool _userCanAccessUserManagement;
-    private bool _userCanEditCompletedTransaction;
-    private bool _userCanDeleteCompletedTransaction;
 
     public MainViewModel(DatabaseService databaseService, OperatorMaster currentUser)
     {
@@ -287,8 +268,6 @@ public class MainViewModel : BaseViewModel
         OpenTransactionTypeLookupCommand = new RelayCommand(OpenTransactionTypeLookupAsync);
         OpenScenarioLookupCommand = new RelayCommand(OpenScenarioLookupAsync);
         OpenWeighmentGatePassLookupCommand = new RelayCommand(OpenWeighmentGatePassLookupAsync);
-        AddPartyCommand = new RelayCommand(AddPartyAsync);
-        AddMaterialCommand = new RelayCommand(AddMaterialAsync);
         AddVehicleCommand = new RelayCommand(AddVehicleAsync);
         LoadReportCommand = new RelayCommand(LoadReportAsync);
         ClearReportFiltersCommand = new RelayCommand(ClearReportFilters);
@@ -305,8 +284,6 @@ public class MainViewModel : BaseViewModel
         StartCancellationFromTransactionCommand = new RelayCommand(StartCancellationFromSelectedTransactionAsync, () => CanInitiateCancellationFromTransaction);
         NewCorrectionCommand = new RelayCommand(NewCorrectionAsync);
         OpenSelectedCorrectionCommand = new RelayCommand(OpenSelectedCorrectionAsync, () => CanOpenSelectedCorrection);
-        SaveUserCommand = new RelayCommand(SaveUserAsync);
-        ClearUserFormCommand = new RelayCommand(ClearUserForm);
         SaveCustomerCommand = new RelayCommand(SaveCustomerAsync);
         ClearCustomerFormCommand = new RelayCommand(ClearCustomerForm);
         SaveVendorCommand = new RelayCommand(SaveVendorAsync);
@@ -334,7 +311,6 @@ public class MainViewModel : BaseViewModel
         ClearWeighbridgeMasterFormCommand = new RelayCommand(ClearWeighbridgeMasterForm);
         SaveOperatorMasterCommand = new RelayCommand(SaveOperatorMasterAsync);
         ClearOperatorMasterFormCommand = new RelayCommand(ClearOperatorMasterForm);
-        RefreshUsersCommand = new RelayCommand(LoadUsersAsync);
         SaveLegalEntityCommand = new RelayCommand(SaveLegalEntityAsync);
         ClearLegalEntityFormCommand = new RelayCommand(ClearLegalEntityForm);
         AddOperatorLegalEntityCommand = new RelayCommand(AddOperatorLegalEntityToForm);
@@ -398,9 +374,6 @@ public class MainViewModel : BaseViewModel
     public ObservableCollection<string> ParityOptions { get; }
     public ObservableCollection<string> StopBitsOptions { get; }
     public ObservableCollection<string> PartyTypes { get; }
-    public ObservableCollection<Party> Parties { get; } = new();
-    public ObservableCollection<Party> FilteredParties { get; } = new();
-    public ObservableCollection<Material> Materials { get; } = new();
     public ObservableCollection<Vehicle> Vehicles { get; } = new();
     public ObservableCollection<Vehicle> ActiveVehicles { get; } = new();
     public ObservableCollection<Driver> Drivers { get; } = new();
@@ -438,7 +411,6 @@ public class MainViewModel : BaseViewModel
     public ObservableCollection<TransactionReviewField> TransactionReviewCommonFields { get; } = new();
     public ObservableCollection<TransactionReviewField> TransactionReviewDynamicFields { get; } = new();
     public ObservableCollection<WeighmentMaterialLine> TransactionReviewMaterialLines { get; } = new();
-    public ObservableCollection<AppUser> Users { get; } = new();
     public ObservableCollection<ShiftMaster> ShiftMasters { get; } = new();
     public ObservableCollection<ScenarioMaster> ScenarioMasters { get; } = new();
     public ObservableCollection<ReasonMaster> ReasonMasters { get; } = new();
@@ -483,8 +455,6 @@ public class MainViewModel : BaseViewModel
     public RelayCommand OpenTransactionTypeLookupCommand { get; }
     public RelayCommand OpenScenarioLookupCommand { get; }
     public RelayCommand OpenWeighmentGatePassLookupCommand { get; }
-    public RelayCommand AddPartyCommand { get; }
-    public RelayCommand AddMaterialCommand { get; }
     public RelayCommand AddVehicleCommand { get; }
     public RelayCommand LoadReportCommand { get; }
     public RelayCommand ClearReportFiltersCommand { get; }
@@ -501,8 +471,6 @@ public class MainViewModel : BaseViewModel
     public RelayCommand StartCancellationFromTransactionCommand { get; }
     public RelayCommand NewCorrectionCommand { get; }
     public RelayCommand OpenSelectedCorrectionCommand { get; }
-    public RelayCommand SaveUserCommand { get; }
-    public RelayCommand ClearUserFormCommand { get; }
     public RelayCommand SaveCustomerCommand { get; }
     public RelayCommand ClearCustomerFormCommand { get; }
     public RelayCommand SaveVendorCommand { get; }
@@ -530,7 +498,6 @@ public class MainViewModel : BaseViewModel
     public RelayCommand ClearWeighbridgeMasterFormCommand { get; }
     public RelayCommand SaveOperatorMasterCommand { get; }
     public RelayCommand ClearOperatorMasterFormCommand { get; }
-    public RelayCommand RefreshUsersCommand { get; }
     public RelayCommand SaveLegalEntityCommand { get; }
     public RelayCommand ClearLegalEntityFormCommand { get; }
     public RelayCommand AddOperatorLegalEntityCommand { get; }
@@ -916,14 +883,9 @@ public class MainViewModel : BaseViewModel
     public bool CanAccessGatePass => _currentUser.CanAccessGatePass;
     public bool CanAccessCancellationVoid => _currentUser.CanAccessCancellationVoid;
     public bool CanAccessCorrection => _currentUser.CanAccessCorrection;
-    public bool CanAccessUserManagement => false;
-    public bool CanCorrectTransactions => CanAccessCorrection && (_currentUser.CanSubmitCorrection || _currentUser.CanApproveRejectCorrection);
-    public bool CanEditCompletedTransaction => false;
 
     // Legacy direct-cancel authorization is intentionally disabled.
-    public bool CanCancelTransactions => false;
-    public bool CanDeleteCompletedTransaction => false;
-    public bool CanCorrectSelectedTransaction => CanCorrectTransactions && SelectedTransactionWeighment != null && string.Equals(SelectedTransactionWeighment.Status, "Completed", StringComparison.OrdinalIgnoreCase);
+    public bool CanCorrectSelectedTransaction => CanAccessCorrection && (_currentUser.CanSubmitCorrection || _currentUser.CanApproveRejectCorrection) && SelectedTransactionWeighment != null && string.Equals(SelectedTransactionWeighment.Status, "Completed", StringComparison.OrdinalIgnoreCase);
     public bool CanCancelSelectedTransaction => false;
     public bool CanCreateCorrectionRequest => CanAccessCorrection && _currentUser.CanSubmitCorrection;
     public bool CanOpenSelectedCorrection => CanAccessCorrection && SelectedCorrectionRequest != null;
@@ -1137,18 +1099,6 @@ public class MainViewModel : BaseViewModel
     {
         get => _remarks;
         set => SetProperty(ref _remarks, value);
-    }
-
-    public Party? SelectedParty
-    {
-        get => _selectedParty;
-        set => SetProperty(ref _selectedParty, value);
-    }
-
-    public Material? SelectedMaterial
-    {
-        get => _selectedMaterial;
-        set => SetProperty(ref _selectedMaterial, value);
     }
 
     public WeighmentMaterialLine? SelectedMaterialLine
@@ -1517,24 +1467,6 @@ public class MainViewModel : BaseViewModel
             if (SetProperty(ref _transactionStatusFilter, value))
                 ApplyTransactionFilter();
         }
-    }
-
-    public string NewPartyName
-    {
-        get => _newPartyName;
-        set => SetProperty(ref _newPartyName, value);
-    }
-
-    public string NewPartyType
-    {
-        get => _newPartyType;
-        set => SetProperty(ref _newPartyType, value);
-    }
-
-    public string NewMaterialName
-    {
-        get => _newMaterialName;
-        set => SetProperty(ref _newMaterialName, value);
     }
 
     public string NewVehicleNo
@@ -1923,12 +1855,12 @@ public class MainViewModel : BaseViewModel
         }
     }
 
-    public string DriverCnicFilter
+    public string DriverIdentificationFilter
     {
-        get => _driverCnicFilter;
+        get => _driverIdentificationFilter;
         set
         {
-            if (SetProperty(ref _driverCnicFilter, value))
+            if (SetProperty(ref _driverIdentificationFilter, value))
                 ApplyDriverFilter();
         }
     }
@@ -2207,90 +2139,6 @@ public class MainViewModel : BaseViewModel
                 LoadSelectedOperatorMasterToForm();
         }
     }
-
-    public AppUser? SelectedUser
-    {
-        get => _selectedUser;
-        set
-        {
-            if (SetProperty(ref _selectedUser, value))
-                LoadSelectedUserToForm();
-        }
-    }
-
-    public string UserUsername
-    {
-        get => _userUsername;
-        set => SetProperty(ref _userUsername, value);
-    }
-
-    public string UserFullName
-    {
-        get => _userFullName;
-        set => SetProperty(ref _userFullName, value);
-    }
-
-    public string UserCompanyName
-    {
-        get => _userCompanyName;
-        set => SetProperty(ref _userCompanyName, value);
-    }
-
-    public string UserPassword
-    {
-        get => _userPassword;
-        set => SetProperty(ref _userPassword, value);
-    }
-
-    public bool UserIsActive
-    {
-        get => _userIsActive;
-        set => SetProperty(ref _userIsActive, value);
-    }
-
-    public bool UserCanAccessWeighment
-    {
-        get => _userCanAccessWeighment;
-        set => SetProperty(ref _userCanAccessWeighment, value);
-    }
-
-    public bool UserCanAccessSettings
-    {
-        get => _userCanAccessSettings;
-        set => SetProperty(ref _userCanAccessSettings, value);
-    }
-
-    public bool UserCanAccessMasters
-    {
-        get => _userCanAccessMasters;
-        set => SetProperty(ref _userCanAccessMasters, value);
-    }
-
-    public bool UserCanAccessReports
-    {
-        get => _userCanAccessReports;
-        set => SetProperty(ref _userCanAccessReports, value);
-    }
-
-    public bool UserCanAccessUserManagement
-    {
-        get => _userCanAccessUserManagement;
-        set => SetProperty(ref _userCanAccessUserManagement, value);
-    }
-
-    public bool UserCanEditCompletedTransaction
-    {
-        get => _userCanEditCompletedTransaction;
-        set => SetProperty(ref _userCanEditCompletedTransaction, value);
-    }
-
-    public bool UserCanDeleteCompletedTransaction
-    {
-        get => _userCanDeleteCompletedTransaction;
-        set => SetProperty(ref _userCanDeleteCompletedTransaction, value);
-    }
-
-    public string UserFormModeText => _editingUserId.HasValue ? "Edit User" : "Create User";
 
     public async Task InitializeAsync()
     {
@@ -2950,8 +2798,6 @@ public class MainViewModel : BaseViewModel
     private async Task LoadMastersAsync()
     {
         var currentDataAreaId = CurrentUserCompany;
-        var parties = await _databaseService.GetPartiesAsync();
-        var materials = await _databaseService.GetMaterialsAsync();
         var vehicles = await _databaseService.GetVehiclesAsync();
         var drivers = await _databaseService.GetDriversAsync();
         var weighbridgeMasters = await _databaseService.GetWeighbridgeMastersAsync();
@@ -3000,8 +2846,6 @@ public class MainViewModel : BaseViewModel
         // Operator Master is global for login/security, so it is not filtered by Legal Entity.
         var globalOperators = operatorMasters.ToList();
 
-        ReplaceCollection(Parties, parties);
-        ReplaceCollection(Materials, materials);
         ReplaceCollection(Vehicles, dataAreaVehicles);
         ReplaceCollection(ActiveVehicles, dataAreaVehicles.Where(x => IsStatusActive(x.Status)));
         ReplaceCollection(Drivers, dataAreaDrivers);
@@ -3019,7 +2863,6 @@ public class MainViewModel : BaseViewModel
         ApplyOperatorFilter();
         RefreshPartyLookup();
         SelectedWeighmentItem ??= null;
-        SelectedMaterial ??= Materials.FirstOrDefault();
     }
 
     private void ResetLargeMasterPageIndexes()
@@ -3162,60 +3005,6 @@ public class MainViewModel : BaseViewModel
         var completedRows = (await _databaseService.GetCompletedTodayAsync()).Where(x => IsSameDataArea(x.DataAreaId, CurrentUserCompany));
         ReplaceCollection(OpenWeighments, openRows);
         ReplaceCollection(CompletedToday, completedRows);
-    }
-
-    private async Task AddPartyAsync()
-    {
-        try
-        {
-            if (!CanAccessMasters)
-            {
-                StatusMessage = "You do not have access to Masters.";
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(NewPartyName))
-            {
-                StatusMessage = "Please enter party name.";
-                return;
-            }
-
-            await _databaseService.AddPartyAsync(NewPartyName, NewPartyType);
-            NewPartyName = string.Empty;
-            await LoadMastersAsync();
-            StatusMessage = "Party saved.";
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = "Party save error: " + ex.Message;
-        }
-    }
-
-    private async Task AddMaterialAsync()
-    {
-        try
-        {
-            if (!CanAccessMasters)
-            {
-                StatusMessage = "You do not have access to Masters.";
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(NewMaterialName))
-            {
-                StatusMessage = "Please enter material name.";
-                return;
-            }
-
-            await _databaseService.AddMaterialAsync(NewMaterialName);
-            NewMaterialName = string.Empty;
-            await LoadMastersAsync();
-            StatusMessage = "Material saved.";
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = "Material save error: " + ex.Message;
-        }
     }
 
     private async Task AddVehicleAsync()
@@ -4069,7 +3858,6 @@ public class MainViewModel : BaseViewModel
             }
 
             await _databaseService.SaveCustomerAsync(CustomerForm);
-            await _databaseService.AddPartyAsync(string.IsNullOrWhiteSpace(CustomerForm.Name) ? CustomerForm.CustomerAccount : CustomerForm.Name, "Customer");
             await LoadMastersAsync();
             StatusMessage = "Customer saved.";
         }
@@ -4133,7 +3921,6 @@ public class MainViewModel : BaseViewModel
             }
 
             await _databaseService.SaveVendorAsync(VendorForm);
-            await _databaseService.AddPartyAsync(string.IsNullOrWhiteSpace(VendorForm.Name) ? VendorForm.VendorAccount : VendorForm.Name, "Vendor");
             await LoadMastersAsync();
             StatusMessage = "Vendor saved.";
         }
@@ -4222,7 +4009,6 @@ public class MainViewModel : BaseViewModel
             }
 
             await _databaseService.SaveItemMasterAsync(ItemMasterForm);
-            await _databaseService.AddMaterialAsync(string.IsNullOrWhiteSpace(ItemMasterForm.ProductName) ? ItemMasterForm.ItemNumber : ItemMasterForm.ProductName);
             await LoadMastersAsync();
             StatusMessage = "Item saved.";
         }
@@ -4387,179 +4173,6 @@ public class MainViewModel : BaseViewModel
             PartitionId = SelectedUnitOfMeasureMaster.PartitionId
         };
         StatusMessage = $"Unit of Measure opened: {UnitOfMeasureMasterForm.symbol}";
-    }
-
-    private async Task LoadUsersAsync()
-    {
-        try
-        {
-            if (!CanAccessUserManagement)
-            {
-                StatusMessage = "You do not have access to User Management.";
-                return;
-            }
-
-            ReplaceCollection(Users, await _databaseService.GetUsersAsync());
-            StatusMessage = $"Users loaded. Rows: {Users.Count}";
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = "Users load error: " + ex.Message;
-        }
-    }
-
-    private async Task SaveUserAsync()
-    {
-        try
-        {
-            if (!CanAccessUserManagement)
-            {
-                StatusMessage = "You do not have access to User Management.";
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(UserUsername))
-            {
-                StatusMessage = "Please enter username.";
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(UserCompanyName))
-            {
-                StatusMessage = "Please enter company name.";
-                return;
-            }
-
-            if (!_editingUserId.HasValue && string.IsNullOrWhiteSpace(UserPassword))
-            {
-                StatusMessage = "Please enter password for new user.";
-                return;
-            }
-
-            var user = new AppUser
-            {
-                UserId = _editingUserId ?? 0,
-                Username = UserUsername.Trim(),
-                FullName = string.IsNullOrWhiteSpace(UserFullName) ? UserUsername.Trim() : UserFullName.Trim(),
-                CompanyName = UserCompanyName.Trim(),
-                IsActive = UserIsActive,
-                CanAccessWeighment = UserCanAccessWeighment,
-                CanAccessSettings = UserCanAccessSettings,
-                CanAccessMasters = UserCanAccessMasters,
-                CanAccessReports = UserCanAccessReports,
-                CanAccessUserManagement = UserCanAccessUserManagement,
-                CanEditCompletedTransaction = UserCanEditCompletedTransaction,
-                CanDeleteCompletedTransaction = UserCanDeleteCompletedTransaction
-            };
-
-            if (_editingUserId == _currentUser.UserId)
-            {
-                if (!user.IsActive)
-                {
-                    StatusMessage = "You cannot deactivate your own user.";
-                    return;
-                }
-
-                if (!user.CanAccessUserManagement)
-                {
-                    StatusMessage = "You cannot remove your own User Management access.";
-                    return;
-                }
-            }
-
-            if (_editingUserId.HasValue)
-            {
-                await _databaseService.UpdateUserAsync(user, UserPassword);
-                if (_editingUserId == _currentUser.UserId)
-                    ApplyCurrentUserChanges(user);
-                StatusMessage = "User updated.";
-            }
-            else
-            {
-                await _databaseService.AddUserAsync(user, UserPassword);
-                StatusMessage = "User created.";
-            }
-
-            ClearUserForm();
-            await LoadUsersAsync();
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = "User save error: " + ex.Message;
-        }
-    }
-
-    private void ApplyCurrentUserChanges(AppUser user)
-    {
-        _currentUser.Username = user.Username;
-        _currentUser.FullName = user.FullName;
-        _currentUser.CompanyName = user.CompanyName;
-        _currentUser.IsActive = user.IsActive;
-        _currentUser.CanAccessWeighment = user.CanAccessWeighment;
-        _currentUser.CanAccessSettings = user.CanAccessSettings;
-        _currentUser.CanAccessMasters = user.CanAccessMasters;
-        _currentUser.CanAccessReports = user.CanAccessReports;
-        _currentUser.CanAccessUserManagement = user.CanAccessUserManagement;
-        _currentUser.CanEditCompletedTransaction = user.CanEditCompletedTransaction;
-        _currentUser.CanDeleteCompletedTransaction = user.CanDeleteCompletedTransaction;
-
-        OnPropertyChanged(nameof(CurrentUserDisplay));
-        OnPropertyChanged(nameof(CurrentUserCompany));
-        OnPropertyChanged(nameof(CanAccessWeighment));
-        OnPropertyChanged(nameof(CanAccessSettings));
-        OnPropertyChanged(nameof(CanAccessMasters));
-        OnPropertyChanged(nameof(CanAccessReports));
-        OnPropertyChanged(nameof(CanAccessCorrection));
-        OnPropertyChanged(nameof(CanCreateCorrectionRequest));
-        OnPropertyChanged(nameof(CanOpenSelectedCorrection));
-        OnPropertyChanged(nameof(CanAccessUserManagement));
-        OnPropertyChanged(nameof(CanCorrectTransactions));
-        OnPropertyChanged(nameof(CanCancelTransactions));
-        OnPropertyChanged(nameof(CanEditCompletedTransaction));
-        OnPropertyChanged(nameof(CanDeleteCompletedTransaction));
-        OnPropertyChanged(nameof(IsCompletedGridReadOnly));
-        NotifyWeighmentButtonStates();
-    }
-
-    private void LoadSelectedUserToForm()
-    {
-        if (SelectedUser == null)
-            return;
-
-        _editingUserId = SelectedUser.UserId;
-        UserUsername = SelectedUser.Username;
-        UserFullName = SelectedUser.FullName;
-        UserCompanyName = SelectedUser.CompanyName;
-        UserPassword = string.Empty;
-        UserIsActive = SelectedUser.IsActive;
-        UserCanAccessWeighment = SelectedUser.CanAccessWeighment;
-        UserCanAccessSettings = SelectedUser.CanAccessSettings;
-        UserCanAccessMasters = SelectedUser.CanAccessMasters;
-        UserCanAccessReports = SelectedUser.CanAccessReports;
-        UserCanAccessUserManagement = SelectedUser.CanAccessUserManagement;
-        UserCanEditCompletedTransaction = SelectedUser.CanEditCompletedTransaction;
-        UserCanDeleteCompletedTransaction = SelectedUser.CanDeleteCompletedTransaction;
-        OnPropertyChanged(nameof(UserFormModeText));
-        StatusMessage = $"Selected user: {SelectedUser.Username}. Leave password blank if you do not want to change it.";
-    }
-
-    private void ClearUserForm()
-    {
-        _editingUserId = null;
-        SelectedUser = null;
-        UserUsername = string.Empty;
-        UserFullName = string.Empty;
-        UserCompanyName = string.Empty;
-        UserPassword = string.Empty;
-        UserIsActive = true;
-        UserCanAccessWeighment = true;
-        UserCanAccessSettings = false;
-        UserCanAccessMasters = false;
-        UserCanAccessReports = true;
-        UserCanAccessUserManagement = false;
-        UserCanEditCompletedTransaction = false;
-        UserCanDeleteCompletedTransaction = false;
-        OnPropertyChanged(nameof(UserFormModeText));
     }
 
     private void ClearEntry()
@@ -4772,7 +4385,6 @@ public class MainViewModel : BaseViewModel
     {
         // Party selection is handled through the search lookup window. Do not pre-load
         // Customers/Vendors into an editable ComboBox because those masters can be very large.
-        FilteredParties.Clear();
         SelectedWeighmentParty = null;
         PartyAccount = string.Empty;
         PartyName = string.Empty;
@@ -4978,7 +4590,6 @@ public class MainViewModel : BaseViewModel
             }
 
             VehicleMasterForm.DataAreaId = CurrentUserCompany;
-            VehicleMasterForm.LegalEntity = CurrentUserCompany;
             await _databaseService.SaveVehicleAsync(VehicleMasterForm);
             await LoadMastersAsync();
             StatusMessage = "Vehicle master saved.";
@@ -5014,7 +4625,6 @@ public class MainViewModel : BaseViewModel
             Capacity = SelectedVehicleMaster.Capacity,
             DefaultDriver = SelectedVehicleMaster.DefaultDriver,
             RegistrationExpiryDate = SelectedVehicleMaster.RegistrationExpiryDate,
-            LegalEntity = SelectedVehicleMaster.LegalEntity,
             Status = SelectedVehicleMaster.Status
         };
     }
@@ -5030,7 +4640,6 @@ public class MainViewModel : BaseViewModel
             }
 
             DriverMasterForm.DataAreaId = CurrentUserCompany;
-            DriverMasterForm.LegalEntity = CurrentUserCompany;
             await _databaseService.SaveDriverAsync(DriverMasterForm);
             await LoadMastersAsync();
             StatusMessage = "Driver master saved.";
@@ -5080,7 +4689,6 @@ public class MainViewModel : BaseViewModel
             EmiratesIdAttachment = SelectedDriverMaster.EmiratesIdAttachment,
             PassportAttachment = SelectedDriverMaster.PassportAttachment,
             DrivingLicenceAttachment = SelectedDriverMaster.DrivingLicenceAttachment,
-            LegalEntity = SelectedDriverMaster.LegalEntity,
             Status = SelectedDriverMaster.Status,
             Blacklisted = SelectedDriverMaster.Blacklisted,
             BlacklistReason = SelectedDriverMaster.BlacklistReason,
@@ -5314,7 +4922,6 @@ public class MainViewModel : BaseViewModel
             CanAccessSettings = SelectedOperatorMaster.CanAccessSettings,
             CanCaptureFirstWeight = SelectedOperatorMaster.CanCaptureFirstWeight,
             CanCaptureSecondWeight = SelectedOperatorMaster.CanCaptureSecondWeight,
-            CanCorrectTransactions = SelectedOperatorMaster.CanCorrectTransactions,
             CanSubmitCorrection = SelectedOperatorMaster.CanSubmitCorrection,
             CanApproveRejectCorrection = SelectedOperatorMaster.CanApproveRejectCorrection,
             CanCorrectWeight = SelectedOperatorMaster.CanCorrectWeight,
@@ -5596,7 +5203,7 @@ public class MainViewModel : BaseViewModel
             MatchesFilter(x.MobileNumber, DriverMobileFilter) &&
             MatchesFilter(x.DriverType, DriverTypeFilter) &&
             MatchesFilter(x.EmployerAccount, DriverEmployerFilter) &&
-            MatchesFilter(x.IdentificationNumber, DriverCnicFilter) &&
+            MatchesFilter(x.IdentificationNumber, DriverIdentificationFilter) &&
             MatchesFilter(x.DrivingLicenceNumber, DriverLicenseFilter) &&
             MatchesFilter(x.Status, DriverStatusFilter)));
     }
