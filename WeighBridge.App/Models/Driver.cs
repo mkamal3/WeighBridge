@@ -3,6 +3,8 @@ namespace WeightBridgeApp.Models;
 public class Driver
 {
     public int DriverId { get; set; }
+    /// <summary>Global business key for Hub sync (client-generated GUID).</summary>
+    public string DriverGuid { get; set; } = string.Empty;
     public string DriverName { get; set; } = string.Empty;
     public string MobileNumber { get; set; } = string.Empty;
     public string SecondaryMobile { get; set; } = string.Empty;

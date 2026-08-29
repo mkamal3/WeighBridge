@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
+using WeighBridge.Service.Extensions;
 
 namespace DeltaToSqlitePoc;
 
@@ -16,13 +17,71 @@ public static class Program
 {
     public static async Task<int> Main(string[] args)
     {
-        var parseResult = Parser.Default.ParseArguments<SyncCliOptions>(args);
-        return await parseResult.MapResult(
-            async opts => await RunAsync(opts, args).ConfigureAwait(false),
-            _ => Task.FromResult(1)).ConfigureAwait(false);
+        if (IsAdlsCliInvocation(args))
+        {
+            var parseResult = Parser.Default.ParseArguments<SyncCliOptions>(args);
+            return await parseResult.MapResult(
+                async opts => await RunAdlsSyncCliAsync(opts, args).ConfigureAwait(false),
+                _ => Task.FromResult(1)).ConfigureAwait(false);
+        }
+
+        await RunPushSyncWorkerAsync(args).ConfigureAwait(false);
+        return 0;
     }
 
-    private static async Task<int> RunAsync(SyncCliOptions cli, string[] rawArgs)
+    private static bool IsAdlsCliInvocation(string[] args) =>
+        args.Any(static arg => arg.StartsWith("--mode", StringComparison.OrdinalIgnoreCase));
+
+    private static async Task RunPushSyncWorkerAsync(string[] args)
+    {
+        var contentRoot = AppContext.BaseDirectory;
+        Directory.CreateDirectory(Path.Combine(contentRoot, "logs"));
+
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Information()
+            .MinimumLevel.Override("WeighBridge.Service.PushSync", Serilog.Events.LogEventLevel.Debug)
+            .Enrich.FromLogContext()
+            .WriteTo.Console()
+            .WriteTo.File(
+                Path.Combine(contentRoot, "logs", "push-sync-.log"),
+                rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: 14)
+            .CreateLogger();
+
+        try
+        {
+            var host = Host.CreateDefaultBuilder(args)
+                .UseContentRoot(contentRoot)
+                .UseWindowsService()
+                .UseSerilog()
+                .ConfigureAppConfiguration((ctx, config) =>
+                {
+                    config.Sources.Clear();
+                    config.SetBasePath(contentRoot);
+                    config.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+                    config.AddJsonFile($"appsettings.{ctx.HostingEnvironment.EnvironmentName}.json", optional: true);
+                    config.AddUserSecrets(typeof(Program).Assembly, optional: true);
+                    config.AddEnvironmentVariables(prefix: "PUSHSYNC_");
+                })
+                .ConfigureServices((ctx, services) =>
+                {
+                    services.AddPushSync(ctx.Configuration);
+                })
+                .Build();
+
+            Log.Information(
+                "WeighBridge push sync worker starting (environment={Environment}).",
+                host.Services.GetRequiredService<IHostEnvironment>().EnvironmentName);
+
+            await host.RunAsync().ConfigureAwait(false);
+        }
+        finally
+        {
+            await Log.CloseAndFlushAsync().ConfigureAwait(false);
+        }
+    }
+
+    private static async Task<int> RunAdlsSyncCliAsync(SyncCliOptions cli, string[] rawArgs)
     {
         if (!cli.IsFull && !cli.IsIncremental)
         {

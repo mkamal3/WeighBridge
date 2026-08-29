@@ -184,6 +184,7 @@ CREATE TABLE IF NOT EXISTS Vehicles (
 
 CREATE TABLE IF NOT EXISTS Drivers (
     DriverId INTEGER PRIMARY KEY AUTOINCREMENT,
+    DriverGuid TEXT NOT NULL DEFAULT '',
     DataAreaId TEXT NOT NULL DEFAULT 'DAT',
     DriverName TEXT NOT NULL,
     MobileNumber TEXT NOT NULL DEFAULT '',
@@ -213,7 +214,12 @@ CREATE TABLE IF NOT EXISTS Drivers (
     Blacklisted INTEGER NOT NULL DEFAULT 0,
     BlacklistReason TEXT NOT NULL DEFAULT '',
     EffectiveFrom TEXT,
-    Remarks TEXT NOT NULL DEFAULT ''
+    Remarks TEXT NOT NULL DEFAULT '',
+    SyncStatus TEXT NOT NULL DEFAULT 'Pending',
+    LastModifiedUtc TEXT NOT NULL DEFAULT '',
+    SyncedAtUtc TEXT,
+    RetryCount INTEGER NOT NULL DEFAULT 0,
+    LastSyncError TEXT
 );
 
 CREATE TABLE IF NOT EXISTS Weighments (
@@ -942,6 +948,7 @@ TcpPort = excluded.TcpPort;";
             result.Add(new Driver
             {
                 DriverId = Convert.ToInt32(reader["DriverId"]),
+                DriverGuid = ReadText(reader, "DriverGuid"),
                 DataAreaId = ReadDataAreaId(reader),
                 DriverName = ReadText(reader, "DriverName"),
                 MobileNumber = ReadText(reader, "MobileNumber"),
@@ -1003,6 +1010,7 @@ TcpPort = excluded.TcpPort;";
             result.Add(new Driver
             {
                 DriverId = Convert.ToInt32(reader["DriverId"]),
+                DriverGuid = ReadText(reader, "DriverGuid"),
                 DataAreaId = ReadDataAreaId(reader),
                 DriverName = ReadText(reader, "DriverName"),
                 MobileNumber = ReadText(reader, "MobileNumber"),
@@ -1111,9 +1119,13 @@ VALUES
         using var connection = CreateConnection();
         connection.Open();
         using var command = connection.CreateCommand();
-        command.CommandText = "INSERT OR IGNORE INTO Drivers (DriverName, Status, EffectiveFrom) VALUES ($DriverName, 'Active', $EffectiveFrom)";
+        command.CommandText = @"
+INSERT OR IGNORE INTO Drivers (DriverGuid, DriverName, Status, EffectiveFrom, SyncStatus, LastModifiedUtc)
+VALUES ($DriverGuid, $DriverName, 'Active', $EffectiveFrom, 'Pending', $LastModifiedUtc)";
+        command.Parameters.AddWithValue("$DriverGuid", Guid.NewGuid().ToString());
         command.Parameters.AddWithValue("$DriverName", driverName.Trim());
         command.Parameters.AddWithValue("$EffectiveFrom", DateTime.Today.ToString("yyyy-MM-dd"));
+        command.Parameters.AddWithValue("$LastModifiedUtc", DateTime.UtcNow.ToString("o"));
         command.ExecuteNonQuery();
     });
 
@@ -1148,9 +1160,21 @@ VALUES
         connection.Open();
         EnsureCompanyWiseValueIsUnique(connection, "Drivers", "DriverName", driver.DriverName, driver.DataAreaId, "DriverId", driver.DriverId > 0 ? driver.DriverId : null, "Driver Name");
         using var command = connection.CreateCommand();
+        var lastModifiedUtc = DateTime.UtcNow.ToString("o");
 
         if (driver.DriverId > 0)
         {
+            if (string.IsNullOrWhiteSpace(driver.DriverGuid))
+            {
+                using var guidCommand = connection.CreateCommand();
+                guidCommand.CommandText = "SELECT DriverGuid FROM Drivers WHERE DriverId = $DriverId";
+                guidCommand.Parameters.AddWithValue("$DriverId", driver.DriverId);
+                driver.DriverGuid = Convert.ToString(guidCommand.ExecuteScalar()) ?? string.Empty;
+            }
+
+            if (string.IsNullOrWhiteSpace(driver.DriverGuid))
+                driver.DriverGuid = Guid.NewGuid().ToString();
+
             command.CommandText = @"
 UPDATE Drivers SET
 DataAreaId = $DataAreaId,
@@ -1182,17 +1206,27 @@ Status = $Status,
 Blacklisted = $Blacklisted,
 BlacklistReason = $BlacklistReason,
 EffectiveFrom = $EffectiveFrom,
-Remarks = $Remarks
+Remarks = $Remarks,
+DriverGuid = $DriverGuid,
+SyncStatus = 'Pending',
+LastModifiedUtc = $LastModifiedUtc
 WHERE DriverId = $DriverId;";
             command.Parameters.AddWithValue("$DriverId", driver.DriverId);
+            command.Parameters.AddWithValue("$DriverGuid", driver.DriverGuid);
+            command.Parameters.AddWithValue("$LastModifiedUtc", lastModifiedUtc);
         }
         else
         {
+            if (string.IsNullOrWhiteSpace(driver.DriverGuid))
+                driver.DriverGuid = Guid.NewGuid().ToString();
+
             command.CommandText = @"
 INSERT INTO Drivers
-(DataAreaId, DriverName, MobileNumber, SecondaryMobile, Email, Nationality, DriverType, EmployerPartyType, EmployerAccount, IdentificationType, IdentificationNumber, IdentificationExpiryDate, EmiratesIdExpiryDate, PassportNumber, PassportExpiryDate, DrivingLicenceNumber, DrivingLicenceIssuedBy, DrivingLicenceExpiryDate, LicenceCategories, DefaultVehicle, Address, DriverPhoto, EmiratesIdAttachment, PassportAttachment, DrivingLicenceAttachment, Status, Blacklisted, BlacklistReason, EffectiveFrom, Remarks)
+(DriverGuid, DataAreaId, DriverName, MobileNumber, SecondaryMobile, Email, Nationality, DriverType, EmployerPartyType, EmployerAccount, IdentificationType, IdentificationNumber, IdentificationExpiryDate, EmiratesIdExpiryDate, PassportNumber, PassportExpiryDate, DrivingLicenceNumber, DrivingLicenceIssuedBy, DrivingLicenceExpiryDate, LicenceCategories, DefaultVehicle, Address, DriverPhoto, EmiratesIdAttachment, PassportAttachment, DrivingLicenceAttachment, Status, Blacklisted, BlacklistReason, EffectiveFrom, Remarks, SyncStatus, LastModifiedUtc)
 VALUES
-($DataAreaId, $DriverName, $MobileNumber, $SecondaryMobile, $Email, $Nationality, $DriverType, $EmployerPartyType, $EmployerAccount, $IdentificationType, $IdentificationNumber, $IdentificationExpiryDate, $EmiratesIdExpiryDate, $PassportNumber, $PassportExpiryDate, $DrivingLicenceNumber, $DrivingLicenceIssuedBy, $DrivingLicenceExpiryDate, $LicenceCategories, $DefaultVehicle, $Address, $DriverPhoto, $EmiratesIdAttachment, $PassportAttachment, $DrivingLicenceAttachment, $Status, $Blacklisted, $BlacklistReason, $EffectiveFrom, $Remarks);";
+($DriverGuid, $DataAreaId, $DriverName, $MobileNumber, $SecondaryMobile, $Email, $Nationality, $DriverType, $EmployerPartyType, $EmployerAccount, $IdentificationType, $IdentificationNumber, $IdentificationExpiryDate, $EmiratesIdExpiryDate, $PassportNumber, $PassportExpiryDate, $DrivingLicenceNumber, $DrivingLicenceIssuedBy, $DrivingLicenceExpiryDate, $LicenceCategories, $DefaultVehicle, $Address, $DriverPhoto, $EmiratesIdAttachment, $PassportAttachment, $DrivingLicenceAttachment, $Status, $Blacklisted, $BlacklistReason, $EffectiveFrom, $Remarks, 'Pending', $LastModifiedUtc);";
+            command.Parameters.AddWithValue("$DriverGuid", driver.DriverGuid);
+            command.Parameters.AddWithValue("$LastModifiedUtc", lastModifiedUtc);
         }
 
         AddDriverParameters(command, driver);
@@ -4449,6 +4483,13 @@ ON CONFLICT(DataAreaId) DO UPDATE SET LegalEntityName = excluded.LegalEntityName
         EnsureColumn(connection, "Drivers", "BlacklistReason", "TEXT NOT NULL DEFAULT ''");
         EnsureColumn(connection, "Drivers", "EffectiveFrom", "TEXT");
         EnsureColumn(connection, "Drivers", "Remarks", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Drivers", "DriverGuid", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Drivers", "SyncStatus", "TEXT NOT NULL DEFAULT 'Pending'");
+        EnsureColumn(connection, "Drivers", "LastModifiedUtc", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "Drivers", "SyncedAtUtc", "TEXT");
+        EnsureColumn(connection, "Drivers", "RetryCount", "INTEGER NOT NULL DEFAULT 0");
+        EnsureColumn(connection, "Drivers", "LastSyncError", "TEXT");
+        BackfillDriverSyncMetadata(connection);
 
 
         // Weighbridge master migration
@@ -4645,6 +4686,8 @@ WHERE trim(ifnull(DataAreaId, '')) <> ''; ");
         ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_WarehouseMasters_DataArea_Warehouse ON WarehouseMasters (DataAreaId, Warehouse);");
         ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_Vehicles_DataArea_PlateNumber ON Vehicles (DataAreaId, PlateNumber);");
         ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_Drivers_DataArea_DriverName ON Drivers (DataAreaId, DriverName);");
+        ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_Drivers_DriverGuid ON Drivers (DriverGuid) WHERE trim(ifnull(DriverGuid, '')) <> '';");
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_Drivers_SyncStatus ON Drivers (SyncStatus, LastModifiedUtc);");
         ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_WeighbridgeMasters_DataArea_WeighbridgeCode ON WeighbridgeMasters (DataAreaId, WeighbridgeCode);");
         ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_OperatorMasters_DataArea_EmployeeId ON OperatorMasters (DataAreaId, EmployeeId);");
         ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_OperatorMasters_Username ON OperatorMasters (Username);");
@@ -4684,7 +4727,7 @@ WHERE trim(ifnull(DataAreaId, '')) <> ''; ");
     private static void ApplyPerformancePragmas(SqliteConnection connection)
     {
         ExecuteNonQuery(connection, "PRAGMA journal_mode=WAL;");
-        ExecuteNonQuery(connection, "PRAGMA synchronous=NORMAL;");
+        ExecuteNonQuery(connection, "PRAGMA synchronous=FULL;");
         ExecuteNonQuery(connection, "PRAGMA busy_timeout=5000;");
     }
 
@@ -4856,6 +4899,46 @@ WHERE NOT EXISTS (SELECT 1 FROM ReasonMasters WHERE lower(trim(Code)) = lower(tr
         ExecuteNonQuery(connection, $"ALTER TABLE {tableName} ADD COLUMN {columnName} {definition};");
     }
 
+    private static void BackfillDriverSyncMetadata(SqliteConnection connection)
+    {
+        using var selectCommand = connection.CreateCommand();
+        selectCommand.CommandText = """
+            SELECT DriverId, DriverGuid, LastModifiedUtc
+            FROM Drivers
+            WHERE trim(ifnull(DriverGuid, '')) = ''
+               OR trim(ifnull(LastModifiedUtc, '')) = '';
+            """;
+        using var reader = selectCommand.ExecuteReader();
+        var updates = new List<(int DriverId, string DriverGuid, string LastModifiedUtc)>();
+        while (reader.Read())
+        {
+            var driverId = Convert.ToInt32(reader["DriverId"]);
+            var driverGuid = Convert.ToString(reader["DriverGuid"]) ?? string.Empty;
+            var lastModifiedUtc = Convert.ToString(reader["LastModifiedUtc"]) ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(driverGuid))
+                driverGuid = Guid.NewGuid().ToString();
+            if (string.IsNullOrWhiteSpace(lastModifiedUtc))
+                lastModifiedUtc = DateTime.UtcNow.ToString("o");
+            updates.Add((driverId, driverGuid, lastModifiedUtc));
+        }
+
+        foreach (var (driverId, driverGuid, lastModifiedUtc) in updates)
+        {
+            using var updateCommand = connection.CreateCommand();
+            updateCommand.CommandText = """
+                UPDATE Drivers
+                SET DriverGuid = $DriverGuid,
+                    LastModifiedUtc = $LastModifiedUtc,
+                    SyncStatus = CASE WHEN trim(ifnull(SyncStatus, '')) = '' THEN 'Pending' ELSE SyncStatus END
+                WHERE DriverId = $DriverId;
+                """;
+            updateCommand.Parameters.AddWithValue("$DriverGuid", driverGuid);
+            updateCommand.Parameters.AddWithValue("$LastModifiedUtc", lastModifiedUtc);
+            updateCommand.Parameters.AddWithValue("$DriverId", driverId);
+            updateCommand.ExecuteNonQuery();
+        }
+    }
+
     private static bool ColumnExists(SqliteConnection connection, string tableName, string columnName)
     {
         using var command = connection.CreateCommand();
@@ -4962,7 +5045,7 @@ SELECT 'CONV-PROD0001-TON-KG', 0.001, 1, 1000, 'ton', 0,
 WHERE NOT EXISTS (SELECT 1 FROM productsunitofmeasureconversion WHERE Id = 'CONV-PROD0001-TON-KG');
 
 INSERT OR IGNORE INTO Vehicles (DataAreaId, VehicleNo, PlateNumber, PlateEmirate, PlateCategory, VehicleType, Status) VALUES ('DAT', 'TEST-0001', 'TEST-0001', 'Dubai', 'Commercial', 'Truck', 'Active');
-INSERT OR IGNORE INTO Drivers (DataAreaId, DriverName, MobileNumber, DriverType, EmployerPartyType, IdentificationType, IdentificationNumber, DrivingLicenceNumber, DrivingLicenceIssuedBy, DrivingLicenceExpiryDate, Status, EffectiveFrom) VALUES ('DAT', 'Default Driver', '0000000000', 'Company Driver', 'Legal Entity', 'Emirates ID', 'ID-0001', 'LIC-0001', 'Dubai', date('now', '+1 year'), 'Active', date('now'));
+INSERT OR IGNORE INTO Drivers (DriverGuid, DataAreaId, DriverName, MobileNumber, DriverType, EmployerPartyType, IdentificationType, IdentificationNumber, DrivingLicenceNumber, DrivingLicenceIssuedBy, DrivingLicenceExpiryDate, Status, EffectiveFrom, SyncStatus, LastModifiedUtc) VALUES ('00000000-0000-4000-8000-000000000001', 'DAT', 'Default Driver', '0000000000', 'Company Driver', 'Legal Entity', 'Emirates ID', 'ID-0001', 'LIC-0001', 'Dubai', date('now', '+1 year'), 'Active', date('now'), 'Pending', datetime('now'));
 INSERT OR IGNORE INTO WeighbridgeMasters (DataAreaId, WeighbridgeCode, WeighbridgeName, PlantSite, Warehouse, WeighbridgeType, ScaleType, ScaleCapacity, CapacityUnit, CommunicationType, ScaleIpAddress, TcpPort, ScaleComPort, BaudRate, Parity, DataBits, StopBits, OperatingStatus, EffectiveFrom, CreatedAt) VALUES ('DAT', 'WB-001', 'Default Weighbridge', 'Default Site', 'Default Warehouse', 'Bidirectional', 'Platform Scale', 100000, 'kg', 'Mock', '192.168.1.100', 4001, 'COM1', 9600, 'None', 8, 'One', 'Active', date('now'), datetime('now'));
 
 INSERT OR IGNORE INTO WarehouseMasters (DataAreaId, Warehouse, Name, Site, Type, CreatedAt) VALUES ('DAT', 'WH-001', 'Default Warehouse', 'SITE-001', 'Warehouse', datetime('now'));

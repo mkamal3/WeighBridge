@@ -4664,6 +4664,7 @@ public class MainViewModel : BaseViewModel
         DriverMasterForm = new Driver
         {
             DriverId = SelectedDriverMaster.DriverId,
+            DriverGuid = SelectedDriverMaster.DriverGuid,
             DataAreaId = SelectedDriverMaster.DataAreaId,
             DriverName = SelectedDriverMaster.DriverName,
             MobileNumber = SelectedDriverMaster.MobileNumber,
