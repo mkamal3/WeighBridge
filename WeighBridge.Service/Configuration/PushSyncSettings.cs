@@ -27,4 +27,10 @@ public sealed class PushSyncSettings
 
     /// <summary>Cap for exponential backoff interval (seconds).</summary>
     public int MaxBackoffSeconds { get; set; } = 300;
+
+    /// <summary>Delete sync_outbox rows in Synced status older than this many days.</summary>
+    public int SyncedOutboxRetentionDays { get; set; } = 7;
+
+    /// <summary>How often to run outbox pruning (hours).</summary>
+    public int OutboxPruneIntervalHours { get; set; } = 1;
 }

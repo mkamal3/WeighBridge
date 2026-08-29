@@ -6,8 +6,8 @@ namespace WeighBridge.Service.Extensions;
 public static class PushSyncServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers generic push sync services. Add new <see cref="ISyncableTableConfig"/> implementations
-    /// to the registry when extending beyond Drivers (e.g. Vehicle, TicketEntry).
+    /// Registers generic Hub push sync (sync_outbox driven).
+    /// Add new <see cref="ISyncableTableConfig"/> implementations to the registry for additional entity types.
     /// </summary>
     public static IServiceCollection AddPushSync(this IServiceCollection services, IConfiguration configuration)
     {
@@ -15,10 +15,11 @@ public static class PushSyncServiceCollectionExtensions
         services.AddSingleton<BridgeOneDatabasePathResolver>();
         services.AddSingleton<DriverSyncConfig>();
         services.AddSingleton<SyncTableRegistry>(sp => new SyncTableRegistry([sp.GetRequiredService<DriverSyncConfig>()]));
-        services.AddSingleton<LocalSyncRepository>();
+        services.AddSingleton<OutboxSyncRepository>();
         services.AddSingleton<HubSqlPushRepository>();
         services.AddSingleton<PushSyncEngine>();
         services.AddHostedService<PushSyncBackgroundService>();
+        services.AddHostedService<OutboxPruningService>();
         return services;
     }
 }

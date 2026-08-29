@@ -6,17 +6,18 @@ namespace WeighBridge.Service.PushSync;
 /// </summary>
 public interface ISyncableTableConfig
 {
+    /// <summary>sync_outbox.EntityType value (e.g. Driver).</summary>
+    string EntityType { get; }
+
     string LocalTableName { get; }
 
     string HubTableName { get; }
 
-    /// <summary>Global business key column (e.g. DriverGuid).</summary>
+    /// <summary>Global business key column on the local table (e.g. DriverGuid).</summary>
     string BusinessKeyColumn { get; }
 
     IReadOnlyList<HubColumnMapping> HubColumns { get; }
 
-    /// <summary>Columns selected from the local table (includes business key and sync metadata).</summary>
+    /// <summary>Business columns loaded from the local table when pushing.</summary>
     IReadOnlyList<string> SelectColumns { get; }
-
-    string BuildSelectPendingSql();
 }

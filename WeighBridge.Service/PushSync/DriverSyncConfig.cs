@@ -3,6 +3,8 @@ namespace WeighBridge.Service.PushSync;
 /// <summary>Push sync config for the local Drivers table → Hub dbo.Drivers.</summary>
 public sealed class DriverSyncConfig : ISyncableTableConfig
 {
+    public string EntityType => HubSyncEntityTypes.Driver;
+
     public string LocalTableName => "Drivers";
 
     public string HubTableName => "Drivers";
@@ -42,8 +44,7 @@ public sealed class DriverSyncConfig : ISyncableTableConfig
         "BlacklistReason",
         "EffectiveFrom",
         "Remarks",
-        "LastModifiedUtc",
-        "RetryCount"
+        "LastModifiedUtc"
     ];
 
     public IReadOnlyList<HubColumnMapping> HubColumns { get; } =
@@ -81,24 +82,4 @@ public sealed class DriverSyncConfig : ISyncableTableConfig
         new("Remarks", "Remarks"),
         new("LastModifiedUtc", "SourceLastModifiedUtc", HubColumnType.DateTimeOffset)
     ];
-
-    public string BuildSelectPendingSql() => """
-        SELECT *
-        FROM Drivers
-        WHERE trim(ifnull(DriverGuid, '')) <> ''
-          AND (
-              SyncStatus = 'Pending'
-              OR (
-                  SyncStatus = 'Failed'
-                  AND RetryCount < $MaxRetryCount
-                  AND datetime(LastModifiedUtc) <= datetime(
-                      'now',
-                      '-' || MIN(
-                          $MaxBackoffSeconds,
-                          CAST(POWER(2, MAX(RetryCount, 1)) AS INTEGER)) || ' seconds')
-              )
-          )
-        ORDER BY LastModifiedUtc
-        LIMIT $BatchSize;
-        """;
 }
