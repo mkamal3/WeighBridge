@@ -79,7 +79,7 @@ public sealed class DriverSyncConfig : ISyncableTableConfig
         new("Blacklisted", "Blacklisted", HubColumnType.Boolean),
         new("BlacklistReason", "BlacklistReason"),
         new("EffectiveFrom", "EffectiveFrom"),
-        new("Remarks", "Remarks"),
-        new("LastModifiedUtc", "SourceLastModifiedUtc", HubColumnType.DateTimeOffset)
+        new("Remarks", "Remarks")
+        //new("LastModifiedUtc", "SourceLastModifiedUtc", HubColumnType.DateTimeOffset)
     ];
 }

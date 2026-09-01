@@ -54,7 +54,10 @@ public sealed class HubSqlPushRepository
         CancellationToken cancellationToken)
     {
         var hubTable = $"[dbo].[{config.HubTableName}]";
+        // avoid colliding with reserved parameters added below (StationId, SourceLastModifiedUtc)
+        //var reserved = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "StationId", "SourceLastModifiedUtc" };
         var sourceProjection = config.HubColumns
+            //.Where(x => !reserved.Contains(x.HubColumn))
             .Select(x => $"{ParamName(x.HubColumn)} AS [{x.HubColumn}]")
             .Concat(["@StationId AS [StationId]", "@SourceLastModifiedUtc AS [SourceLastModifiedUtc]"]);
 
@@ -86,12 +89,15 @@ public sealed class HubSqlPushRepository
             """;
 
         await using var command = new SqlCommand(mergeSql, connection, transaction);
+        // add parameters for hub column mappings excluding reserved columns
+        //foreach (var mapping in config.HubColumns.Where(x => !reserved.Contains(x.HubColumn)))
         foreach (var mapping in config.HubColumns)
         {
             row.Values.TryGetValue(mapping.LocalColumn, out var rawValue);
             command.Parameters.AddWithValue(ParamName(mapping.HubColumn), ConvertHubValue(mapping, rawValue));
         }
 
+        // add reserved parameters
         command.Parameters.AddWithValue("@StationId", stationId);
         command.Parameters.AddWithValue("@SourceLastModifiedUtc", ParseSourceLastModifiedUtc(row));
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
