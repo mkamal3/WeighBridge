@@ -14,13 +14,13 @@ public static class CsvExportService
 
         var filePath = System.IO.Path.Combine(folder, $"BridgeOneReport-{DateTime.Now:yyyyMMdd-HHmmss}.csv");
         var sb = new StringBuilder();
-        sb.AppendLine("SlipNumber,CompanyName,VehicleNo,DriverName,ItemNumber,ItemName,FirstWeight,FirstWeightTime,FirstWeightBy,SecondWeight,SecondWeightTime,SecondWeightBy,NetWeight,Status,Remarks");
+        sb.AppendLine("SlipNumber,LegalEntity,VehicleNo,DriverName,ItemNumber,ItemName,FirstWeight,FirstWeightTime,FirstWeightBy,SecondWeight,SecondWeightTime,SecondWeightBy,NetWeight,Status,Remarks");
 
         foreach (var row in rows)
         {
             sb.AppendLine(string.Join(",",
                 Escape(row.SlipNumber),
-                Escape(row.CompanyName),
+                Escape(row.DataAreaId),
                 Escape(row.VehicleNo),
                 Escape(row.DriverName),
                 Escape(row.ItemNumber),

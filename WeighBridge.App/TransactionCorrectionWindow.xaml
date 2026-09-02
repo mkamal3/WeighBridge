@@ -86,9 +86,9 @@
                         <TextBlock Grid.Row="0" Grid.Column="1" Text="Original Value" FontWeight="SemiBold" Foreground="#6B7280" Margin="4,4,4,8" />
                         <TextBlock Grid.Row="0" Grid.Column="2" Text="Corrected Value" FontWeight="SemiBold" Foreground="#202A44" Margin="4,4,4,8" />
 
-                        <Label Grid.Row="1" Grid.Column="0" Content="Company" />
-                        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding OriginalWeighment.CompanyName}" IsReadOnly="True" Background="#F2F4F7" />
-                        <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding CorrectedWeighment.CompanyName, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True" Background="#F2F4F7" ToolTip="Legal entity/company cannot be changed through correction." />
+                        <Label Grid.Row="1" Grid.Column="0" Content="Legal Entity" />
+                        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding OriginalWeighment.DataAreaId}" IsReadOnly="True" Background="#F2F4F7" />
+                        <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding CorrectedWeighment.DataAreaId, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True" Background="#F2F4F7" ToolTip="Legal Entity cannot be changed through correction." />
 
                         <Label Grid.Row="2" Grid.Column="0" Content="Vehicle No" />
                         <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding OriginalWeighment.VehicleNo}" IsReadOnly="True" Background="#F2F4F7" />

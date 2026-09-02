@@ -647,7 +647,6 @@ public sealed class CorrectionWorkspaceViewModel : BaseViewModel
         OperatorUsername = source.OperatorUsername,
         ExternalReference = source.ExternalReference,
         OperatorRemarks = source.OperatorRemarks,
-        CompanyName = source.CompanyName,
         VehicleNo = source.VehicleNo,
         DriverName = source.DriverName,
         MaterialId = source.MaterialId,
