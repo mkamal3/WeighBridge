@@ -206,6 +206,16 @@ public class MainViewModel : BaseViewModel
                 if (CanAccessTransactions) await LoadTransactionsAsync();
                 if (CanAccessReports) await LoadReportAsync();
             });
+        QualityInspectionWorkspace = new QualityInspectionWorkspaceViewModel(
+            _databaseService,
+            _currentUser,
+            () => CurrentUserCompany,
+            async () =>
+            {
+                await RefreshWeighmentsAsync();
+                if (CanAccessTransactions) await LoadTransactionsAsync();
+                if (CanAccessReports) await LoadReportAsync();
+            });
 
         ConnectionTypes = new ObservableCollection<string> { "Mock", "TCP/IP", "Serial", "USB", "OPC", "API" };
         ParityOptions = new ObservableCollection<string> { "None", "Odd", "Even", "Mark", "Space" };
@@ -280,6 +290,7 @@ public class MainViewModel : BaseViewModel
         LoadTransactionsCommand = new RelayCommand(LoadTransactionsAsync);
         ClearTransactionFiltersCommand = new RelayCommand(ClearTransactionFilters);
         CorrectTransactionCommand = new RelayCommand(CorrectTransactionAsync);
+        StartQualityInspectionCommand = new RelayCommand(StartQualityInspectionAsync, () => CanStartQualityInspection);
         CancelTransactionCommand = new RelayCommand(CancelTransactionAsync);
         StartCancellationFromTransactionCommand = new RelayCommand(StartCancellationFromSelectedTransactionAsync, () => CanInitiateCancellationFromTransaction);
         NewCorrectionCommand = new RelayCommand(NewCorrectionAsync);
@@ -424,6 +435,7 @@ public class MainViewModel : BaseViewModel
     public ObservableCollection<CancellationVoidRequest> CancellationVoidRequests { get; } = new();
     public ObservableCollection<WeighmentCorrection> CorrectionRequests { get; } = new();
     public CorrectionWorkspaceViewModel CorrectionWorkspace { get; }
+    public QualityInspectionWorkspaceViewModel QualityInspectionWorkspace { get; }
     public ObservableCollection<string> CancellationVoidTypes { get; }
     public ObservableCollection<string> CancellationReasons { get; } = new();
     public ObservableCollection<string> GatePassTypes { get; }
@@ -467,6 +479,7 @@ public class MainViewModel : BaseViewModel
     public RelayCommand LoadTransactionsCommand { get; }
     public RelayCommand ClearTransactionFiltersCommand { get; }
     public RelayCommand CorrectTransactionCommand { get; }
+    public RelayCommand StartQualityInspectionCommand { get; }
     public RelayCommand CancelTransactionCommand { get; } // legacy; direct cancellation is no longer exposed
     public RelayCommand StartCancellationFromTransactionCommand { get; }
     public RelayCommand NewCorrectionCommand { get; }
@@ -883,9 +896,14 @@ public class MainViewModel : BaseViewModel
     public bool CanAccessGatePass => _currentUser.CanAccessGatePass;
     public bool CanAccessCancellationVoid => _currentUser.CanAccessCancellationVoid;
     public bool CanAccessCorrection => _currentUser.CanAccessCorrection;
+    public bool CanAccessQualityInspection => _currentUser.CanAccessQualityInspection;
+    public bool CanProcessQualityInspection => CanAccessQualityInspection && _currentUser.CanProcessQualityInspection;
 
     // Legacy direct-cancel authorization is intentionally disabled.
     public bool CanCorrectSelectedTransaction => CanAccessCorrection && (_currentUser.CanSubmitCorrection || _currentUser.CanApproveRejectCorrection) && SelectedTransactionWeighment != null && string.Equals(SelectedTransactionWeighment.Status, "Completed", StringComparison.OrdinalIgnoreCase);
+    public bool CanStartQualityInspection => CanProcessQualityInspection
+                                             && SelectedTransactionWeighment != null
+                                             && string.Equals(SelectedTransactionWeighment.Status, "Completed", StringComparison.OrdinalIgnoreCase);
     public bool CanCancelSelectedTransaction => false;
     public bool CanCreateCorrectionRequest => CanAccessCorrection && _currentUser.CanSubmitCorrection;
     public bool CanOpenSelectedCorrection => CanAccessCorrection && SelectedCorrectionRequest != null;
@@ -1145,6 +1163,7 @@ public class MainViewModel : BaseViewModel
                 OnPropertyChanged(nameof(CanCorrectSelectedTransaction));
                 OnPropertyChanged(nameof(CanCancelSelectedTransaction));
                 OnPropertyChanged(nameof(CanInitiateCancellationFromTransaction));
+                OnPropertyChanged(nameof(CanStartQualityInspection));
                 OnPropertyChanged(nameof(HasSelectedTransactionReview));
                 System.Windows.Input.CommandManager.InvalidateRequerySuggested();
                 if (value != null)
@@ -2162,6 +2181,8 @@ public class MainViewModel : BaseViewModel
                 await LoadCorrectionRequestsAsync();
                 await CorrectionWorkspace.InitializeAsync();
             }
+            if (CanAccessQualityInspection)
+                await QualityInspectionWorkspace.InitializeAsync();
             if (CanAccessReports)
                 await LoadReportAsync();
             StatusMessage = $"Application loaded. Database: {DatabaseFolderPath}. Use Mock mode first, then test Serial/TCP with your indicator.";
@@ -2670,6 +2691,8 @@ public class MainViewModel : BaseViewModel
                 await LoadCancellationVoidRequestsAsync();
             if (CanAccessCorrection)
                 await LoadCorrectionRequestsAsync();
+            if (CanAccessQualityInspection)
+                await QualityInspectionWorkspace.RefreshListAsync();
             StatusMessage = $"Data refreshed successfully for Legal Entity {CurrentUserCompany}.";
         }
         finally
@@ -2703,6 +2726,8 @@ public class MainViewModel : BaseViewModel
                 await LoadCorrectionRequestsAsync();
                 await CorrectionWorkspace.RefreshForCompanyAsync();
             }
+            if (CanAccessQualityInspection)
+                await QualityInspectionWorkspace.RefreshForCompanyAsync();
             StatusMessage = $"Legal Entity changed to {CurrentUserCompany}.";
         }
         catch (Exception ex)
@@ -3840,6 +3865,37 @@ public class MainViewModel : BaseViewModel
         }
     }
 
+    private async Task StartQualityInspectionAsync()
+    {
+        try
+        {
+            if (!CanProcessQualityInspection)
+            {
+                StatusMessage = "You do not have permission to process Quality Inspection transactions.";
+                return;
+            }
+
+            if (SelectedTransactionWeighment == null)
+            {
+                StatusMessage = "Please select a completed transaction first.";
+                return;
+            }
+
+            if (!string.Equals(SelectedTransactionWeighment.Status, "Completed", StringComparison.OrdinalIgnoreCase))
+            {
+                StatusMessage = "Quality Inspection is available only for Completed transactions.";
+                return;
+            }
+
+            SelectedMainTabIndex = 7;
+            await QualityInspectionWorkspace.StartForTransactionAsync(SelectedTransactionWeighment);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Quality Inspection error: " + ex.Message;
+        }
+    }
+
     private Task CancelTransactionAsync()
     {
         // Direct cancellation is intentionally blocked. Use the controlled Cancellation / Void workflow.
@@ -4844,6 +4900,8 @@ public class MainViewModel : BaseViewModel
                 OperatorMasterForm.CanAccessCancellationVoid = true;
             if (OperatorMasterForm.CanSubmitCorrection || OperatorMasterForm.CanApproveRejectCorrection || OperatorMasterForm.CanCorrectWeight)
                 OperatorMasterForm.CanAccessCorrection = true;
+            if (OperatorMasterForm.CanProcessQualityInspection)
+                OperatorMasterForm.CanAccessQualityInspection = true;
 
             await _databaseService.SaveOperatorMasterAsync(OperatorMasterForm);
             var savedOperator = await _databaseService.GetOperatorByUsernameAsync(OperatorMasterForm.Username);
@@ -4919,12 +4977,14 @@ public class MainViewModel : BaseViewModel
             CanAccessGatePass = SelectedOperatorMaster.CanAccessGatePass,
             CanAccessCancellationVoid = SelectedOperatorMaster.CanAccessCancellationVoid,
             CanAccessCorrection = SelectedOperatorMaster.CanAccessCorrection,
+            CanAccessQualityInspection = SelectedOperatorMaster.CanAccessQualityInspection,
             CanAccessSettings = SelectedOperatorMaster.CanAccessSettings,
             CanCaptureFirstWeight = SelectedOperatorMaster.CanCaptureFirstWeight,
             CanCaptureSecondWeight = SelectedOperatorMaster.CanCaptureSecondWeight,
             CanSubmitCorrection = SelectedOperatorMaster.CanSubmitCorrection,
             CanApproveRejectCorrection = SelectedOperatorMaster.CanApproveRejectCorrection,
             CanCorrectWeight = SelectedOperatorMaster.CanCorrectWeight,
+            CanProcessQualityInspection = SelectedOperatorMaster.CanProcessQualityInspection,
             CanSubmitCancellationVoid = SelectedOperatorMaster.CanSubmitCancellationVoid,
             CanApproveRejectCancellationVoid = SelectedOperatorMaster.CanApproveRejectCancellationVoid,
             LastLogin = SelectedOperatorMaster.LastLogin,

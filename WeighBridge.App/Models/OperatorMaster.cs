@@ -29,6 +29,7 @@ public class OperatorMaster
     public bool CanAccessCancellationVoid { get; set; }
     public bool CanAccessCorrection { get; set; }
     public bool CanAccessSettings { get; set; }
+    public bool CanAccessQualityInspection { get; set; }
 
     public bool CanCaptureFirstWeight { get; set; } = true;
     public bool CanCaptureSecondWeight { get; set; } = true;
@@ -37,6 +38,7 @@ public class OperatorMaster
     public bool CanCorrectWeight { get; set; }
     public bool CanSubmitCancellationVoid { get; set; }
     public bool CanApproveRejectCancellationVoid { get; set; }
+    public bool CanProcessQualityInspection { get; set; }
 
     public DateTime? LastLogin { get; set; }
     public string Status { get; set; } = "Active";

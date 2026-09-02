@@ -780,12 +780,14 @@ CREATE TABLE IF NOT EXISTS OperatorMasters (
     CanAccessGatePass INTEGER NOT NULL DEFAULT 0,
     CanAccessCancellationVoid INTEGER NOT NULL DEFAULT 0,
     CanAccessCorrection INTEGER NOT NULL DEFAULT 0,
+    CanAccessQualityInspection INTEGER NOT NULL DEFAULT 0,
     CanAccessSettings INTEGER NOT NULL DEFAULT 0,
     CanCaptureFirstWeight INTEGER NOT NULL DEFAULT 1,
     CanCaptureSecondWeight INTEGER NOT NULL DEFAULT 1,
     CanSubmitCorrection INTEGER NOT NULL DEFAULT 0,
     CanApproveRejectCorrection INTEGER NOT NULL DEFAULT 0,
     CanCorrectWeight INTEGER NOT NULL DEFAULT 0,
+    CanProcessQualityInspection INTEGER NOT NULL DEFAULT 0,
     CanSubmitCancellationVoid INTEGER NOT NULL DEFAULT 0,
     CanApproveRejectCancellationVoid INTEGER NOT NULL DEFAULT 0,
     LastLogin TEXT,
@@ -1382,12 +1384,14 @@ UPDATE OperatorMasters SET
     CanAccessGatePass = $CanAccessGatePass,
     CanAccessCancellationVoid = $CanAccessCancellationVoid,
     CanAccessCorrection = $CanAccessCorrection,
+    CanAccessQualityInspection = $CanAccessQualityInspection,
     CanAccessSettings = $CanAccessSettings,
     CanCaptureFirstWeight = $CanCaptureFirstWeight,
     CanCaptureSecondWeight = $CanCaptureSecondWeight,
     CanSubmitCorrection = $CanSubmitCorrection,
     CanApproveRejectCorrection = $CanApproveRejectCorrection,
     CanCorrectWeight = $CanCorrectWeight,
+    CanProcessQualityInspection = $CanProcessQualityInspection,
     CanSubmitCancellationVoid = $CanSubmitCancellationVoid,
     CanApproveRejectCancellationVoid = $CanApproveRejectCancellationVoid,
     LastLogin = $LastLogin,
@@ -1396,9 +1400,9 @@ UPDATE OperatorMasters SET
     Remarks = $Remarks
 WHERE OperatorId = $OperatorId;" : @"
 INSERT INTO OperatorMasters
-(DataAreaId, EmployeeId, OperatorName, Username, PasswordHash, PasswordSalt, Email, MobileNumber, Designation, Department, DefaultWeighbridge, AssignedWeighbridges, DefaultShift, Role, PermissionProfile, CanAccessWeighment, CanAccessMasters, CanAccessReports, CanAccessTransactions, CanAccessGatePass, CanAccessCancellationVoid, CanAccessCorrection, CanAccessSettings, CanCaptureFirstWeight, CanCaptureSecondWeight, CanSubmitCorrection, CanApproveRejectCorrection, CanCorrectWeight, CanSubmitCancellationVoid, CanApproveRejectCancellationVoid, LastLogin, Status, EffectiveFrom, Remarks, CreatedAt)
+(DataAreaId, EmployeeId, OperatorName, Username, PasswordHash, PasswordSalt, Email, MobileNumber, Designation, Department, DefaultWeighbridge, AssignedWeighbridges, DefaultShift, Role, PermissionProfile, CanAccessWeighment, CanAccessMasters, CanAccessReports, CanAccessTransactions, CanAccessGatePass, CanAccessCancellationVoid, CanAccessCorrection, CanAccessQualityInspection, CanAccessSettings, CanCaptureFirstWeight, CanCaptureSecondWeight, CanSubmitCorrection, CanApproveRejectCorrection, CanCorrectWeight, CanProcessQualityInspection, CanSubmitCancellationVoid, CanApproveRejectCancellationVoid, LastLogin, Status, EffectiveFrom, Remarks, CreatedAt)
 VALUES
-($DataAreaId, $EmployeeId, $OperatorName, $Username, $PasswordHash, $PasswordSalt, $Email, $MobileNumber, $Designation, $Department, $DefaultWeighbridge, $AssignedWeighbridges, $DefaultShift, $Role, $PermissionProfile, $CanAccessWeighment, $CanAccessMasters, $CanAccessReports, $CanAccessTransactions, $CanAccessGatePass, $CanAccessCancellationVoid, $CanAccessCorrection, $CanAccessSettings, $CanCaptureFirstWeight, $CanCaptureSecondWeight, $CanSubmitCorrection, $CanApproveRejectCorrection, $CanCorrectWeight, $CanSubmitCancellationVoid, $CanApproveRejectCancellationVoid, $LastLogin, $Status, $EffectiveFrom, $Remarks, $CreatedAt);";
+($DataAreaId, $EmployeeId, $OperatorName, $Username, $PasswordHash, $PasswordSalt, $Email, $MobileNumber, $Designation, $Department, $DefaultWeighbridge, $AssignedWeighbridges, $DefaultShift, $Role, $PermissionProfile, $CanAccessWeighment, $CanAccessMasters, $CanAccessReports, $CanAccessTransactions, $CanAccessGatePass, $CanAccessCancellationVoid, $CanAccessCorrection, $CanAccessQualityInspection, $CanAccessSettings, $CanCaptureFirstWeight, $CanCaptureSecondWeight, $CanSubmitCorrection, $CanApproveRejectCorrection, $CanCorrectWeight, $CanProcessQualityInspection, $CanSubmitCancellationVoid, $CanApproveRejectCancellationVoid, $LastLogin, $Status, $EffectiveFrom, $Remarks, $CreatedAt);";
         AddOperatorMasterParameters(command, operatorMaster);
         command.Parameters.AddWithValue("$OperatorId", operatorMaster.OperatorId);
         command.Parameters.AddWithValue("$CreatedAt", DateTime.Now.ToString("O"));
@@ -2972,6 +2976,364 @@ WHERE CorrectionId=$CorrectionId AND Status='Submitted';";
             throw new InvalidOperationException("Only Submitted correction requests can be rejected.");
     });
 
+    public Task<List<QualityInspection>> GetQualityInspectionsAsync(string dataAreaId) => Task.Run(() =>
+    {
+        var result = new List<QualityInspection>();
+        using var connection = CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = @"SELECT * FROM QualityInspections
+WHERE lower(trim(DataAreaId)) = lower(trim($DataAreaId))
+ORDER BY QualityInspectionId DESC";
+        command.Parameters.AddWithValue("$DataAreaId", string.IsNullOrWhiteSpace(dataAreaId) ? "DAT" : dataAreaId.Trim());
+        using var reader = command.ExecuteReader();
+        while (reader.Read()) result.Add(MapQualityInspection(reader));
+        return result;
+    });
+
+    public Task<List<QualityInspectionLine>> GetQualityInspectionLinesAsync(int qualityInspectionId) => Task.Run(() =>
+    {
+        var result = new List<QualityInspectionLine>();
+        using var connection = CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = @"SELECT * FROM QualityInspectionLines
+WHERE QualityInspectionId = $QualityInspectionId
+ORDER BY LineNo, QualityInspectionLineId";
+        command.Parameters.AddWithValue("$QualityInspectionId", qualityInspectionId);
+        using var reader = command.ExecuteReader();
+        while (reader.Read()) result.Add(MapQualityInspectionLine(reader));
+        return result;
+    });
+
+    public Task<List<Weighment>> SearchQcEligibleWeighmentsAsync(string dataAreaId, string slipFilter, string vehicleFilter, int limit = 100) => Task.Run(() =>
+    {
+        using var connection = CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = WeighmentSelectSql + @"
+ WHERE lower(trim(w.DataAreaId)) = lower(trim($DataAreaId))
+   AND w.Status = 'Completed'
+   AND EXISTS (
+       SELECT 1
+       FROM ScenarioMasters s
+       WHERE lower(trim(s.DataAreaId)) = lower(trim(w.DataAreaId))
+         AND lower(trim(s.Form)) = lower(trim(w.Scenario))
+         AND lower(trim(ifnull(s.QC,''))) IN ('yes','true','1','required','enabled')
+   )
+   AND NOT EXISTS (
+       SELECT 1 FROM QualityInspections q WHERE q.WeighmentId = w.WeighmentId
+   )
+   AND ($SlipFilter = '' OR w.SlipNumber LIKE $SlipLike OR w.TicketNo LIKE $SlipLike)
+   AND ($VehicleFilter = '' OR w.VehicleNo LIKE $VehicleLike)
+ ORDER BY w.WeighmentId DESC
+ LIMIT $Limit";
+        command.Parameters.AddWithValue("$DataAreaId", string.IsNullOrWhiteSpace(dataAreaId) ? "DAT" : dataAreaId.Trim());
+        command.Parameters.AddWithValue("$SlipFilter", slipFilter?.Trim() ?? string.Empty);
+        command.Parameters.AddWithValue("$SlipLike", "%" + (slipFilter?.Trim() ?? string.Empty) + "%");
+        command.Parameters.AddWithValue("$VehicleFilter", vehicleFilter?.Trim() ?? string.Empty);
+        command.Parameters.AddWithValue("$VehicleLike", "%" + (vehicleFilter?.Trim() ?? string.Empty) + "%");
+        command.Parameters.AddWithValue("$Limit", limit <= 0 ? 100 : limit);
+        return ReadWeighments(command);
+    });
+
+    public Task<bool> IsWeighmentQcEligibleAsync(int weighmentId, string dataAreaId) => Task.Run(() =>
+    {
+        using var connection = CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = @"SELECT COUNT(1)
+FROM Weighments w
+WHERE w.WeighmentId = $WeighmentId
+  AND lower(trim(w.DataAreaId)) = lower(trim($DataAreaId))
+  AND w.Status = 'Completed'
+  AND EXISTS (
+      SELECT 1 FROM ScenarioMasters s
+      WHERE lower(trim(s.DataAreaId)) = lower(trim(w.DataAreaId))
+        AND lower(trim(s.Form)) = lower(trim(w.Scenario))
+        AND lower(trim(ifnull(s.QC,''))) IN ('yes','true','1','required','enabled')
+  )
+  AND NOT EXISTS (
+      SELECT 1 FROM QualityInspections q WHERE q.WeighmentId = w.WeighmentId
+  );";
+        command.Parameters.AddWithValue("$WeighmentId", weighmentId);
+        command.Parameters.AddWithValue("$DataAreaId", string.IsNullOrWhiteSpace(dataAreaId) ? "DAT" : dataAreaId.Trim());
+        return Convert.ToInt32(command.ExecuteScalar()) > 0;
+    });
+
+    public Task<int> SaveQualityInspectionAsync(QualityInspection inspection, IEnumerable<QualityInspectionLine> lines, bool complete, string currentUser) => Task.Run(() =>
+    {
+        if (inspection.WeighmentId <= 0)
+            throw new InvalidOperationException("Please load a QC-enabled completed slip.");
+        if (string.IsNullOrWhiteSpace(currentUser))
+            throw new InvalidOperationException("QC User is required.");
+        if ((inspection.QcRemarks?.Length ?? 0) > 500)
+            throw new InvalidOperationException("QC Remarks cannot exceed 500 characters.");
+
+        var suppliedLines = lines?.OrderBy(x => x.LineNo).ToList() ?? new List<QualityInspectionLine>();
+        if (suppliedLines.Count == 0)
+            throw new InvalidOperationException("The selected slip has no material lines to inspect.");
+
+        using var connection = CreateConnection();
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
+
+        using (var permission = connection.CreateCommand())
+        {
+            permission.Transaction = transaction;
+            permission.CommandText = @"SELECT COUNT(1) FROM OperatorMasters
+WHERE lower(Username)=lower($Username)
+  AND lower(ifnull(Status,'Active'))='active'
+  AND ifnull(CanAccessQualityInspection,0)=1
+  AND ifnull(CanProcessQualityInspection,0)=1;";
+            permission.Parameters.AddWithValue("$Username", currentUser);
+            if (Convert.ToInt32(permission.ExecuteScalar()) == 0)
+                throw new InvalidOperationException("You do not have permission to process Quality Inspection transactions.");
+        }
+
+        decimal netWeight;
+        using (var getWeighment = connection.CreateCommand())
+        {
+            getWeighment.Transaction = transaction;
+            getWeighment.CommandText = @"SELECT w.NetWeight
+FROM Weighments w
+WHERE w.WeighmentId = $WeighmentId
+  AND lower(trim(w.DataAreaId)) = lower(trim($DataAreaId))
+  AND w.Status = 'Completed'
+  AND EXISTS (
+      SELECT 1 FROM ScenarioMasters s
+      WHERE lower(trim(s.DataAreaId)) = lower(trim(w.DataAreaId))
+        AND lower(trim(s.Form)) = lower(trim(w.Scenario))
+        AND lower(trim(ifnull(s.QC,''))) IN ('yes','true','1','required','enabled')
+  );";
+            getWeighment.Parameters.AddWithValue("$WeighmentId", inspection.WeighmentId);
+            getWeighment.Parameters.AddWithValue("$DataAreaId", string.IsNullOrWhiteSpace(inspection.DataAreaId) ? "DAT" : inspection.DataAreaId.Trim());
+            var value = getWeighment.ExecuteScalar();
+            if (value == null || value == DBNull.Value)
+                throw new InvalidOperationException("QC can only be performed on a QC-enabled Completed slip with a Net Weight.");
+            netWeight = Convert.ToDecimal(value);
+        }
+
+        var originalLines = new List<WeighmentMaterialLine>();
+        using (var getLines = connection.CreateCommand())
+        {
+            getLines.Transaction = transaction;
+            getLines.CommandText = @"SELECT * FROM WeighmentMaterialLines
+WHERE WeighmentId = $WeighmentId AND ifnull(IsActive,1) = 1
+ORDER BY LineNo";
+            getLines.Parameters.AddWithValue("$WeighmentId", inspection.WeighmentId);
+            using var reader = getLines.ExecuteReader();
+            while (reader.Read()) originalLines.Add(MapWeighmentMaterialLine(reader));
+        }
+
+        if (originalLines.Count == 0)
+            throw new InvalidOperationException("The selected slip has no active material lines to inspect.");
+        if (suppliedLines.Count != originalLines.Count)
+            throw new InvalidOperationException("QC material lines no longer match the original slip. Reload the slip before saving.");
+
+        var validatedLines = new List<QualityInspectionLine>();
+        foreach (var original in originalLines)
+        {
+            var line = suppliedLines.FirstOrDefault(x => x.OriginalMaterialLineId == original.MaterialLineId)
+                       ?? suppliedLines.FirstOrDefault(x => !x.OriginalMaterialLineId.HasValue && x.LineNo == original.LineNo);
+            if (line == null)
+                throw new InvalidOperationException($"Original material line {original.LineNo} is missing from QC.");
+            if (line.AcceptedQty < 0m || line.AcceptedQty > original.ExpectedQty)
+                throw new InvalidOperationException($"Line {original.LineNo}: Accepted Qty must be between 0 and Original Qty ({original.ExpectedQty:N3}).");
+            if (line.MoisturePercent is < 0m or > 100m)
+                throw new InvalidOperationException($"Line {original.LineNo}: Moisture % must be between 0 and 100.");
+            if (line.ContaminationPercent is < 0m or > 100m)
+                throw new InvalidOperationException($"Line {original.LineNo}: Contamination % must be between 0 and 100.");
+
+            var rejectedQty = original.ExpectedQty - line.AcceptedQty;
+            if (complete && rejectedQty > 0m && string.IsNullOrWhiteSpace(line.RejectionReason))
+                throw new InvalidOperationException($"Line {original.LineNo}: Rejection Reason is required when Rejected Qty is greater than zero.");
+
+            validatedLines.Add(new QualityInspectionLine
+            {
+                OriginalMaterialLineId = original.MaterialLineId,
+                LineNo = original.LineNo,
+                ItemMasterId = original.ItemMasterId,
+                ItemNumber = original.ItemNumber,
+                ItemName = original.ItemName,
+                Uom = original.Uom,
+                OriginalQty = original.ExpectedQty,
+                AcceptedQty = line.AcceptedQty,
+                MoisturePercent = line.MoisturePercent,
+                ContaminationPercent = line.ContaminationPercent,
+                RejectionReason = line.RejectionReason?.Trim() ?? string.Empty,
+                Remarks = line.Remarks?.Trim() ?? string.Empty
+            });
+        }
+
+        var acceptedTotal = validatedLines.Sum(x => x.AcceptedQty);
+        var rejectedTotal = validatedLines.Sum(x => x.RejectedQty);
+        var mode = rejectedTotal <= 0m
+            ? "Quality Inspection"
+            : acceptedTotal <= 0m ? "Full Rejection" : "Partial Rejection";
+        if (complete && (string.Equals(mode, "Full Rejection", StringComparison.OrdinalIgnoreCase) || inspection.ReopenCount > 0)
+            && string.IsNullOrWhiteSpace(inspection.QcRemarks))
+            throw new InvalidOperationException("QC Remarks are required for Full Rejection or a reopened/override inspection.");
+
+        var now = DateTime.Now;
+        var status = complete ? "Completed" : "Draft";
+        if (inspection.QualityInspectionId == 0)
+        {
+            using var duplicate = connection.CreateCommand();
+            duplicate.Transaction = transaction;
+            duplicate.CommandText = "SELECT COUNT(1) FROM QualityInspections WHERE WeighmentId = $WeighmentId";
+            duplicate.Parameters.AddWithValue("$WeighmentId", inspection.WeighmentId);
+            if (Convert.ToInt32(duplicate.ExecuteScalar()) > 0)
+                throw new InvalidOperationException("A QC inspection already exists for this slip. Open the existing QC record instead.");
+
+            inspection.QcNumber = GenerateQualityInspectionNumber(connection, transaction, inspection.DataAreaId);
+            inspection.QcUser = currentUser;
+            inspection.InspectionDateTime = now;
+            inspection.CreatedAt = now;
+            using var insert = connection.CreateCommand();
+            insert.Transaction = transaction;
+            insert.CommandText = @"INSERT INTO QualityInspections
+(DataAreaId, WeighmentId, SlipNumber, QcNumber, QcUser, InspectionDateTime, InspectionMode, NetWeight, QcRemarks, Status,
+ CompletedBy, CompletedDateTime, ReopenCount, LastReopenedBy, LastReopenedDateTime, CreatedAt, UpdatedAt)
+VALUES
+($DataAreaId,$WeighmentId,$SlipNumber,$QcNumber,$QcUser,$InspectionDateTime,$InspectionMode,$NetWeight,$QcRemarks,$Status,
+ $CompletedBy,$CompletedDateTime,0,'',NULL,$CreatedAt,$UpdatedAt);
+SELECT last_insert_rowid();";
+            AddQualityInspectionParameters(insert, inspection, mode, netWeight, status, complete ? currentUser : string.Empty, complete ? now : null, now);
+            inspection.QualityInspectionId = Convert.ToInt32(insert.ExecuteScalar());
+        }
+        else
+        {
+            using var statusCheck = connection.CreateCommand();
+            statusCheck.Transaction = transaction;
+            statusCheck.CommandText = @"SELECT Status FROM QualityInspections
+WHERE QualityInspectionId = $QualityInspectionId AND WeighmentId = $WeighmentId";
+            statusCheck.Parameters.AddWithValue("$QualityInspectionId", inspection.QualityInspectionId);
+            statusCheck.Parameters.AddWithValue("$WeighmentId", inspection.WeighmentId);
+            var existingStatus = Convert.ToString(statusCheck.ExecuteScalar()) ?? string.Empty;
+            if (!string.Equals(existingStatus, "Draft", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Only a Draft or supervisor-reopened QC inspection can be saved/completed.");
+
+            using var update = connection.CreateCommand();
+            update.Transaction = transaction;
+            update.CommandText = @"UPDATE QualityInspections SET
+InspectionMode=$InspectionMode, NetWeight=$NetWeight, QcRemarks=$QcRemarks, Status=$Status,
+CompletedBy=$CompletedBy, CompletedDateTime=$CompletedDateTime, UpdatedAt=$UpdatedAt
+WHERE QualityInspectionId=$QualityInspectionId;";
+            update.Parameters.AddWithValue("$QualityInspectionId", inspection.QualityInspectionId);
+            update.Parameters.AddWithValue("$InspectionMode", mode);
+            update.Parameters.AddWithValue("$NetWeight", netWeight);
+            update.Parameters.AddWithValue("$QcRemarks", inspection.QcRemarks?.Trim() ?? string.Empty);
+            update.Parameters.AddWithValue("$Status", status);
+            update.Parameters.AddWithValue("$CompletedBy", complete ? currentUser : string.Empty);
+            update.Parameters.AddWithValue("$CompletedDateTime", complete ? now.ToString("O") : DBNull.Value);
+            update.Parameters.AddWithValue("$UpdatedAt", now.ToString("O"));
+            update.ExecuteNonQuery();
+        }
+
+        using (var deleteLines = connection.CreateCommand())
+        {
+            deleteLines.Transaction = transaction;
+            deleteLines.CommandText = "DELETE FROM QualityInspectionLines WHERE QualityInspectionId = $QualityInspectionId";
+            deleteLines.Parameters.AddWithValue("$QualityInspectionId", inspection.QualityInspectionId);
+            deleteLines.ExecuteNonQuery();
+        }
+
+        foreach (var line in validatedLines)
+        {
+            using var insertLine = connection.CreateCommand();
+            insertLine.Transaction = transaction;
+            insertLine.CommandText = @"INSERT INTO QualityInspectionLines
+(QualityInspectionId, OriginalMaterialLineId, LineNo, ItemMasterId, ItemNumber, ItemName, Uom, OriginalQty, AcceptedQty, RejectedQty,
+ MoisturePercent, ContaminationPercent, RejectionReason, Remarks)
+VALUES
+($QualityInspectionId,$OriginalMaterialLineId,$LineNo,$ItemMasterId,$ItemNumber,$ItemName,$Uom,$OriginalQty,$AcceptedQty,$RejectedQty,
+ $MoisturePercent,$ContaminationPercent,$RejectionReason,$Remarks);";
+            AddQualityInspectionLineParameters(insertLine, inspection.QualityInspectionId, line);
+            insertLine.ExecuteNonQuery();
+        }
+
+        InsertQualityInspectionAudit(connection, transaction, inspection.QualityInspectionId,
+            complete ? "Completed" : "Draft Saved", currentUser, now, mode, acceptedTotal, rejectedTotal, inspection.QcRemarks);
+        transaction.Commit();
+
+        inspection.InspectionMode = mode;
+        inspection.NetWeight = netWeight;
+        inspection.Status = status;
+        inspection.CompletedBy = complete ? currentUser : string.Empty;
+        inspection.CompletedDateTime = complete ? now : null;
+        inspection.UpdatedAt = now;
+        return inspection.QualityInspectionId;
+    });
+
+    public Task ReopenQualityInspectionAsync(int qualityInspectionId, string supervisorUser) => Task.Run(() =>
+    {
+        using var connection = CreateConnection();
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
+
+        using (var permission = connection.CreateCommand())
+        {
+            permission.Transaction = transaction;
+            permission.CommandText = @"SELECT COUNT(1) FROM OperatorMasters
+WHERE lower(Username)=lower($Username)
+  AND lower(ifnull(Status,'Active'))='active'
+  AND ifnull(CanAccessQualityInspection,0)=1
+  AND ifnull(CanProcessQualityInspection,0)=1
+  AND (lower(ifnull(Role,'')) LIKE '%supervisor%'
+       OR lower(ifnull(Role,'')) LIKE '%administrator%'
+       OR lower(ifnull(Designation,'')) LIKE '%supervisor%'
+       OR lower(ifnull(Designation,'')) LIKE '%administrator%');";
+            permission.Parameters.AddWithValue("$Username", supervisorUser ?? string.Empty);
+            if (Convert.ToInt32(permission.ExecuteScalar()) == 0)
+                throw new InvalidOperationException("Reopening QC requires an active Supervisor or Administrator account.");
+        }
+
+        QualityInspection inspection;
+        using (var get = connection.CreateCommand())
+        {
+            get.Transaction = transaction;
+            get.CommandText = "SELECT * FROM QualityInspections WHERE QualityInspectionId=$QualityInspectionId";
+            get.Parameters.AddWithValue("$QualityInspectionId", qualityInspectionId);
+            using var reader = get.ExecuteReader();
+            if (!reader.Read()) throw new InvalidOperationException("QC inspection was not found.");
+            inspection = MapQualityInspection(reader);
+        }
+        if (!string.Equals(inspection.Status, "Completed", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Only a Completed QC inspection can be reopened.");
+
+        decimal acceptedTotal;
+        decimal rejectedTotal;
+        using (var totals = connection.CreateCommand())
+        {
+            totals.Transaction = transaction;
+            totals.CommandText = @"SELECT ifnull(sum(AcceptedQty),0), ifnull(sum(RejectedQty),0)
+FROM QualityInspectionLines WHERE QualityInspectionId=$QualityInspectionId";
+            totals.Parameters.AddWithValue("$QualityInspectionId", qualityInspectionId);
+            using var reader = totals.ExecuteReader();
+            reader.Read();
+            acceptedTotal = Convert.ToDecimal(reader.GetValue(0));
+            rejectedTotal = Convert.ToDecimal(reader.GetValue(1));
+        }
+
+        var now = DateTime.Now;
+        InsertQualityInspectionAudit(connection, transaction, qualityInspectionId, "Reopened",
+            supervisorUser, now, inspection.InspectionMode, acceptedTotal, rejectedTotal, inspection.QcRemarks);
+
+        using var update = connection.CreateCommand();
+        update.Transaction = transaction;
+        update.CommandText = @"UPDATE QualityInspections SET
+Status='Draft', CompletedBy='', CompletedDateTime=NULL,
+ReopenCount=ifnull(ReopenCount,0)+1, LastReopenedBy=$User, LastReopenedDateTime=$When, UpdatedAt=$When
+WHERE QualityInspectionId=$QualityInspectionId AND Status='Completed';";
+        update.Parameters.AddWithValue("$User", supervisorUser ?? string.Empty);
+        update.Parameters.AddWithValue("$When", now.ToString("O"));
+        update.Parameters.AddWithValue("$QualityInspectionId", qualityInspectionId);
+        if (update.ExecuteNonQuery() == 0)
+            throw new InvalidOperationException("QC inspection status changed before it could be reopened.");
+        transaction.Commit();
+    });
+
     public Task<string> GenerateCancellationVoidNumberAsync(string dataAreaId) => Task.Run(() =>
     {
         var company = string.IsNullOrWhiteSpace(dataAreaId) ? "DAT" : dataAreaId.Trim();
@@ -3916,9 +4278,9 @@ ORDER BY w.CreatedAt DESC";
         using var command = connection.CreateCommand();
         command.CommandText = @"
 INSERT INTO OperatorMasters
-(DataAreaId, EmployeeId, OperatorName, Username, PasswordHash, PasswordSalt, Email, MobileNumber, Designation, Department, DefaultWeighbridge, AssignedWeighbridges, DefaultShift, Role, PermissionProfile, CanAccessWeighment, CanAccessMasters, CanAccessReports, CanAccessTransactions, CanAccessGatePass, CanAccessCancellationVoid, CanAccessCorrection, CanAccessSettings, CanCaptureFirstWeight, CanCaptureSecondWeight, CanSubmitCorrection, CanApproveRejectCorrection, CanCorrectWeight, CanSubmitCancellationVoid, CanApproveRejectCancellationVoid, LastLogin, Status, EffectiveFrom, Remarks, CreatedAt)
+(DataAreaId, EmployeeId, OperatorName, Username, PasswordHash, PasswordSalt, Email, MobileNumber, Designation, Department, DefaultWeighbridge, AssignedWeighbridges, DefaultShift, Role, PermissionProfile, CanAccessWeighment, CanAccessMasters, CanAccessReports, CanAccessTransactions, CanAccessGatePass, CanAccessCancellationVoid, CanAccessCorrection, CanAccessQualityInspection, CanAccessSettings, CanCaptureFirstWeight, CanCaptureSecondWeight, CanSubmitCorrection, CanApproveRejectCorrection, CanCorrectWeight, CanProcessQualityInspection, CanSubmitCancellationVoid, CanApproveRejectCancellationVoid, LastLogin, Status, EffectiveFrom, Remarks, CreatedAt)
 VALUES
-($DataAreaId, $EmployeeId, $OperatorName, $Username, $PasswordHash, $PasswordSalt, '', '', 'Administrator', 'IT', 'WB-001', 'WB-001', '', 'Administrator', 'Admin', 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, NULL, 'Active', $EffectiveFrom, 'Initial administrator operator created during first setup.', $CreatedAt);";
+($DataAreaId, $EmployeeId, $OperatorName, $Username, $PasswordHash, $PasswordSalt, '', '', 'Administrator', 'IT', 'WB-001', 'WB-001', '', 'Administrator', 'Admin', 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, NULL, 'Active', $EffectiveFrom, 'Initial administrator operator created during first setup.', $CreatedAt);";
         command.Parameters.AddWithValue("$EmployeeId", "ADMIN-001");
         command.Parameters.AddWithValue("$OperatorName", operatorName);
         command.Parameters.AddWithValue("$Username", username);
@@ -4252,6 +4614,60 @@ ON CONFLICT(DataAreaId) DO UPDATE SET LegalEntityName = excluded.LegalEntityName
         ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_WeighmentCorrections_DataArea_Number ON WeighmentCorrections(DataAreaId, CorrectionNumber);");
         ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_WeighmentCorrectionDetails_CorrectionId ON WeighmentCorrectionDetails(CorrectionId);");
 
+        ExecuteNonQuery(connection, @"CREATE TABLE IF NOT EXISTS QualityInspections (
+    QualityInspectionId INTEGER PRIMARY KEY AUTOINCREMENT,
+    DataAreaId TEXT NOT NULL DEFAULT 'DAT',
+    WeighmentId INTEGER NOT NULL UNIQUE,
+    SlipNumber TEXT NOT NULL,
+    QcNumber TEXT NOT NULL UNIQUE,
+    QcUser TEXT NOT NULL DEFAULT '',
+    InspectionDateTime TEXT,
+    InspectionMode TEXT NOT NULL DEFAULT 'Quality Inspection',
+    NetWeight REAL NOT NULL DEFAULT 0,
+    QcRemarks TEXT NOT NULL DEFAULT '',
+    Status TEXT NOT NULL DEFAULT 'Draft',
+    CompletedBy TEXT NOT NULL DEFAULT '',
+    CompletedDateTime TEXT,
+    ReopenCount INTEGER NOT NULL DEFAULT 0,
+    LastReopenedBy TEXT NOT NULL DEFAULT '',
+    LastReopenedDateTime TEXT,
+    CreatedAt TEXT NOT NULL,
+    UpdatedAt TEXT NOT NULL
+);");
+        ExecuteNonQuery(connection, @"CREATE TABLE IF NOT EXISTS QualityInspectionLines (
+    QualityInspectionLineId INTEGER PRIMARY KEY AUTOINCREMENT,
+    QualityInspectionId INTEGER NOT NULL,
+    OriginalMaterialLineId INTEGER,
+    LineNo INTEGER NOT NULL,
+    ItemMasterId INTEGER,
+    ItemNumber TEXT NOT NULL DEFAULT '',
+    ItemName TEXT NOT NULL DEFAULT '',
+    Uom TEXT NOT NULL DEFAULT '',
+    OriginalQty REAL NOT NULL DEFAULT 0,
+    AcceptedQty REAL NOT NULL DEFAULT 0,
+    RejectedQty REAL NOT NULL DEFAULT 0,
+    MoisturePercent REAL,
+    ContaminationPercent REAL,
+    RejectionReason TEXT NOT NULL DEFAULT '',
+    Remarks TEXT NOT NULL DEFAULT ''
+);");
+        ExecuteNonQuery(connection, @"CREATE TABLE IF NOT EXISTS QualityInspectionAudits (
+    QualityInspectionAuditId INTEGER PRIMARY KEY AUTOINCREMENT,
+    QualityInspectionId INTEGER NOT NULL,
+    EventType TEXT NOT NULL,
+    EventBy TEXT NOT NULL DEFAULT '',
+    EventDateTime TEXT NOT NULL,
+    InspectionMode TEXT NOT NULL DEFAULT '',
+    AcceptedQtyTotal REAL NOT NULL DEFAULT 0,
+    RejectedQtyTotal REAL NOT NULL DEFAULT 0,
+    QcRemarks TEXT NOT NULL DEFAULT ''
+);");
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_QualityInspections_DataArea_Status ON QualityInspections(DataAreaId, Status);");
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_QualityInspections_SlipNumber ON QualityInspections(SlipNumber);");
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_QualityInspectionLines_InspectionId ON QualityInspectionLines(QualityInspectionId);");
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_QualityInspectionAudits_InspectionId ON QualityInspectionAudits(QualityInspectionId);");
+
+
         ExecuteNonQuery(connection, @"CREATE TABLE IF NOT EXISTS LocationMasters (
     LocationMasterId INTEGER PRIMARY KEY AUTOINCREMENT,
     DataAreaId TEXT NOT NULL DEFAULT 'DAT',
@@ -4540,10 +4956,12 @@ ON CONFLICT(DataAreaId) DO UPDATE SET LegalEntityName = excluded.LegalEntityName
         EnsureColumn(connection, "OperatorMasters", "CanCaptureFirstWeight", "INTEGER NOT NULL DEFAULT 1");
         EnsureColumn(connection, "OperatorMasters", "CanCaptureSecondWeight", "INTEGER NOT NULL DEFAULT 1");
         EnsureColumn(connection, "OperatorMasters", "CanAccessCorrection", "INTEGER NOT NULL DEFAULT 0");
+        EnsureColumn(connection, "OperatorMasters", "CanAccessQualityInspection", "INTEGER NOT NULL DEFAULT 0");
         EnsureColumn(connection, "OperatorMasters", "CanSubmitCorrection", "INTEGER NOT NULL DEFAULT 0");
         EnsureColumn(connection, "OperatorMasters", "CanApproveRejectCorrection", "INTEGER NOT NULL DEFAULT 0");
         EnsureColumn(connection, "OperatorMasters", "CanCorrectWeight", "INTEGER NOT NULL DEFAULT 0");
-        ExecuteNonQuery(connection, "UPDATE OperatorMasters SET CanAccessGatePass = 1, CanAccessCancellationVoid = 1, CanSubmitCancellationVoid = 1, CanApproveRejectCancellationVoid = 1, CanAccessCorrection = 1, CanSubmitCorrection = 1, CanApproveRejectCorrection = 1, CanCorrectWeight = 1 WHERE lower(Username) = 'admin' OR lower(Role) = 'administrator'");
+        EnsureColumn(connection, "OperatorMasters", "CanProcessQualityInspection", "INTEGER NOT NULL DEFAULT 0");
+        ExecuteNonQuery(connection, "UPDATE OperatorMasters SET CanAccessGatePass = 1, CanAccessCancellationVoid = 1, CanSubmitCancellationVoid = 1, CanApproveRejectCancellationVoid = 1, CanAccessCorrection = 1, CanSubmitCorrection = 1, CanApproveRejectCorrection = 1, CanCorrectWeight = 1, CanAccessQualityInspection = 1, CanProcessQualityInspection = 1 WHERE lower(Username) = 'admin' OR lower(Role) = 'administrator'");
         EnsureColumn(connection, "OperatorMasters", "LastLogin", "TEXT");
         EnsureColumn(connection, "OperatorMasters", "Status", "TEXT NOT NULL DEFAULT 'Active'");
         EnsureColumn(connection, "OperatorMasters", "EffectiveFrom", "TEXT");
@@ -5002,9 +5420,9 @@ INSERT OR IGNORE INTO LocationMasters (DataAreaId, LocationCode, LocationName, L
         using var command = connection.CreateCommand();
         command.CommandText = @"
 INSERT INTO OperatorMasters
-(DataAreaId, EmployeeId, OperatorName, Username, PasswordHash, PasswordSalt, Email, MobileNumber, Designation, Department, DefaultWeighbridge, AssignedWeighbridges, DefaultShift, Role, PermissionProfile, CanAccessWeighment, CanAccessMasters, CanAccessReports, CanAccessTransactions, CanAccessGatePass, CanAccessCancellationVoid, CanAccessCorrection, CanAccessSettings, CanCaptureFirstWeight, CanCaptureSecondWeight, CanSubmitCorrection, CanApproveRejectCorrection, CanCorrectWeight, CanSubmitCancellationVoid, CanApproveRejectCancellationVoid, LastLogin, Status, EffectiveFrom, Remarks, CreatedAt)
+(DataAreaId, EmployeeId, OperatorName, Username, PasswordHash, PasswordSalt, Email, MobileNumber, Designation, Department, DefaultWeighbridge, AssignedWeighbridges, DefaultShift, Role, PermissionProfile, CanAccessWeighment, CanAccessMasters, CanAccessReports, CanAccessTransactions, CanAccessGatePass, CanAccessCancellationVoid, CanAccessCorrection, CanAccessQualityInspection, CanAccessSettings, CanCaptureFirstWeight, CanCaptureSecondWeight, CanSubmitCorrection, CanApproveRejectCorrection, CanCorrectWeight, CanProcessQualityInspection, CanSubmitCancellationVoid, CanApproveRejectCancellationVoid, LastLogin, Status, EffectiveFrom, Remarks, CreatedAt)
 VALUES
-('DAT', 'ADMIN-001', 'Administrator', 'admin', $PasswordHash, $PasswordSalt, '', '', 'Administrator', 'IT', 'WB-001', 'WB-001', '', 'Administrator', 'Admin', 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, NULL, 'Active', $EffectiveFrom, 'Default administrator created automatically for a new database. Change this password after first login.', $CreatedAt);";
+('DAT', 'ADMIN-001', 'Administrator', 'admin', $PasswordHash, $PasswordSalt, '', '', 'Administrator', 'IT', 'WB-001', 'WB-001', '', 'Administrator', 'Admin', 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, NULL, 'Active', $EffectiveFrom, 'Default administrator created automatically for a new database. Change this password after first login.', $CreatedAt);";
         command.Parameters.AddWithValue("$PasswordHash", passwordData.Hash);
         command.Parameters.AddWithValue("$PasswordSalt", passwordData.Salt);
         command.Parameters.AddWithValue("$EffectiveFrom", DateTime.Today.ToString("O"));
@@ -5535,12 +5953,14 @@ ON CONFLICT(OperatorId, DataAreaId) DO UPDATE SET IsDefault = excluded.IsDefault
         command.Parameters.AddWithValue("$CanAccessGatePass", DbValue(operatorMaster.CanAccessGatePass));
         command.Parameters.AddWithValue("$CanAccessCancellationVoid", DbValue(operatorMaster.CanAccessCancellationVoid));
         command.Parameters.AddWithValue("$CanAccessCorrection", DbValue(operatorMaster.CanAccessCorrection));
+        command.Parameters.AddWithValue("$CanAccessQualityInspection", DbValue(operatorMaster.CanAccessQualityInspection));
         command.Parameters.AddWithValue("$CanAccessSettings", DbValue(operatorMaster.CanAccessSettings));
         command.Parameters.AddWithValue("$CanCaptureFirstWeight", DbValue(operatorMaster.CanCaptureFirstWeight));
         command.Parameters.AddWithValue("$CanCaptureSecondWeight", DbValue(operatorMaster.CanCaptureSecondWeight));
         command.Parameters.AddWithValue("$CanSubmitCorrection", DbValue(operatorMaster.CanSubmitCorrection));
         command.Parameters.AddWithValue("$CanApproveRejectCorrection", DbValue(operatorMaster.CanApproveRejectCorrection));
         command.Parameters.AddWithValue("$CanCorrectWeight", DbValue(operatorMaster.CanCorrectWeight));
+        command.Parameters.AddWithValue("$CanProcessQualityInspection", DbValue(operatorMaster.CanProcessQualityInspection));
         command.Parameters.AddWithValue("$CanSubmitCancellationVoid", DbValue(operatorMaster.CanSubmitCancellationVoid));
         command.Parameters.AddWithValue("$CanApproveRejectCancellationVoid", DbValue(operatorMaster.CanApproveRejectCancellationVoid));
         command.Parameters.AddWithValue("$LastLogin", DbValue(operatorMaster.LastLogin));
@@ -5620,12 +6040,14 @@ ON CONFLICT(OperatorId, DataAreaId) DO UPDATE SET IsDefault = excluded.IsDefault
         CanAccessGatePass = HasColumn(reader, "CanAccessGatePass") && ReadBool(reader, "CanAccessGatePass"),
         CanAccessCancellationVoid = HasColumn(reader, "CanAccessCancellationVoid") && ReadBool(reader, "CanAccessCancellationVoid"),
         CanAccessCorrection = HasColumn(reader, "CanAccessCorrection") && ReadBool(reader, "CanAccessCorrection"),
+        CanAccessQualityInspection = HasColumn(reader, "CanAccessQualityInspection") && ReadBool(reader, "CanAccessQualityInspection"),
         CanAccessSettings = ReadBool(reader, "CanAccessSettings"),
         CanCaptureFirstWeight = ReadBool(reader, "CanCaptureFirstWeight"),
         CanCaptureSecondWeight = ReadBool(reader, "CanCaptureSecondWeight"),
         CanSubmitCorrection = HasColumn(reader, "CanSubmitCorrection") && ReadBool(reader, "CanSubmitCorrection"),
         CanApproveRejectCorrection = HasColumn(reader, "CanApproveRejectCorrection") && ReadBool(reader, "CanApproveRejectCorrection"),
         CanCorrectWeight = HasColumn(reader, "CanCorrectWeight") && ReadBool(reader, "CanCorrectWeight"),
+        CanProcessQualityInspection = HasColumn(reader, "CanProcessQualityInspection") && ReadBool(reader, "CanProcessQualityInspection"),
         CanSubmitCancellationVoid = HasColumn(reader, "CanSubmitCancellationVoid") && ReadBool(reader, "CanSubmitCancellationVoid"),
         CanApproveRejectCancellationVoid = HasColumn(reader, "CanApproveRejectCancellationVoid") && ReadBool(reader, "CanApproveRejectCancellationVoid"),
         LastLogin = ReadDate(reader, "LastLogin"),
@@ -5907,6 +6329,120 @@ ON CONFLICT(OperatorId, DataAreaId) DO UPDATE SET IsDefault = excluded.IsDefault
         TcpPort = Convert.ToInt32(reader["TcpPort"])
     };
 
+
+    private static string GenerateQualityInspectionNumber(SqliteConnection connection, SqliteTransaction transaction, string dataAreaId)
+    {
+        var company = string.IsNullOrWhiteSpace(dataAreaId) ? "DAT" : dataAreaId.Trim().ToUpperInvariant();
+        var prefix = $"QC-{company}-{DateTime.Now:yyyyMMdd}-";
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = @"SELECT QcNumber FROM QualityInspections
+WHERE QcNumber LIKE $Prefix ORDER BY QualityInspectionId DESC LIMIT 1";
+        command.Parameters.AddWithValue("$Prefix", prefix + "%");
+        var last = Convert.ToString(command.ExecuteScalar()) ?? string.Empty;
+        var next = 1;
+        if (last.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+            && int.TryParse(last[prefix.Length..], out var parsed))
+            next = parsed + 1;
+        return prefix + next.ToString("0000");
+    }
+
+    private static void AddQualityInspectionParameters(SqliteCommand command, QualityInspection inspection, string mode,
+        decimal netWeight, string status, string completedBy, DateTime? completedDateTime, DateTime updatedAt)
+    {
+        command.Parameters.AddWithValue("$DataAreaId", string.IsNullOrWhiteSpace(inspection.DataAreaId) ? "DAT" : inspection.DataAreaId.Trim());
+        command.Parameters.AddWithValue("$WeighmentId", inspection.WeighmentId);
+        command.Parameters.AddWithValue("$SlipNumber", inspection.SlipNumber ?? string.Empty);
+        command.Parameters.AddWithValue("$QcNumber", inspection.QcNumber ?? string.Empty);
+        command.Parameters.AddWithValue("$QcUser", inspection.QcUser ?? string.Empty);
+        command.Parameters.AddWithValue("$InspectionDateTime", inspection.InspectionDateTime?.ToString("O") ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$InspectionMode", mode);
+        command.Parameters.AddWithValue("$NetWeight", netWeight);
+        command.Parameters.AddWithValue("$QcRemarks", inspection.QcRemarks?.Trim() ?? string.Empty);
+        command.Parameters.AddWithValue("$Status", status);
+        command.Parameters.AddWithValue("$CompletedBy", completedBy ?? string.Empty);
+        command.Parameters.AddWithValue("$CompletedDateTime", completedDateTime?.ToString("O") ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$CreatedAt", inspection.CreatedAt.ToString("O"));
+        command.Parameters.AddWithValue("$UpdatedAt", updatedAt.ToString("O"));
+    }
+
+    private static void AddQualityInspectionLineParameters(SqliteCommand command, int qualityInspectionId, QualityInspectionLine line)
+    {
+        command.Parameters.AddWithValue("$QualityInspectionId", qualityInspectionId);
+        command.Parameters.AddWithValue("$OriginalMaterialLineId", (object?)line.OriginalMaterialLineId ?? DBNull.Value);
+        command.Parameters.AddWithValue("$LineNo", line.LineNo);
+        command.Parameters.AddWithValue("$ItemMasterId", (object?)line.ItemMasterId ?? DBNull.Value);
+        command.Parameters.AddWithValue("$ItemNumber", line.ItemNumber ?? string.Empty);
+        command.Parameters.AddWithValue("$ItemName", line.ItemName ?? string.Empty);
+        command.Parameters.AddWithValue("$Uom", line.Uom ?? string.Empty);
+        command.Parameters.AddWithValue("$OriginalQty", line.OriginalQty);
+        command.Parameters.AddWithValue("$AcceptedQty", line.AcceptedQty);
+        command.Parameters.AddWithValue("$RejectedQty", line.RejectedQty);
+        command.Parameters.AddWithValue("$MoisturePercent", (object?)line.MoisturePercent ?? DBNull.Value);
+        command.Parameters.AddWithValue("$ContaminationPercent", (object?)line.ContaminationPercent ?? DBNull.Value);
+        command.Parameters.AddWithValue("$RejectionReason", line.RejectionReason ?? string.Empty);
+        command.Parameters.AddWithValue("$Remarks", line.Remarks ?? string.Empty);
+    }
+
+    private static void InsertQualityInspectionAudit(SqliteConnection connection, SqliteTransaction transaction, int qualityInspectionId,
+        string eventType, string eventBy, DateTime eventDateTime, string mode, decimal acceptedTotal, decimal rejectedTotal, string? remarks)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = @"INSERT INTO QualityInspectionAudits
+(QualityInspectionId, EventType, EventBy, EventDateTime, InspectionMode, AcceptedQtyTotal, RejectedQtyTotal, QcRemarks)
+VALUES
+($QualityInspectionId,$EventType,$EventBy,$EventDateTime,$InspectionMode,$AcceptedQtyTotal,$RejectedQtyTotal,$QcRemarks);";
+        command.Parameters.AddWithValue("$QualityInspectionId", qualityInspectionId);
+        command.Parameters.AddWithValue("$EventType", eventType ?? string.Empty);
+        command.Parameters.AddWithValue("$EventBy", eventBy ?? string.Empty);
+        command.Parameters.AddWithValue("$EventDateTime", eventDateTime.ToString("O"));
+        command.Parameters.AddWithValue("$InspectionMode", mode ?? string.Empty);
+        command.Parameters.AddWithValue("$AcceptedQtyTotal", acceptedTotal);
+        command.Parameters.AddWithValue("$RejectedQtyTotal", rejectedTotal);
+        command.Parameters.AddWithValue("$QcRemarks", remarks?.Trim() ?? string.Empty);
+        command.ExecuteNonQuery();
+    }
+
+    private static QualityInspection MapQualityInspection(SqliteDataReader reader) => new()
+    {
+        QualityInspectionId = ReadInt(reader, "QualityInspectionId") ?? 0,
+        DataAreaId = ReadText(reader, "DataAreaId"),
+        WeighmentId = ReadInt(reader, "WeighmentId") ?? 0,
+        SlipNumber = ReadText(reader, "SlipNumber"),
+        QcNumber = ReadText(reader, "QcNumber"),
+        QcUser = ReadText(reader, "QcUser"),
+        InspectionDateTime = ReadDate(reader, "InspectionDateTime"),
+        InspectionMode = ReadText(reader, "InspectionMode"),
+        NetWeight = ReadDecimal(reader, "NetWeight") ?? 0m,
+        QcRemarks = ReadText(reader, "QcRemarks"),
+        Status = ReadText(reader, "Status"),
+        CompletedBy = ReadText(reader, "CompletedBy"),
+        CompletedDateTime = ReadDate(reader, "CompletedDateTime"),
+        ReopenCount = ReadInt(reader, "ReopenCount") ?? 0,
+        LastReopenedBy = ReadText(reader, "LastReopenedBy"),
+        LastReopenedDateTime = ReadDate(reader, "LastReopenedDateTime"),
+        CreatedAt = ReadDate(reader, "CreatedAt") ?? DateTime.Now,
+        UpdatedAt = ReadDate(reader, "UpdatedAt") ?? DateTime.Now
+    };
+
+    private static QualityInspectionLine MapQualityInspectionLine(SqliteDataReader reader) => new()
+    {
+        QualityInspectionLineId = ReadInt(reader, "QualityInspectionLineId") ?? 0,
+        QualityInspectionId = ReadInt(reader, "QualityInspectionId") ?? 0,
+        OriginalMaterialLineId = ReadInt(reader, "OriginalMaterialLineId"),
+        LineNo = ReadInt(reader, "LineNo") ?? 0,
+        ItemMasterId = ReadInt(reader, "ItemMasterId"),
+        ItemNumber = ReadText(reader, "ItemNumber"),
+        ItemName = ReadText(reader, "ItemName"),
+        Uom = ReadText(reader, "Uom"),
+        OriginalQty = ReadDecimal(reader, "OriginalQty") ?? 0m,
+        AcceptedQty = ReadDecimal(reader, "AcceptedQty") ?? 0m,
+        MoisturePercent = ReadDecimal(reader, "MoisturePercent"),
+        ContaminationPercent = ReadDecimal(reader, "ContaminationPercent"),
+        RejectionReason = ReadText(reader, "RejectionReason"),
+        Remarks = ReadText(reader, "Remarks")
+    };
 
     private static void AddCorrectionDetailParameters(SqliteCommand command, int correctionId, WeighmentCorrectionDetail detail)
     {
