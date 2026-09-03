@@ -2,6 +2,8 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Windows;
+using Microsoft.Win32;
+using System.Windows.Threading;
 using WeightBridgeApp.Models;
 using WeightBridgeApp.Services;
 
@@ -14,6 +16,7 @@ public class MainViewModel : BaseViewModel
     private IWeightReader? _weightReader;
     private int? _loadedOpenWeighmentId;
     private bool _isRefreshingData;
+    private readonly DispatcherTimer _openInquiryRefreshTimer;
     private const int MasterPageSize = 200;
     private int _customerPageIndex;
     private int _vendorPageIndex;
@@ -73,6 +76,15 @@ public class MainViewModel : BaseViewModel
     private string _transactionPartyTypeFilter = string.Empty;
     private string _transactionItemFilter = string.Empty;
     private string _transactionStatusFilter = string.Empty;
+    private DateTime? _openInquiryFrom;
+    private DateTime? _openInquiryTo;
+    private string _openInquirySlipFilter = string.Empty;
+    private string _openInquiryTransactionTypeFilter = string.Empty;
+    private string _openInquiryScenarioFilter = string.Empty;
+    private string _openInquiryVehicleFilter = string.Empty;
+    private string _openInquiryWeighbridgeFilter = string.Empty;
+    private string _openInquiryStageFilter = string.Empty;
+    private Weighment? _selectedOpenInquiryWeighment;
     private int _selectedMainTabIndex;
     private Weighment? _selectedTransactionWeighment;
     private string _selectedTransactionReviewForm = string.Empty;
@@ -171,6 +183,7 @@ public class MainViewModel : BaseViewModel
     private WeighmentProductionDetails _productionDetailsForm = new();
     private WeighmentReturnDetails _returnDetailsForm = new();
     private WeighmentDisposalDetails _disposalDetailsForm = new();
+    private WeighmentGeneralWeighingServiceDetails _generalWeighingServiceDetailsForm = new();
     private GatePass? _selectedGatePass;
     private GatePass? _selectedWeighmentGatePass;
     private GatePass _gatePassForm = new();
@@ -196,6 +209,13 @@ public class MainViewModel : BaseViewModel
     {
         _databaseService = databaseService;
         _currentUser = currentUser;
+        _openInquiryRefreshTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(60) };
+        _openInquiryRefreshTimer.Tick += async (_, _) =>
+        {
+            if (CanAccessOpenTransactionsInquiry && SelectedMainTabIndex == 5 && !_isRefreshingData)
+                await LoadOpenTransactionsInquiryAsync();
+        };
+        _openInquiryRefreshTimer.Start();
         CorrectionWorkspace = new CorrectionWorkspaceViewModel(
             _databaseService,
             _currentUser,
@@ -204,6 +224,7 @@ public class MainViewModel : BaseViewModel
             {
                 await RefreshWeighmentsAsync();
                 if (CanAccessTransactions) await LoadTransactionsAsync();
+                if (CanAccessOpenTransactionsInquiry) await LoadOpenTransactionsInquiryAsync();
                 if (CanAccessReports) await LoadReportAsync();
             });
 
@@ -221,7 +242,8 @@ public class MainViewModel : BaseViewModel
             "Sales / Dispatch",
             "Production Weighing",
             "Return",
-            "Disposal / Waste Movement"
+            "Disposal / Waste Movement",
+            "General Weighing Service"
         };
         LocationTypeValues = new ObservableCollection<string>
         {
@@ -246,6 +268,8 @@ public class MainViewModel : BaseViewModel
         TransferDirectionValues = new ObservableCollection<string> { "Transfer In", "Transfer Out", "Return" };
         SalesSubtypeValues = new ObservableCollection<string> { "Credit", "Cash", "Dispatch-only" };
         PaymentStatusValues = new ObservableCollection<string> { "Unpaid", "Paid", "Credit" };
+        GeneralWeighingPaymentStatusValues = new ObservableCollection<string> { "Unpaid", "Paid" };
+        GeneralWeighingServiceModeValues = new ObservableCollection<string> { "Single Weight", "Two Weight" };
         ProductionMovementValues = new ObservableCollection<string> { "Receipt", "Issue", "Return", "Dispatch" };
         ReturnTypeValues = new ObservableCollection<string> { "Purchase Return", "Sales Return", "Intercompany Return" };
         DisposalTypeValues = new ObservableCollection<string> { "Landfill", "Rejected Material Disposal", "Internal Waste Movement" };
@@ -278,7 +302,12 @@ public class MainViewModel : BaseViewModel
         SaveReportEditCommand = new RelayCommand(SaveReportEditAsync);
         DeleteReportRowCommand = new RelayCommand(DeleteReportRowAsync);
         LoadTransactionsCommand = new RelayCommand(LoadTransactionsAsync);
+        ExportTransactionsCommand = new RelayCommand(ExportTransactionsAsync, () => CanAccessTransactions);
         ClearTransactionFiltersCommand = new RelayCommand(ClearTransactionFilters);
+        LoadOpenTransactionsInquiryCommand = new RelayCommand(LoadOpenTransactionsInquiryAsync);
+        ClearOpenTransactionsInquiryFiltersCommand = new RelayCommand(ClearOpenTransactionsInquiryFilters);
+        ResumeOpenTransactionCommand = new RelayCommand(ResumeSelectedOpenTransactionAsync, () => CanResumeSelectedOpenTransaction);
+        ExportOpenTransactionsCommand = new RelayCommand(ExportOpenTransactionsAsync, () => CanExportOpenTransactions);
         CorrectTransactionCommand = new RelayCommand(CorrectTransactionAsync);
         CancelTransactionCommand = new RelayCommand(CancelTransactionAsync);
         StartCancellationFromTransactionCommand = new RelayCommand(StartCancellationFromSelectedTransactionAsync, () => CanInitiateCancellationFromTransaction);
@@ -351,6 +380,7 @@ public class MainViewModel : BaseViewModel
         OpenReturnDestinationLookupCommand = new RelayCommand(OpenReturnDestinationLookupAsync, () => IsReturnDetailsEditable);
         OpenDisposalSourceLookupCommand = new RelayCommand(OpenDisposalSourceLookupAsync, () => IsDisposalDetailsEditable);
         OpenDisposalDestinationLookupCommand = new RelayCommand(OpenDisposalDestinationLookupAsync, () => IsDisposalDetailsEditable);
+        OpenGeneralWeighingCustomerLookupCommand = new RelayCommand(OpenGeneralWeighingCustomerLookupAsync, () => IsGeneralWeighingBeforeW1Editable);
         SaveGatePassCommand = new RelayCommand(SaveGatePassAsync);
         ClearGatePassCommand = new RelayCommand(ClearGatePassForm);
         CloseGatePassCommand = new RelayCommand(CloseGatePassAsync);
@@ -368,6 +398,7 @@ public class MainViewModel : BaseViewModel
 
         PurchaseDetailsForm.PropertyChanged += PurchaseDetailsForm_PropertyChanged;
         ContractCollectionDetailsForm.PropertyChanged += ContractCollectionDetailsForm_PropertyChanged;
+        _generalWeighingServiceDetailsForm.PropertyChanged += GeneralWeighingServiceDetailsForm_PropertyChanged;
     }
 
     public ObservableCollection<string> ConnectionTypes { get; }
@@ -408,6 +439,8 @@ public class MainViewModel : BaseViewModel
     public ObservableCollection<Weighment> FilteredReportRows { get; } = new();
     public ObservableCollection<Weighment> TransactionRows { get; } = new();
     public ObservableCollection<Weighment> FilteredTransactionRows { get; } = new();
+    public ObservableCollection<Weighment> OpenInquiryRows { get; } = new();
+    public ObservableCollection<Weighment> FilteredOpenInquiryRows { get; } = new();
     public ObservableCollection<TransactionReviewField> TransactionReviewCommonFields { get; } = new();
     public ObservableCollection<TransactionReviewField> TransactionReviewDynamicFields { get; } = new();
     public ObservableCollection<WeighmentMaterialLine> TransactionReviewMaterialLines { get; } = new();
@@ -434,6 +467,8 @@ public class MainViewModel : BaseViewModel
     public ObservableCollection<string> TransferDirectionValues { get; }
     public ObservableCollection<string> SalesSubtypeValues { get; }
     public ObservableCollection<string> PaymentStatusValues { get; }
+    public ObservableCollection<string> GeneralWeighingPaymentStatusValues { get; }
+    public ObservableCollection<string> GeneralWeighingServiceModeValues { get; }
     public ObservableCollection<string> ProductionMovementValues { get; }
     public ObservableCollection<string> ReturnTypeValues { get; }
     public ObservableCollection<string> DisposalTypeValues { get; }
@@ -465,7 +500,12 @@ public class MainViewModel : BaseViewModel
     public RelayCommand SaveReportEditCommand { get; }
     public RelayCommand DeleteReportRowCommand { get; }
     public RelayCommand LoadTransactionsCommand { get; }
+    public RelayCommand ExportTransactionsCommand { get; }
     public RelayCommand ClearTransactionFiltersCommand { get; }
+    public RelayCommand LoadOpenTransactionsInquiryCommand { get; }
+    public RelayCommand ClearOpenTransactionsInquiryFiltersCommand { get; }
+    public RelayCommand ResumeOpenTransactionCommand { get; }
+    public RelayCommand ExportOpenTransactionsCommand { get; }
     public RelayCommand CorrectTransactionCommand { get; }
     public RelayCommand CancelTransactionCommand { get; } // legacy; direct cancellation is no longer exposed
     public RelayCommand StartCancellationFromTransactionCommand { get; }
@@ -538,6 +578,7 @@ public class MainViewModel : BaseViewModel
     public RelayCommand OpenReturnDestinationLookupCommand { get; }
     public RelayCommand OpenDisposalSourceLookupCommand { get; }
     public RelayCommand OpenDisposalDestinationLookupCommand { get; }
+    public RelayCommand OpenGeneralWeighingCustomerLookupCommand { get; }
     public RelayCommand SaveGatePassCommand { get; }
     public RelayCommand ClearGatePassCommand { get; }
     public RelayCommand CloseGatePassCommand { get; }
@@ -576,6 +617,9 @@ public class MainViewModel : BaseViewModel
                 OnPropertyChanged(nameof(IsProductionWeighingForm));
                 OnPropertyChanged(nameof(IsReturnForm));
                 OnPropertyChanged(nameof(IsDisposalWasteMovementForm));
+                OnPropertyChanged(nameof(IsGeneralWeighingServiceForm));
+                OnPropertyChanged(nameof(IsGeneralWeighingSingleWeight));
+                OnPropertyChanged(nameof(ShowMaterialLines));
                 OnPropertyChanged(nameof(IsPurchaseDetailsEditable));
                 OnPropertyChanged(nameof(IsPurchaseDetailsReadOnly));
                 OnPropertyChanged(nameof(IsPurchaseVendorSelectable));
@@ -587,6 +631,17 @@ public class MainViewModel : BaseViewModel
                 OnPropertyChanged(nameof(IsProductionDetailsEditable));
                 OnPropertyChanged(nameof(IsReturnDetailsEditable));
                 OnPropertyChanged(nameof(IsDisposalDetailsEditable));
+                OnPropertyChanged(nameof(IsGeneralWeighingBeforeW1Editable));
+                OnPropertyChanged(nameof(IsGeneralWeighingBeforeCompletionEditable));
+                OnPropertyChanged(nameof(IsGeneralWeighingReceiptEditable));
+                if (IsGeneralWeighingServiceForm && IsHeaderAndLinesEditable)
+                {
+                    MaterialLines.Clear();
+                    SelectedMaterialLine = null;
+                    SelectedWeighmentItem = null;
+                    ItemNumber = string.Empty;
+                    ItemName = string.Empty;
+                }
                 System.Windows.Input.CommandManager.InvalidateRequerySuggested();
             }
         }
@@ -601,6 +656,9 @@ public class MainViewModel : BaseViewModel
     public bool IsProductionWeighingForm => string.Equals(SelectedTransactionForm, "Production Weighing", StringComparison.OrdinalIgnoreCase);
     public bool IsReturnForm => string.Equals(SelectedTransactionForm, "Return", StringComparison.OrdinalIgnoreCase);
     public bool IsDisposalWasteMovementForm => string.Equals(SelectedTransactionForm, "Disposal / Waste Movement", StringComparison.OrdinalIgnoreCase);
+    public bool IsGeneralWeighingServiceForm => string.Equals(SelectedTransactionForm, "General Weighing Service", StringComparison.OrdinalIgnoreCase);
+    public bool IsGeneralWeighingSingleWeight => IsGeneralWeighingServiceForm && string.Equals(GeneralWeighingServiceDetailsForm.ServiceMode, "Single Weight", StringComparison.OrdinalIgnoreCase);
+    public bool ShowMaterialLines => true;
     public bool IsPurchaseDetailsEditable => IsHeaderAndLinesEditable && IsPurchaseReceiptCollectionForm;
     public bool IsPurchaseDetailsReadOnly => !IsPurchaseDetailsEditable;
     public bool IsContractCollectionDetailsEditable => IsHeaderAndLinesEditable && IsContractCollectionForm;
@@ -610,6 +668,10 @@ public class MainViewModel : BaseViewModel
     public bool IsProductionDetailsEditable => IsHeaderAndLinesEditable && IsProductionWeighingForm;
     public bool IsReturnDetailsEditable => IsHeaderAndLinesEditable && IsReturnForm;
     public bool IsDisposalDetailsEditable => IsHeaderAndLinesEditable && IsDisposalWasteMovementForm;
+    public bool IsGeneralWeighingBeforeW1Editable => IsHeaderAndLinesEditable && IsGeneralWeighingServiceForm;
+    public bool IsGeneralWeighingBeforeCompletionEditable => IsGeneralWeighingServiceForm && !SecondWeight.HasValue && (_loadedOpenWeighmentId == null || !IsGeneralWeighingSingleWeight);
+    public bool IsGeneralWeighingReceiptEditable => IsGeneralWeighingBeforeCompletionEditable && string.Equals(GeneralWeighingServiceDetailsForm.PaymentStatus, "Paid", StringComparison.OrdinalIgnoreCase);
+    public string GeneralWeighingCustomerDisplay => BuildMergedDisplay(GeneralWeighingServiceDetailsForm.CustomerAccount, GeneralWeighingServiceDetailsForm.CustomerName);
 
     public ScenarioMaster? SelectedScenarioMaster
     {
@@ -664,6 +726,59 @@ public class MainViewModel : BaseViewModel
     public WeighmentProductionDetails ProductionDetailsForm { get => _productionDetailsForm; set => SetProperty(ref _productionDetailsForm, value); }
     public WeighmentReturnDetails ReturnDetailsForm { get => _returnDetailsForm; set => SetProperty(ref _returnDetailsForm, value); }
     public WeighmentDisposalDetails DisposalDetailsForm { get => _disposalDetailsForm; set => SetProperty(ref _disposalDetailsForm, value); }
+
+    public WeighmentGeneralWeighingServiceDetails GeneralWeighingServiceDetailsForm
+    {
+        get => _generalWeighingServiceDetailsForm;
+        set
+        {
+            if (ReferenceEquals(_generalWeighingServiceDetailsForm, value))
+                return;
+
+            if (_generalWeighingServiceDetailsForm != null)
+                _generalWeighingServiceDetailsForm.PropertyChanged -= GeneralWeighingServiceDetailsForm_PropertyChanged;
+
+            if (SetProperty(ref _generalWeighingServiceDetailsForm, value))
+            {
+                if (_generalWeighingServiceDetailsForm != null)
+                    _generalWeighingServiceDetailsForm.PropertyChanged += GeneralWeighingServiceDetailsForm_PropertyChanged;
+                RaiseGeneralWeighingDependentProperties();
+            }
+        }
+    }
+
+    private void GeneralWeighingServiceDetailsForm_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(WeighmentGeneralWeighingServiceDetails.ServiceMode) && IsGeneralWeighingBeforeW1Editable)
+            ApplyGeneralWeighingServiceCharge();
+
+        if (e.PropertyName == nameof(WeighmentGeneralWeighingServiceDetails.PaymentStatus) &&
+            !string.Equals(GeneralWeighingServiceDetailsForm.PaymentStatus, "Paid", StringComparison.OrdinalIgnoreCase))
+            GeneralWeighingServiceDetailsForm.ReceiptNumber = string.Empty;
+
+        RaiseGeneralWeighingDependentProperties();
+    }
+
+    private void ApplyGeneralWeighingServiceCharge()
+    {
+        var match = ServiceChargeMasters.FirstOrDefault(x =>
+            IsSameDataArea(x.DataAreaId, CurrentUserCompany) &&
+            string.Equals(x.ServiceMode?.Trim(), GeneralWeighingServiceDetailsForm.ServiceMode?.Trim(), StringComparison.OrdinalIgnoreCase));
+
+        GeneralWeighingServiceDetailsForm.ServiceCharge = match?.Amount ?? 0m;
+        GeneralWeighingServiceDetailsForm.Currency = match?.Currency?.Trim() ?? string.Empty;
+    }
+
+    private void RaiseGeneralWeighingDependentProperties()
+    {
+        OnPropertyChanged(nameof(GeneralWeighingCustomerDisplay));
+        OnPropertyChanged(nameof(IsGeneralWeighingSingleWeight));
+        OnPropertyChanged(nameof(IsGeneralWeighingBeforeW1Editable));
+        OnPropertyChanged(nameof(IsGeneralWeighingBeforeCompletionEditable));
+        OnPropertyChanged(nameof(IsGeneralWeighingReceiptEditable));
+        OnPropertyChanged(nameof(CanSaveSecondWeight));
+        System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+    }
 
     public WeighmentPurchaseDetails PurchaseDetailsForm
     {
@@ -880,6 +995,11 @@ public class MainViewModel : BaseViewModel
     public bool CanAccessMasters => _currentUser.CanAccessMasters;
     public bool CanAccessReports => _currentUser.CanAccessReports;
     public bool CanAccessTransactions => _currentUser.CanAccessTransactions;
+    public bool CanAccessOpenTransactionsInquiry => _currentUser.CanAccessOpenTransactionsInquiry;
+    public bool CanResumeOpenTransactions => _currentUser.CanResumeOpenTransactions;
+    public bool CanExportOpenTransactions => _currentUser.CanExportOpenTransactions;
+    public bool CanResumeSelectedOpenTransaction => CanAccessOpenTransactionsInquiry && CanResumeOpenTransactions && CanAccessWeighment && SelectedOpenInquiryWeighment != null && string.Equals(SelectedOpenInquiryWeighment.Status, "Open", StringComparison.OrdinalIgnoreCase);
+    public int OpenTransactionCount => FilteredOpenInquiryRows.Count;
     public bool CanAccessGatePass => _currentUser.CanAccessGatePass;
     public bool CanAccessCancellationVoid => _currentUser.CanAccessCancellationVoid;
     public bool CanAccessCorrection => _currentUser.CanAccessCorrection;
@@ -908,7 +1028,7 @@ public class MainViewModel : BaseViewModel
     public bool IsCompletedGridReadOnly => true;
 
     public bool CanSaveFirstWeight => CanAccessWeighment && _currentUser.CanCaptureFirstWeight && _loadedOpenWeighmentId == null && !FirstWeight.HasValue;
-    public bool CanSaveSecondWeight => CanAccessWeighment && _currentUser.CanCaptureSecondWeight && _loadedOpenWeighmentId.HasValue && FirstWeight.HasValue && !SecondWeight.HasValue;
+    public bool CanSaveSecondWeight => CanAccessWeighment && _currentUser.CanCaptureSecondWeight && _loadedOpenWeighmentId.HasValue && FirstWeight.HasValue && !SecondWeight.HasValue && !IsGeneralWeighingSingleWeight;
     public bool IsHeaderAndLinesEditable => _loadedOpenWeighmentId == null && !FirstWeight.HasValue;
     public bool IsHeaderAndLinesLocked => !IsHeaderAndLinesEditable;
 
@@ -1133,6 +1253,21 @@ public class MainViewModel : BaseViewModel
     {
         get => _selectedReportWeighment;
         set => SetProperty(ref _selectedReportWeighment, value);
+    }
+
+    public Weighment? SelectedOpenInquiryWeighment
+    {
+        get => _selectedOpenInquiryWeighment;
+        set
+        {
+            if (SetProperty(ref _selectedOpenInquiryWeighment, value))
+            {
+                if (value != null)
+                    SelectedTransactionWeighment = value;
+                OnPropertyChanged(nameof(CanResumeSelectedOpenTransaction));
+                System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+            }
+        }
     }
 
     public Weighment? SelectedTransactionWeighment
@@ -1467,6 +1602,47 @@ public class MainViewModel : BaseViewModel
             if (SetProperty(ref _transactionStatusFilter, value))
                 ApplyTransactionFilter();
         }
+    }
+
+    public DateTime? OpenInquiryFrom
+    {
+        get => _openInquiryFrom;
+        set { if (SetProperty(ref _openInquiryFrom, value)) ApplyOpenTransactionInquiryFilter(); }
+    }
+    public DateTime? OpenInquiryTo
+    {
+        get => _openInquiryTo;
+        set { if (SetProperty(ref _openInquiryTo, value)) ApplyOpenTransactionInquiryFilter(); }
+    }
+    public string OpenInquirySlipFilter
+    {
+        get => _openInquirySlipFilter;
+        set { if (SetProperty(ref _openInquirySlipFilter, value)) ApplyOpenTransactionInquiryFilter(); }
+    }
+    public string OpenInquiryTransactionTypeFilter
+    {
+        get => _openInquiryTransactionTypeFilter;
+        set { if (SetProperty(ref _openInquiryTransactionTypeFilter, value)) ApplyOpenTransactionInquiryFilter(); }
+    }
+    public string OpenInquiryScenarioFilter
+    {
+        get => _openInquiryScenarioFilter;
+        set { if (SetProperty(ref _openInquiryScenarioFilter, value)) ApplyOpenTransactionInquiryFilter(); }
+    }
+    public string OpenInquiryVehicleFilter
+    {
+        get => _openInquiryVehicleFilter;
+        set { if (SetProperty(ref _openInquiryVehicleFilter, value)) ApplyOpenTransactionInquiryFilter(); }
+    }
+    public string OpenInquiryWeighbridgeFilter
+    {
+        get => _openInquiryWeighbridgeFilter;
+        set { if (SetProperty(ref _openInquiryWeighbridgeFilter, value)) ApplyOpenTransactionInquiryFilter(); }
+    }
+    public string OpenInquiryStageFilter
+    {
+        get => _openInquiryStageFilter;
+        set { if (SetProperty(ref _openInquiryStageFilter, value)) ApplyOpenTransactionInquiryFilter(); }
     }
 
     public string NewVehicleNo
@@ -2164,6 +2340,10 @@ public class MainViewModel : BaseViewModel
             }
             if (CanAccessReports)
                 await LoadReportAsync();
+            if (CanAccessTransactions)
+                await LoadTransactionsAsync();
+            if (CanAccessOpenTransactionsInquiry)
+                await LoadOpenTransactionsInquiryAsync();
             StatusMessage = $"Application loaded. Database: {DatabaseFolderPath}. Use Mock mode first, then test Serial/TCP with your indicator.";
         }
         catch (Exception ex)
@@ -2316,7 +2496,7 @@ public class MainViewModel : BaseViewModel
             var currentWeighbridgeCode = SelectedSettingsWeighbridge?.WeighbridgeCode ?? Settings.SelectedWeighbridgeCode;
             SlipNumber = await _databaseService.GenerateSlipNumberAsync(currentWeighbridgeCode, CurrentUserCompany);
             TicketNo = SlipNumber;
-            if (MaterialLines.Count == 0)
+            if (!IsGeneralWeighingServiceForm && MaterialLines.Count == 0)
             {
                 StatusMessage = "Please add at least one material line before saving First Weight.";
                 return;
@@ -2339,7 +2519,7 @@ public class MainViewModel : BaseViewModel
                 CreatedAt = line.CreatedAt
             }).ToList();
 
-            var primaryMaterialLine = materialLineSnapshot.First();
+            var primaryMaterialLine = materialLineSnapshot.FirstOrDefault();
             FirstWeight = LiveWeight;
             var transactionDateTime = DateTime.Now;
 
@@ -2357,13 +2537,12 @@ public class MainViewModel : BaseViewModel
                 ExternalReference = ExternalReference.Trim(),
                 OperatorRemarks = OperatorRemarks.Trim(),
                 DataAreaId = CurrentUserCompany.Trim(),
-                CompanyName = CurrentUserCompany.Trim(),
                 VehicleNo = VehicleNo.Trim().ToUpperInvariant(),
                 DriverName = DriverName.Trim(),
-                MaterialId = primaryMaterialLine.ItemMasterId,
-                ItemNumber = primaryMaterialLine.ItemNumber.Trim(),
-                ItemName = primaryMaterialLine.ItemName.Trim(),
-                MaterialName = primaryMaterialLine.ItemName.Trim(),
+                MaterialId = primaryMaterialLine?.ItemMasterId,
+                ItemNumber = primaryMaterialLine?.ItemNumber?.Trim() ?? string.Empty,
+                ItemName = primaryMaterialLine?.ItemName?.Trim() ?? string.Empty,
+                MaterialName = IsGeneralWeighingServiceForm ? GeneralWeighingServiceDetailsForm.MaterialDescription?.Trim() ?? string.Empty : primaryMaterialLine?.ItemName?.Trim() ?? string.Empty,
                 FirstWeight = LiveWeight,
                 FirstWeightTime = DateTime.Now,
                 FirstWeightBy = CurrentUsername,
@@ -2499,18 +2678,44 @@ public class MainViewModel : BaseViewModel
                     AuthorizedBy = DisposalDetailsForm.AuthorizedBy?.Trim() ?? string.Empty
                 });
             }
+            if (IsGeneralWeighingServiceForm)
+            {
+                await _databaseService.SaveWeighmentGeneralWeighingServiceDetailsAsync(new WeighmentGeneralWeighingServiceDetails
+                {
+                    WeighmentId = savedWeighmentId,
+                    SlipNumber = savedSlipNumber,
+                    DataAreaId = CurrentUserCompany,
+                    ExternalPartyName = GeneralWeighingServiceDetailsForm.ExternalPartyName?.Trim() ?? string.Empty,
+                    CustomerAccount = GeneralWeighingServiceDetailsForm.CustomerAccount?.Trim() ?? string.Empty,
+                    CustomerName = GeneralWeighingServiceDetailsForm.CustomerName?.Trim() ?? string.Empty,
+                    MobileNumber = GeneralWeighingServiceDetailsForm.MobileNumber?.Trim() ?? string.Empty,
+                    MaterialDescription = GeneralWeighingServiceDetailsForm.MaterialDescription?.Trim() ?? string.Empty,
+                    ServiceMode = GeneralWeighingServiceDetailsForm.ServiceMode?.Trim() ?? string.Empty,
+                    ServiceCharge = GeneralWeighingServiceDetailsForm.ServiceCharge,
+                    Currency = GeneralWeighingServiceDetailsForm.Currency?.Trim() ?? string.Empty,
+                    PaymentStatus = GeneralWeighingServiceDetailsForm.PaymentStatus?.Trim() ?? string.Empty,
+                    ReceiptNumber = GeneralWeighingServiceDetailsForm.ReceiptNumber?.Trim() ?? string.Empty
+                });
+
+                if (IsGeneralWeighingSingleWeight)
+                    await _databaseService.CompleteSingleWeightAsync(savedWeighmentId, DateTime.Now, CurrentUsername);
+            }
+
             if (!string.IsNullOrWhiteSpace(weighment.GatePassNumber))
                 await _databaseService.LinkGatePassAsync(weighment.GatePassNumber, savedSlipNumber);
             await _databaseService.AddVehicleAsync(weighment.VehicleNo);
             await _databaseService.AddDriverAsync(weighment.DriverName);
             await RefreshAllAsync();
 
-            // Safety control: after first weight is saved, clear the entry screen and do not keep
-            // the open slip loaded. The operator must select the slip row from Open Slips
-            // before saving the second weight.
+            var completedAsSingleWeight = IsGeneralWeighingSingleWeight;
+
+            // Safety control: after capture, clear the entry screen. Two-weight transactions must
+            // be re-selected from Open Slips before the second weight is captured.
             ClearEntry();
 
-            StatusMessage = $"First weight saved. Slip: {savedSlipNumber}. Select the slip from Open Slips before saving Second Weight.";
+            StatusMessage = completedAsSingleWeight
+                ? $"Single weight completed. Slip: {savedSlipNumber}. Second Weight = 0 and Net Weight = First Weight."
+                : $"First weight saved. Slip: {savedSlipNumber}. Select the slip from Open Slips before saving Second Weight.";
         }
         catch (Exception ex)
         {
@@ -2552,6 +2757,29 @@ public class MainViewModel : BaseViewModel
                 return;
             }
 
+            if (IsGeneralWeighingServiceForm)
+            {
+                if (!ValidateGeneralWeighingBeforeCompletion())
+                    return;
+
+                await _databaseService.SaveWeighmentGeneralWeighingServiceDetailsAsync(new WeighmentGeneralWeighingServiceDetails
+                {
+                    WeighmentId = _loadedOpenWeighmentId.Value,
+                    SlipNumber = SlipNumber,
+                    DataAreaId = CurrentUserCompany,
+                    ExternalPartyName = GeneralWeighingServiceDetailsForm.ExternalPartyName?.Trim() ?? string.Empty,
+                    CustomerAccount = GeneralWeighingServiceDetailsForm.CustomerAccount?.Trim() ?? string.Empty,
+                    CustomerName = GeneralWeighingServiceDetailsForm.CustomerName?.Trim() ?? string.Empty,
+                    MobileNumber = GeneralWeighingServiceDetailsForm.MobileNumber?.Trim() ?? string.Empty,
+                    MaterialDescription = GeneralWeighingServiceDetailsForm.MaterialDescription?.Trim() ?? string.Empty,
+                    ServiceMode = GeneralWeighingServiceDetailsForm.ServiceMode?.Trim() ?? string.Empty,
+                    ServiceCharge = GeneralWeighingServiceDetailsForm.ServiceCharge,
+                    Currency = GeneralWeighingServiceDetailsForm.Currency?.Trim() ?? string.Empty,
+                    PaymentStatus = GeneralWeighingServiceDetailsForm.PaymentStatus?.Trim() ?? string.Empty,
+                    ReceiptNumber = GeneralWeighingServiceDetailsForm.ReceiptNumber?.Trim() ?? string.Empty
+                });
+            }
+
             SecondWeight = LiveWeight;
             await _databaseService.CompleteSecondWeightAsync(_loadedOpenWeighmentId.Value, LiveWeight, DateTime.Now, CurrentUsername);
 
@@ -2570,6 +2798,15 @@ public class MainViewModel : BaseViewModel
         if (SelectedOpenWeighment == null)
         {
             StatusMessage = "Please select an open slip first.";
+            return;
+        }
+
+        var lockAcquired = _databaseService.TryAcquireOpenWeighmentLockAsync(SelectedOpenWeighment.WeighmentId, CurrentUsername, 30).GetAwaiter().GetResult();
+        if (!lockAcquired)
+        {
+            StatusMessage = string.IsNullOrWhiteSpace(SelectedOpenWeighment.ResumeLockDisplay)
+                ? "This open transaction is currently in use by another operator. Refresh Open Slips and try again."
+                : $"This open transaction is currently in use by {SelectedOpenWeighment.ResumeLockDisplay}.";
             return;
         }
 
@@ -2632,6 +2869,8 @@ public class MainViewModel : BaseViewModel
         ReturnDetailsForm = savedReturnDetails ?? new WeighmentReturnDetails { WeighmentId = SelectedOpenWeighment.WeighmentId, SlipNumber = SlipNumber, DataAreaId = CurrentUserCompany };
         var savedDisposalDetails = _databaseService.GetWeighmentDisposalDetailsAsync(SelectedOpenWeighment.WeighmentId).GetAwaiter().GetResult();
         DisposalDetailsForm = savedDisposalDetails ?? new WeighmentDisposalDetails { WeighmentId = SelectedOpenWeighment.WeighmentId, SlipNumber = SlipNumber, DataAreaId = CurrentUserCompany };
+        var savedGeneralWeighingDetails = _databaseService.GetWeighmentGeneralWeighingServiceDetailsAsync(SelectedOpenWeighment.WeighmentId).GetAwaiter().GetResult();
+        GeneralWeighingServiceDetailsForm = savedGeneralWeighingDetails ?? new WeighmentGeneralWeighingServiceDetails { WeighmentId = SelectedOpenWeighment.WeighmentId, SlipNumber = SlipNumber, DataAreaId = CurrentUserCompany };
 
         OnPropertyChanged(nameof(IsHeaderAndLinesEditable));
         OnPropertyChanged(nameof(IsHeaderAndLinesLocked));
@@ -2646,6 +2885,8 @@ public class MainViewModel : BaseViewModel
         OnPropertyChanged(nameof(IsProductionDetailsEditable));
         OnPropertyChanged(nameof(IsReturnDetailsEditable));
         OnPropertyChanged(nameof(IsDisposalDetailsEditable));
+        RaiseGeneralWeighingDependentProperties();
+        OnPropertyChanged(nameof(ShowMaterialLines));
         System.Windows.Input.CommandManager.InvalidateRequerySuggested();
         StatusMessage = $"Open slip loaded: {SlipNumber}";
     }
@@ -2666,6 +2907,8 @@ public class MainViewModel : BaseViewModel
                 await LoadReportAsync();
             if (CanAccessTransactions)
                 await LoadTransactionsAsync();
+            if (CanAccessOpenTransactionsInquiry)
+                await LoadOpenTransactionsInquiryAsync();
             if (CanAccessCancellationVoid)
                 await LoadCancellationVoidRequestsAsync();
             if (CanAccessCorrection)
@@ -2692,6 +2935,8 @@ public class MainViewModel : BaseViewModel
                 await LoadReportAsync();
             if (CanAccessTransactions)
                 await LoadTransactionsAsync();
+            if (CanAccessOpenTransactionsInquiry)
+                await LoadOpenTransactionsInquiryAsync();
             if (CanAccessCancellationVoid)
             {
                 await LoadCancellationVoidRequestsAsync();
@@ -2828,6 +3073,8 @@ public class MainViewModel : BaseViewModel
         ReplaceCollection(ContractMasters, contractMasters);
         ReplaceCollection(ToleranceMasters, toleranceMasters);
         ReplaceCollection(ServiceChargeMasters, serviceChargeMasters);
+        if (IsGeneralWeighingBeforeW1Editable && !string.IsNullOrWhiteSpace(GeneralWeighingServiceDetailsForm.ServiceMode))
+            ApplyGeneralWeighingServiceCharge();
         ReplaceCollection(TransactionTypeMasters, transactionTypeMasters);
         ReplaceCollection(LocationMasters, locationMasters);
         ReplaceCollection(MaterialLineUomSymbols, materialLineUoms
@@ -3182,7 +3429,7 @@ public class MainViewModel : BaseViewModel
                 return;
             }
 
-            SelectedMainTabIndex = 6;
+            SelectedMainTabIndex = 7;
             var lookup = new WeightBridgeApp.CorrectionSlipLookupWindow(_databaseService, CurrentUserCompany)
             {
                 Owner = System.Windows.Application.Current.MainWindow
@@ -3250,6 +3497,8 @@ public class MainViewModel : BaseViewModel
         await LoadCorrectionRequestsAsync();
         if (CanAccessTransactions)
             await LoadTransactionsAsync();
+        if (CanAccessOpenTransactionsInquiry)
+            await LoadOpenTransactionsInquiryAsync();
 
         var correctionId = correctionToOpen?.CorrectionId ?? 0;
         if (correctionId > 0)
@@ -3301,7 +3550,7 @@ public class MainViewModel : BaseViewModel
         }
 
         await PrepareNewCancellationVoidAsync();
-        SelectedMainTabIndex = 5;
+        SelectedMainTabIndex = 6;
         StatusMessage = "New Cancellation/Void request ready.";
     }
 
@@ -3345,7 +3594,7 @@ public class MainViewModel : BaseViewModel
             OnPropertyChanged(nameof(CanSubmitCancellationVoid));
             System.Windows.Input.CommandManager.InvalidateRequerySuggested();
 
-            SelectedMainTabIndex = 5;
+            SelectedMainTabIndex = 6;
             StatusMessage = $"Cancellation/Void request started for {selected.Status} slip {CancellationVoidForm.SlipNumber}.";
         }
         catch (Exception ex)
@@ -3488,6 +3737,8 @@ public class MainViewModel : BaseViewModel
             await LoadCancellationVoidRequestsAsync();
             if (CanAccessTransactions)
                 await LoadTransactionsAsync();
+            if (CanAccessOpenTransactionsInquiry)
+                await LoadOpenTransactionsInquiryAsync();
             await LoadMastersAsync();
 
             var approved = CancellationVoidRequests.FirstOrDefault(x => x.CancellationVoidId == id);
@@ -3577,19 +3828,18 @@ public class MainViewModel : BaseViewModel
             {
                 ReviewField("Slip Number", transaction.SlipNumber),
                 ReviewField("Status", transaction.Status),
+                ReviewField("Current Stage", transaction.CurrentStage),
+                ReviewField("Open Age", string.Equals(transaction.Status, "Open", StringComparison.OrdinalIgnoreCase) ? transaction.OpenAgeText : string.Empty),
                 ReviewField("Transaction Type", transaction.TransactionType),
                 ReviewField("Mapped Form", form),
                 ReviewField("Scenario", transaction.Scenario),
                 ReviewField("Legal Entity", transaction.DataAreaId),
-                ReviewField("Company", transaction.CompanyName),
                 ReviewField("Transaction Date/Time", transaction.TransactionDateTime),
                 ReviewField("Gate Pass", transaction.GatePassNumber),
                 ReviewField("Weighbridge", transaction.WeighbridgeCode),
                 ReviewField("Shift", transaction.ShiftCode),
                 ReviewField("Vehicle", transaction.VehicleNo),
                 ReviewField("Driver", transaction.DriverName),
-                ReviewField("Item Number", transaction.ItemNumber),
-                ReviewField("Item Name", transaction.ItemName),
                 ReviewField("Operator", transaction.OperatorUsername),
                 ReviewField("First Weight", transaction.FirstWeight),
                 ReviewField("First Weight Date/Time", transaction.FirstWeightTime),
@@ -3600,6 +3850,9 @@ public class MainViewModel : BaseViewModel
                 ReviewField("Net Weight", transaction.NetWeight),
                 ReviewField("External Reference", transaction.ExternalReference),
                 ReviewField("Operator Remarks", transaction.OperatorRemarks),
+                ReviewField("In Use By", transaction.ResumeLockDisplay),
+                ReviewField("Last Updated By", transaction.LastUpdatedBy),
+                ReviewField("Last Updated Date/Time", transaction.LastUpdatedAt),
                 ReviewField("Remarks", transaction.Remarks),
                 ReviewField("Corrected", transaction.IsCorrected),
                 ReviewField("Correction Version", transaction.CorrectionVersion),
@@ -3728,6 +3981,24 @@ public class MainViewModel : BaseViewModel
                     }
                     break;
                 }
+                case "General Weighing Service":
+                {
+                    var d = await _databaseService.GetWeighmentGeneralWeighingServiceDetailsAsync(selectedId);
+                    if (d != null)
+                    {
+                        dynamicFields.Add(ReviewField("External Party Name", d.ExternalPartyName));
+                        dynamicFields.Add(ReviewField("Customer Account", d.CustomerAccount));
+                        dynamicFields.Add(ReviewField("Customer Name", d.CustomerName));
+                        dynamicFields.Add(ReviewField("Mobile Number", d.MobileNumber));
+                        dynamicFields.Add(ReviewField("Material Description", d.MaterialDescription));
+                        dynamicFields.Add(ReviewField("Service Mode", d.ServiceMode));
+                        dynamicFields.Add(ReviewField("Service Charge", d.ServiceCharge));
+                        dynamicFields.Add(ReviewField("Currency", d.Currency));
+                        dynamicFields.Add(ReviewField("Payment Status", d.PaymentStatus));
+                        dynamicFields.Add(ReviewField("Receipt Number", d.ReceiptNumber));
+                    }
+                    break;
+                }
             }
 
             if (dynamicFields.Count == 0)
@@ -3765,6 +4036,574 @@ public class MainViewModel : BaseViewModel
             _ => Convert.ToString(value) ?? string.Empty
         };
         return new TransactionReviewField { Label = label, Value = text };
+    }
+
+    private async Task LoadOpenTransactionsInquiryAsync()
+    {
+        try
+        {
+            if (!CanAccessOpenTransactionsInquiry)
+            {
+                StatusMessage = "You do not have access to Open Transactions Inquiry.";
+                return;
+            }
+
+            var selectedId = SelectedOpenInquiryWeighment?.WeighmentId;
+            var rows = (await _databaseService.GetOpenWeighmentsAsync())
+                .Where(x => IsSameDataArea(x.DataAreaId, CurrentUserCompany))
+                .OrderByDescending(x => x.FirstWeightTime)
+                .ToList();
+            ReplaceCollection(OpenInquiryRows, rows);
+            ApplyOpenTransactionInquiryFilter();
+            SelectedOpenInquiryWeighment = selectedId.HasValue
+                ? FilteredOpenInquiryRows.FirstOrDefault(x => x.WeighmentId == selectedId.Value)
+                : SelectedOpenInquiryWeighment;
+            StatusMessage = $"Open Transactions loaded. Rows: {FilteredOpenInquiryRows.Count}.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Open Transactions Inquiry load error: " + ex.Message;
+        }
+    }
+
+    private void ClearOpenTransactionsInquiryFilters()
+    {
+        OpenInquiryFrom = null;
+        OpenInquiryTo = null;
+        OpenInquirySlipFilter = string.Empty;
+        OpenInquiryTransactionTypeFilter = string.Empty;
+        OpenInquiryScenarioFilter = string.Empty;
+        OpenInquiryVehicleFilter = string.Empty;
+        OpenInquiryWeighbridgeFilter = string.Empty;
+        OpenInquiryStageFilter = string.Empty;
+        ApplyOpenTransactionInquiryFilter();
+    }
+
+    private void ApplyOpenTransactionInquiryFilter()
+    {
+        var rows = OpenInquiryRows.Where(x =>
+        {
+            var transactionDate = x.TransactionDateTime ?? x.FirstWeightTime;
+            if (OpenInquiryFrom.HasValue && transactionDate.Date < OpenInquiryFrom.Value.Date) return false;
+            if (OpenInquiryTo.HasValue && transactionDate.Date > OpenInquiryTo.Value.Date) return false;
+            if (!MatchesFilter(x.SlipNumber, OpenInquirySlipFilter)) return false;
+            if (!MatchesFilter(x.TransactionType, OpenInquiryTransactionTypeFilter)) return false;
+            if (!MatchesFilter(x.Scenario, OpenInquiryScenarioFilter)) return false;
+            if (!MatchesFilter(x.VehicleNo, OpenInquiryVehicleFilter)) return false;
+            if (!MatchesFilter(x.WeighbridgeCode, OpenInquiryWeighbridgeFilter)) return false;
+            if (!MatchesFilter(x.CurrentStage, OpenInquiryStageFilter)) return false;
+            return true;
+        });
+        ReplaceCollection(FilteredOpenInquiryRows, rows);
+        OnPropertyChanged(nameof(OpenTransactionCount));
+    }
+
+    private async Task ResumeSelectedOpenTransactionAsync()
+    {
+        try
+        {
+            if (!CanAccessOpenTransactionsInquiry || !CanResumeOpenTransactions)
+            {
+                StatusMessage = "You do not have permission to resume open transactions.";
+                return;
+            }
+            if (!CanAccessWeighment)
+            {
+                StatusMessage = "Weighment access is required to resume a transaction.";
+                return;
+            }
+            if (SelectedOpenInquiryWeighment == null)
+            {
+                StatusMessage = "Please select an open transaction first.";
+                return;
+            }
+            if (!string.Equals(SelectedOpenInquiryWeighment.Status, "Open", StringComparison.OrdinalIgnoreCase))
+            {
+                StatusMessage = "Only Open transactions can be resumed.";
+                return;
+            }
+
+            var selectedId = SelectedOpenInquiryWeighment.WeighmentId;
+            var acquired = await _databaseService.TryAcquireOpenWeighmentLockAsync(selectedId, CurrentUsername, 30);
+            if (!acquired)
+            {
+                await LoadOpenTransactionsInquiryAsync();
+                var refreshed = OpenInquiryRows.FirstOrDefault(x => x.WeighmentId == selectedId);
+                var lockInfo = refreshed?.ResumeLockDisplay;
+                StatusMessage = string.IsNullOrWhiteSpace(lockInfo)
+                    ? "This transaction could not be resumed. Refresh and try again."
+                    : $"Transaction is currently in use by {lockInfo}.";
+                return;
+            }
+
+            await RefreshWeighmentsAsync();
+            var toResume = OpenWeighments.FirstOrDefault(x => x.WeighmentId == selectedId);
+            if (toResume == null)
+            {
+                StatusMessage = "The selected transaction is no longer Open.";
+                return;
+            }
+
+            SelectedOpenWeighment = toResume; // existing loader restores header, material lines and dynamic fields
+            SelectedMainTabIndex = 0;
+            StatusMessage = $"Resumed {toResume.SlipNumber}. Current stage: {toResume.CurrentStage}.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Resume transaction error: " + ex.Message;
+        }
+    }
+
+    private async Task ExportOpenTransactionsAsync()
+    {
+        try
+        {
+            if (!CanAccessOpenTransactionsInquiry || !CanExportOpenTransactions)
+            {
+                StatusMessage = "You do not have permission to export Open Transactions.";
+                return;
+            }
+            if (FilteredOpenInquiryRows.Count == 0)
+            {
+                StatusMessage = "There are no Open Transactions to export.";
+                return;
+            }
+
+            var dialog = new SaveFileDialog
+            {
+                Title = "Export Open Transactions",
+                Filter = "Excel Workbook (*.xlsx)|*.xlsx",
+                DefaultExt = ".xlsx",
+                AddExtension = true,
+                FileName = $"BridgeOne_Open_Transactions_{DateTime.Now:yyyyMMdd_HHmm}.xlsx"
+            };
+            if (dialog.ShowDialog() != true) return;
+
+            var headerRows = new List<IDictionary<string, string>>();
+            var materialRows = new List<IDictionary<string, string>>();
+            var dynamicRowsByTransactionType = new Dictionary<string, List<IDictionary<string, string>>>(StringComparer.OrdinalIgnoreCase);
+
+            var transactionTypes = TransactionTypeMasters
+                .Select(x => x.Type?.Trim() ?? string.Empty)
+                .Concat(FilteredOpenInquiryRows.Select(x => x.TransactionType?.Trim() ?? string.Empty))
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            foreach (var transactionType in transactionTypes)
+                dynamicRowsByTransactionType[transactionType] = new List<IDictionary<string, string>>();
+
+            foreach (var w in FilteredOpenInquiryRows.ToList())
+            {
+                var headerRow = BuildTransactionHeaderExportRow(w);
+                headerRow["Mapped Form"] = GetMappedFormForTransactionType(w.TransactionType);
+                headerRows.Add(headerRow);
+
+                var transactionType = w.TransactionType?.Trim() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(transactionType)) transactionType = "Unspecified Transaction Type";
+                if (!dynamicRowsByTransactionType.TryGetValue(transactionType, out var dynamicRows))
+                {
+                    dynamicRows = new List<IDictionary<string, string>>();
+                    dynamicRowsByTransactionType[transactionType] = dynamicRows;
+                    transactionTypes.Add(transactionType);
+                }
+
+                var mappedForm = GetMappedFormForTransactionType(transactionType);
+                dynamicRows.Add(await BuildTransactionDynamicExportRowAsync(w, mappedForm));
+
+                var lines = await _databaseService.GetWeighmentMaterialLinesAsync(w.WeighmentId);
+                foreach (var line in lines)
+                {
+                    materialRows.Add(new Dictionary<string, string>
+                    {
+                        ["Slip Number"] = w.SlipNumber,
+                        ["Legal Entity"] = w.DataAreaId,
+                        ["Transaction Type"] = w.TransactionType,
+                        ["Line Number"] = line.LineNo.ToString(),
+                        ["Item Number"] = line.ItemNumber,
+                        ["Item Name"] = line.ItemName,
+                        ["UOM"] = line.Uom,
+                        ["Expected Qty"] = line.ExpectedQty.ToString("0.###"),
+                        ["Remarks"] = line.Remarks
+                    });
+                }
+            }
+
+            var worksheets = new List<ExcelWorksheetData>
+            {
+                new(
+                    "Header",
+                    new[]
+                    {
+                        "Slip Number", "Legal Entity", "Transaction Type", "Mapped Form", "Scenario", "Status",
+                        "Current Stage", "Open Age", "Stale", "Transaction Date/Time", "Gate Pass", "Weighbridge",
+                        "Shift", "Vehicle", "Driver", "First Weight", "First Weight Date/Time", "First Weight By",
+                        "Second Weight", "Second Weight Date/Time", "Second Weight By", "Net Weight",
+                        "External Reference", "Operator Remarks", "In Use By", "Last Updated By", "Last Updated Date/Time"
+                    },
+                    headerRows),
+                new(
+                    "Lines",
+                    new[]
+                    {
+                        "Slip Number", "Legal Entity", "Transaction Type", "Line Number", "Item Number", "Item Name",
+                        "UOM", "Expected Qty", "Remarks"
+                    },
+                    materialRows)
+            };
+
+            foreach (var transactionType in transactionTypes)
+            {
+                var mappedForm = GetMappedFormForTransactionType(transactionType);
+                dynamicRowsByTransactionType.TryGetValue(transactionType, out var rows);
+                rows ??= new List<IDictionary<string, string>>();
+                worksheets.Add(new ExcelWorksheetData(
+                    transactionType,
+                    GetDynamicExportHeaders(mappedForm),
+                    rows));
+            }
+
+            ExcelExportService.ExportWorkbook(dialog.FileName, worksheets);
+            StatusMessage = $"Open Transactions exported to Excel. Header: {headerRows.Count}; Lines: {materialRows.Count}; Transaction type sheets: {transactionTypes.Count}.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Open Transactions export error: " + ex.Message;
+        }
+    }
+
+    private string GetMappedFormForTransactionType(string transactionType)
+    {
+        var transactionConfig = TransactionTypeMasters.FirstOrDefault(x =>
+            string.Equals(x.Type?.Trim(), transactionType?.Trim(), StringComparison.OrdinalIgnoreCase));
+        return transactionConfig?.Form?.Trim() ?? transactionType?.Trim() ?? string.Empty;
+    }
+
+    private static IDictionary<string, string> BuildTransactionHeaderExportRow(Weighment w)
+    {
+        static string F(object? value) => value switch
+        {
+            null => string.Empty,
+            DateTime dt => dt.ToString("yyyy-MM-dd HH:mm:ss"),
+            decimal d => d.ToString("0.###"),
+            bool b => b ? "Yes" : "No",
+            _ => Convert.ToString(value) ?? string.Empty
+        };
+
+        return new Dictionary<string, string>
+        {
+            ["Slip Number"] = w.SlipNumber,
+            ["Legal Entity"] = w.DataAreaId,
+            ["Transaction Type"] = w.TransactionType,
+            ["Mapped Form"] = string.Empty,
+            ["Scenario"] = w.Scenario,
+            ["Status"] = w.Status,
+            ["Current Stage"] = w.CurrentStage,
+            ["Open Age"] = w.OpenAgeText,
+            ["Stale"] = w.IsStaleOpenTransaction ? "Yes" : "No",
+            ["Transaction Date/Time"] = F(w.TransactionDateTime),
+            ["Gate Pass"] = w.GatePassNumber,
+            ["Weighbridge"] = w.WeighbridgeCode,
+            ["Shift"] = w.ShiftCode,
+            ["Vehicle"] = w.VehicleNo,
+            ["Driver"] = w.DriverName,
+            ["First Weight"] = F(w.FirstWeight),
+            ["First Weight Date/Time"] = F(w.FirstWeightTime),
+            ["First Weight By"] = string.IsNullOrWhiteSpace(w.FirstWeightByDisplay) ? w.FirstWeightBy : w.FirstWeightByDisplay,
+            ["Second Weight"] = F(w.SecondWeight),
+            ["Second Weight Date/Time"] = F(w.SecondWeightTime),
+            ["Second Weight By"] = string.IsNullOrWhiteSpace(w.SecondWeightByDisplay) ? w.SecondWeightBy : w.SecondWeightByDisplay,
+            ["Net Weight"] = F(w.NetWeight),
+            ["External Reference"] = w.ExternalReference,
+            ["Operator Remarks"] = w.OperatorRemarks,
+            ["In Use By"] = w.ResumeLockDisplay,
+            ["Last Updated By"] = w.LastUpdatedBy,
+            ["Last Updated Date/Time"] = F(w.LastUpdatedAt)
+        };
+    }
+
+    private async Task<IDictionary<string, string>> BuildTransactionDynamicExportRowAsync(Weighment w, string form)
+    {
+        static string F(object? value) => value switch
+        {
+            null => string.Empty,
+            DateTime dt => dt.ToString("yyyy-MM-dd HH:mm:ss"),
+            decimal d => d.ToString("0.###"),
+            bool b => b ? "Yes" : "No",
+            _ => Convert.ToString(value) ?? string.Empty
+        };
+
+        var row = new Dictionary<string, string>
+        {
+            ["Slip Number"] = w.SlipNumber,
+            ["Legal Entity"] = w.DataAreaId,
+            ["Transaction Type"] = w.TransactionType
+        };
+        void Put(string name, object? value) => row[name] = F(value);
+
+        switch (form)
+        {
+            case "Purchase / Receipt / Collection":
+                var p = await _databaseService.GetWeighmentPurchaseDetailsAsync(w.WeighmentId);
+                if (p != null)
+                {
+                    Put("Purchase Subtype", p.PurchaseSubtype);
+                    Put("Vendor Account", p.VendorAccount);
+                    Put("Vendor Name", p.VendorName);
+                    Put("Walk-in Vendor", p.WalkInVendor);
+                    Put("Supplier Driver Name", p.SupplierDriverName);
+                    Put("Purchase Contract Reference", p.PurchaseContractReference);
+                    Put("Source", p.Source);
+                    Put("Destination", p.Destination);
+                    Put("FOC", p.FocFlag);
+                    Put("Rate Amount", p.RateAmount);
+                }
+                break;
+            case "Contract Collection":
+                var c = await _databaseService.GetWeighmentContractCollectionDetailsAsync(w.WeighmentId);
+                if (c != null)
+                {
+                    Put("Vendor Account", c.VendorAccount);
+                    Put("Vendor Name", c.VendorName);
+                    Put("Invoice Account", c.InvoiceAccount);
+                    Put("Invoice Account Name", c.InvoiceAccountName);
+                    Put("Contract Number", c.ContractNumber);
+                    Put("Collection Location", c.CollectionLocation);
+                    Put("Destination", c.Destination);
+                    Put("Billing Basis", c.BillingBasis);
+                }
+                break;
+            case "Transfer Form":
+                var t = await _databaseService.GetWeighmentTransferDetailsAsync(w.WeighmentId);
+                if (t != null)
+                {
+                    Put("Transfer Direction", t.TransferDirection);
+                    Put("From Legal Entity", t.FromLegalEntity);
+                    Put("To Legal Entity", t.ToLegalEntity);
+                    Put("From Location", t.FromLocation);
+                    Put("To Location", t.ToLocation);
+                    Put("Transfer Reference", t.TransferReference);
+                    Put("Sending Slip Reference", t.SendingSlipReference);
+                }
+                break;
+            case "Sales / Dispatch":
+                var sd = await _databaseService.GetWeighmentSalesDispatchDetailsAsync(w.WeighmentId);
+                if (sd != null)
+                {
+                    Put("Sales Subtype", sd.SalesSubtype);
+                    Put("Customer Account", sd.CustomerAccount);
+                    Put("Customer Name", sd.CustomerName);
+                    Put("Walk-in Customer", sd.WalkInCustomer);
+                    Put("Sales Reference", sd.SalesReference);
+                    Put("Source", sd.Source);
+                    Put("Destination", sd.Destination);
+                    Put("Payment Status", sd.PaymentStatus);
+                    Put("Receipt Number", sd.ReceiptNumber);
+                }
+                break;
+            case "Production Weighing":
+                var pr = await _databaseService.GetWeighmentProductionDetailsAsync(w.WeighmentId);
+                if (pr != null)
+                {
+                    Put("Production Movement", pr.ProductionMovement);
+                    Put("Production Order Reference", pr.ProductionOrderReference);
+                    Put("Production Line", pr.ProductionLine);
+                    Put("Warehouse Location", pr.WarehouseLocation);
+                    Put("Batch Number", pr.BatchNumber);
+                    Put("Number of Rolls / Units", pr.NumberOfRollsUnits);
+                    Put("Grade / GSM / Width", pr.GradeGsmWidth);
+                }
+                break;
+            case "Return":
+                var r = await _databaseService.GetWeighmentReturnDetailsAsync(w.WeighmentId);
+                if (r != null)
+                {
+                    Put("Return Type", r.ReturnType);
+                    Put("Vendor Account", r.VendorAccount);
+                    Put("Vendor Name", r.VendorName);
+                    Put("Customer Account", r.CustomerAccount);
+                    Put("Customer Name", r.CustomerName);
+                    Put("From Legal Entity", r.FromLegalEntity);
+                    Put("To Legal Entity", r.ToLegalEntity);
+                    Put("Original Slip Number", r.OriginalSlipNumber);
+                    Put("Return Reference", r.ReturnReference);
+                    Put("Return Reason", r.ReturnReason);
+                    Put("Source", r.Source);
+                    Put("Destination", r.Destination);
+                }
+                break;
+            case "Disposal / Waste Movement":
+                var d = await _databaseService.GetWeighmentDisposalDetailsAsync(w.WeighmentId);
+                if (d != null)
+                {
+                    Put("Disposal Type", d.DisposalType);
+                    Put("Source", d.Source);
+                    Put("Disposal Destination", d.DisposalDestination);
+                    Put("Reason", d.Reason);
+                    Put("Permit / Manifest Number", d.PermitManifestNumber);
+                    Put("Authorized By", d.AuthorizedBy);
+                }
+                break;
+            case "General Weighing Service":
+                var g = await _databaseService.GetWeighmentGeneralWeighingServiceDetailsAsync(w.WeighmentId);
+                if (g != null)
+                {
+                    Put("External Party Name", g.ExternalPartyName);
+                    Put("Customer Account", g.CustomerAccount);
+                    Put("Customer Name", g.CustomerName);
+                    Put("Mobile Number", g.MobileNumber);
+                    Put("Material Description", g.MaterialDescription);
+                    Put("Service Mode", g.ServiceMode);
+                    Put("Service Charge", g.ServiceCharge);
+                    Put("Currency", g.Currency);
+                    Put("Payment Status", g.PaymentStatus);
+                    Put("Receipt Number", g.ReceiptNumber);
+                }
+                break;
+        }
+
+        return row;
+    }
+
+    private static IReadOnlyList<string> GetDynamicExportHeaders(string form)
+    {
+        var baseHeaders = new[] { "Slip Number", "Legal Entity", "Transaction Type" };
+        var dynamicHeaders = form switch
+        {
+            "Purchase / Receipt / Collection" => new[] { "Purchase Subtype", "Vendor Account", "Vendor Name", "Walk-in Vendor", "Supplier Driver Name", "Purchase Contract Reference", "Source", "Destination", "FOC", "Rate Amount" },
+            "Contract Collection" => new[] { "Vendor Account", "Vendor Name", "Invoice Account", "Invoice Account Name", "Contract Number", "Collection Location", "Destination", "Billing Basis" },
+            "Transfer Form" => new[] { "Transfer Direction", "From Legal Entity", "To Legal Entity", "From Location", "To Location", "Transfer Reference", "Sending Slip Reference" },
+            "Sales / Dispatch" => new[] { "Sales Subtype", "Customer Account", "Customer Name", "Walk-in Customer", "Sales Reference", "Source", "Destination", "Payment Status", "Receipt Number" },
+            "Production Weighing" => new[] { "Production Movement", "Production Order Reference", "Production Line", "Warehouse Location", "Batch Number", "Number of Rolls / Units", "Grade / GSM / Width" },
+            "Return" => new[] { "Return Type", "Vendor Account", "Vendor Name", "Customer Account", "Customer Name", "From Legal Entity", "To Legal Entity", "Original Slip Number", "Return Reference", "Return Reason", "Source", "Destination" },
+            "Disposal / Waste Movement" => new[] { "Disposal Type", "Source", "Disposal Destination", "Reason", "Permit / Manifest Number", "Authorized By" },
+            "General Weighing Service" => new[] { "External Party Name", "Customer Account", "Customer Name", "Mobile Number", "Material Description", "Service Mode", "Service Charge", "Currency", "Payment Status", "Receipt Number" },
+            _ => Array.Empty<string>()
+        };
+
+        return baseHeaders.Concat(dynamicHeaders).ToList();
+    }
+
+    private async Task ExportTransactionsAsync()
+    {
+        try
+        {
+            if (!CanAccessTransactions)
+            {
+                StatusMessage = "You do not have access to Transactions.";
+                return;
+            }
+
+            if (FilteredTransactionRows.Count == 0)
+            {
+                StatusMessage = "There are no Transactions to export.";
+                return;
+            }
+
+            var dialog = new SaveFileDialog
+            {
+                Title = "Export Transactions",
+                Filter = "Excel Workbook (*.xlsx)|*.xlsx",
+                DefaultExt = ".xlsx",
+                AddExtension = true,
+                FileName = $"BridgeOne_Transactions_{DateTime.Now:yyyyMMdd_HHmm}.xlsx"
+            };
+            if (dialog.ShowDialog() != true) return;
+
+            var rowsToExport = FilteredTransactionRows.ToList();
+            var headerRows = new List<IDictionary<string, string>>();
+            var materialRows = new List<IDictionary<string, string>>();
+            var dynamicRowsByTransactionType = new Dictionary<string, List<IDictionary<string, string>>>(StringComparer.OrdinalIgnoreCase);
+
+            var transactionTypes = TransactionTypeMasters
+                .Select(x => x.Type?.Trim() ?? string.Empty)
+                .Concat(rowsToExport.Select(x => x.TransactionType?.Trim() ?? string.Empty))
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            foreach (var transactionType in transactionTypes)
+                dynamicRowsByTransactionType[transactionType] = new List<IDictionary<string, string>>();
+
+            foreach (var w in rowsToExport)
+            {
+                var headerRow = BuildTransactionHeaderExportRow(w);
+                headerRow["Mapped Form"] = GetMappedFormForTransactionType(w.TransactionType);
+                headerRows.Add(headerRow);
+
+                var transactionType = w.TransactionType?.Trim() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(transactionType))
+                    transactionType = "Unspecified Transaction Type";
+
+                if (!dynamicRowsByTransactionType.TryGetValue(transactionType, out var dynamicRows))
+                {
+                    dynamicRows = new List<IDictionary<string, string>>();
+                    dynamicRowsByTransactionType[transactionType] = dynamicRows;
+                    transactionTypes.Add(transactionType);
+                }
+
+                var mappedForm = GetMappedFormForTransactionType(transactionType);
+                dynamicRows.Add(await BuildTransactionDynamicExportRowAsync(w, mappedForm));
+
+                var lines = await _databaseService.GetWeighmentMaterialLinesAsync(w.WeighmentId);
+                foreach (var line in lines)
+                {
+                    materialRows.Add(new Dictionary<string, string>
+                    {
+                        ["Slip Number"] = w.SlipNumber,
+                        ["Legal Entity"] = w.DataAreaId,
+                        ["Transaction Type"] = w.TransactionType,
+                        ["Line Number"] = line.LineNo.ToString(),
+                        ["Item Number"] = line.ItemNumber,
+                        ["Item Name"] = line.ItemName,
+                        ["UOM"] = line.Uom,
+                        ["Expected Qty"] = line.ExpectedQty.ToString("0.###"),
+                        ["Remarks"] = line.Remarks
+                    });
+                }
+            }
+
+            var worksheets = new List<ExcelWorksheetData>
+            {
+                new(
+                    "Header",
+                    new[]
+                    {
+                        "Slip Number", "Legal Entity", "Transaction Type", "Mapped Form", "Scenario", "Status",
+                        "Current Stage", "Transaction Date/Time", "Gate Pass", "Weighbridge", "Shift", "Vehicle", "Driver",
+                        "First Weight", "First Weight Date/Time", "First Weight By",
+                        "Second Weight", "Second Weight Date/Time", "Second Weight By", "Net Weight",
+                        "External Reference", "Operator Remarks", "Last Updated By", "Last Updated Date/Time"
+                    },
+                    headerRows),
+                new(
+                    "Lines",
+                    new[]
+                    {
+                        "Slip Number", "Legal Entity", "Transaction Type", "Line Number", "Item Number", "Item Name",
+                        "UOM", "Expected Qty", "Remarks"
+                    },
+                    materialRows)
+            };
+
+            foreach (var transactionType in transactionTypes)
+            {
+                var mappedForm = GetMappedFormForTransactionType(transactionType);
+                dynamicRowsByTransactionType.TryGetValue(transactionType, out var rows);
+                rows ??= new List<IDictionary<string, string>>();
+                worksheets.Add(new ExcelWorksheetData(
+                    transactionType,
+                    GetDynamicExportHeaders(mappedForm),
+                    rows));
+            }
+
+            ExcelExportService.ExportWorkbook(dialog.FileName, worksheets);
+            StatusMessage = $"Transactions exported to Excel. Header: {headerRows.Count}; Lines: {materialRows.Count}; Transaction type sheets: {transactionTypes.Count}.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Transactions export error: " + ex.Message;
+        }
     }
 
     private async Task LoadTransactionsAsync()
@@ -3831,7 +4670,7 @@ public class MainViewModel : BaseViewModel
                 return;
             }
 
-            SelectedMainTabIndex = 6;
+            SelectedMainTabIndex = 7;
             await CorrectionWorkspace.StartForTransactionAsync(SelectedTransactionWeighment);
         }
         catch (Exception ex)
@@ -4177,6 +5016,9 @@ public class MainViewModel : BaseViewModel
 
     private void ClearEntry()
     {
+        var openWeighmentToRelease = _loadedOpenWeighmentId;
+        if (openWeighmentToRelease.HasValue)
+            _ = _databaseService.ReleaseOpenWeighmentLockAsync(openWeighmentToRelease.Value, CurrentUsername);
         SetLoadedOpenWeighmentId(null);
         TicketNo = string.Empty;
         SlipNumber = string.Empty;
@@ -4189,6 +5031,7 @@ public class MainViewModel : BaseViewModel
         ProductionDetailsForm = new WeighmentProductionDetails { DataAreaId = CurrentUserCompany };
         ReturnDetailsForm = new WeighmentReturnDetails { DataAreaId = CurrentUserCompany, FromLegalEntity = CurrentUserCompany };
         DisposalDetailsForm = new WeighmentDisposalDetails { DataAreaId = CurrentUserCompany };
+        GeneralWeighingServiceDetailsForm = new WeighmentGeneralWeighingServiceDetails { DataAreaId = CurrentUserCompany };
         GatePassNumber = string.Empty;
         SelectedWeighmentGatePass = null;
         ExternalReference = string.Empty;
@@ -4221,6 +5064,8 @@ public class MainViewModel : BaseViewModel
         OnPropertyChanged(nameof(IsProductionDetailsEditable));
         OnPropertyChanged(nameof(IsReturnDetailsEditable));
         OnPropertyChanged(nameof(IsDisposalDetailsEditable));
+        RaiseGeneralWeighingDependentProperties();
+        OnPropertyChanged(nameof(ShowMaterialLines));
         System.Windows.Input.CommandManager.InvalidateRequerySuggested();
     }
 
@@ -4258,7 +5103,7 @@ public class MainViewModel : BaseViewModel
         if (string.IsNullOrWhiteSpace(DriverName))
             missingFields.Add("Driver Name");
 
-        if (MaterialLines.Count == 0)
+        if (!IsGeneralWeighingServiceForm && MaterialLines.Count == 0)
             missingFields.Add("Material Line");
 
         if (IsPurchaseReceiptCollectionForm)
@@ -4366,6 +5211,25 @@ public class MainViewModel : BaseViewModel
             if (string.IsNullOrWhiteSpace(DisposalDetailsForm.Reason)) missingFields.Add("Disposal Reason");
         }
 
+        if (IsGeneralWeighingServiceForm)
+        {
+            if (string.IsNullOrWhiteSpace(GeneralWeighingServiceDetailsForm.ExternalPartyName))
+                missingFields.Add("External Party Name");
+            if (string.IsNullOrWhiteSpace(GeneralWeighingServiceDetailsForm.ServiceMode))
+                missingFields.Add("Service Mode");
+            if (string.IsNullOrWhiteSpace(GeneralWeighingServiceDetailsForm.Currency))
+                missingFields.Add("Service Charge setup for Legal Entity + Service Mode");
+            // A Single Weight service completes at W1, so completion-only fields are required now.
+            if (IsGeneralWeighingSingleWeight)
+            {
+                if (string.IsNullOrWhiteSpace(GeneralWeighingServiceDetailsForm.PaymentStatus))
+                    missingFields.Add("Payment Status");
+                if (string.Equals(GeneralWeighingServiceDetailsForm.PaymentStatus, "Paid", StringComparison.OrdinalIgnoreCase) &&
+                    string.IsNullOrWhiteSpace(GeneralWeighingServiceDetailsForm.ReceiptNumber))
+                    missingFields.Add("Receipt Number");
+            }
+        }
+
         if (missingFields.Count > 0)
         {
             StatusMessage = "Mandatory field(s) missing: " + string.Join(", ", missingFields) + ".";
@@ -4379,6 +5243,28 @@ public class MainViewModel : BaseViewModel
         }
 
         return true;
+    }
+
+    private bool ValidateGeneralWeighingBeforeCompletion()
+    {
+        var missingFields = new List<string>();
+
+        if (string.IsNullOrWhiteSpace(GeneralWeighingServiceDetailsForm.ExternalPartyName))
+            missingFields.Add("External Party Name");
+        if (string.IsNullOrWhiteSpace(GeneralWeighingServiceDetailsForm.ServiceMode))
+            missingFields.Add("Service Mode");
+        if (string.IsNullOrWhiteSpace(GeneralWeighingServiceDetailsForm.Currency))
+            missingFields.Add("Service Charge setup for Legal Entity + Service Mode");
+        if (string.IsNullOrWhiteSpace(GeneralWeighingServiceDetailsForm.PaymentStatus))
+            missingFields.Add("Payment Status");
+        if (string.Equals(GeneralWeighingServiceDetailsForm.PaymentStatus, "Paid", StringComparison.OrdinalIgnoreCase) &&
+            string.IsNullOrWhiteSpace(GeneralWeighingServiceDetailsForm.ReceiptNumber))
+            missingFields.Add("Receipt Number");
+        if (missingFields.Count == 0)
+            return true;
+
+        StatusMessage = "Mandatory General Weighing Service field(s) missing: " + string.Join(", ", missingFields) + ".";
+        return false;
     }
 
     private void RefreshPartyLookup()
@@ -4880,6 +5766,9 @@ public class MainViewModel : BaseViewModel
             CanAccessWeighment = true,
             CanAccessReports = true,
             CanAccessTransactions = true,
+            CanAccessOpenTransactionsInquiry = true,
+            CanResumeOpenTransactions = true,
+            CanExportOpenTransactions = true,
             CanCaptureFirstWeight = true,
             CanCaptureSecondWeight = true,
             Status = "Active",
@@ -4916,12 +5805,15 @@ public class MainViewModel : BaseViewModel
             CanAccessMasters = SelectedOperatorMaster.CanAccessMasters,
             CanAccessReports = SelectedOperatorMaster.CanAccessReports,
             CanAccessTransactions = SelectedOperatorMaster.CanAccessTransactions,
+            CanAccessOpenTransactionsInquiry = SelectedOperatorMaster.CanAccessOpenTransactionsInquiry,
             CanAccessGatePass = SelectedOperatorMaster.CanAccessGatePass,
             CanAccessCancellationVoid = SelectedOperatorMaster.CanAccessCancellationVoid,
             CanAccessCorrection = SelectedOperatorMaster.CanAccessCorrection,
             CanAccessSettings = SelectedOperatorMaster.CanAccessSettings,
             CanCaptureFirstWeight = SelectedOperatorMaster.CanCaptureFirstWeight,
             CanCaptureSecondWeight = SelectedOperatorMaster.CanCaptureSecondWeight,
+            CanResumeOpenTransactions = SelectedOperatorMaster.CanResumeOpenTransactions,
+            CanExportOpenTransactions = SelectedOperatorMaster.CanExportOpenTransactions,
             CanSubmitCorrection = SelectedOperatorMaster.CanSubmitCorrection,
             CanApproveRejectCorrection = SelectedOperatorMaster.CanApproveRejectCorrection,
             CanCorrectWeight = SelectedOperatorMaster.CanCorrectWeight,
@@ -5108,7 +6000,7 @@ public class MainViewModel : BaseViewModel
     {
         ReplaceCollection(FilteredReportRows, ReportRows.Where(x =>
             MatchesFilter(x.SlipNumber, ReportTicketFilter) &&
-            MatchesFilter(x.CompanyName, ReportCompanyFilter) &&
+            MatchesFilter(x.DataAreaId, ReportCompanyFilter) &&
             MatchesFilter(x.VehicleNo, ReportVehicleFilter) &&
             MatchesFilter(x.DriverName, ReportDriverFilter) &&
             (MatchesFilter(x.ItemNumber, ReportItemFilter) || MatchesFilter(x.ItemName, ReportItemFilter) || MatchesFilter(x.MaterialName, ReportItemFilter)) &&
@@ -5119,7 +6011,7 @@ public class MainViewModel : BaseViewModel
     {
         ReplaceCollection(FilteredTransactionRows, TransactionRows.Where(x =>
             MatchesFilter(x.SlipNumber, TransactionTicketFilter) &&
-            MatchesFilter(x.CompanyName, TransactionCompanyFilter) &&
+            MatchesFilter(x.DataAreaId, TransactionCompanyFilter) &&
             MatchesFilter(x.VehicleNo, TransactionVehicleFilter) &&
             MatchesFilter(x.DriverName, TransactionDriverFilter) &&
             (MatchesFilter(x.ItemNumber, TransactionItemFilter) || MatchesFilter(x.ItemName, TransactionItemFilter) || MatchesFilter(x.MaterialName, TransactionItemFilter)) &&
@@ -5244,7 +6136,7 @@ public class MainViewModel : BaseViewModel
         if (masterHeader.Contains("Service Charge", StringComparison.OrdinalIgnoreCase))
         {
             if (string.IsNullOrWhiteSpace(ServiceChargeMasterForm.DataAreaId) || !IsSameDataArea(ServiceChargeMasterForm.DataAreaId, CurrentUserCompany))
-                ServiceChargeMasterForm = new ServiceChargeMaster { DataAreaId = CurrentUserCompany, Currency = "PKR" };
+                ServiceChargeMasterForm = new ServiceChargeMaster { DataAreaId = CurrentUserCompany, Currency = "PKR", Validity = DateTime.Today };
         }
 
         if (masterHeader.Contains("Location", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(LocationMasterForm.DataAreaId))
@@ -5336,6 +6228,19 @@ public class MainViewModel : BaseViewModel
                 return;
             }
 
+            if (string.IsNullOrWhiteSpace(ServiceChargeMasterForm.Currency) || ServiceChargeMasterForm.Currency.Trim().Length != 3)
+            {
+                StatusMessage = "Service Charge Master save error: Currency must be a 3-character code.";
+                return;
+            }
+            ServiceChargeMasterForm.Currency = ServiceChargeMasterForm.Currency.Trim().ToUpperInvariant();
+
+            if (!ServiceChargeMasterForm.Validity.HasValue)
+            {
+                StatusMessage = "Service Charge Master save error: Validity Date is required.";
+                return;
+            }
+
             await _databaseService.SaveServiceChargeMasterAsync(ServiceChargeMasterForm);
             ClearServiceChargeMasterForm();
             await LoadMastersAsync();
@@ -5344,7 +6249,7 @@ public class MainViewModel : BaseViewModel
         catch (Exception ex) { StatusMessage = "Service Charge Master save error: " + ex.Message; }
     }
 
-    private void ClearServiceChargeMasterForm() { SelectedServiceChargeMaster = null; ServiceChargeMasterForm = new ServiceChargeMaster { DataAreaId = CurrentUserCompany, Currency = "PKR" }; }
+    private void ClearServiceChargeMasterForm() { SelectedServiceChargeMaster = null; ServiceChargeMasterForm = new ServiceChargeMaster { DataAreaId = CurrentUserCompany, Currency = "PKR", Validity = DateTime.Today }; }
 
     private async Task SaveTransactionTypeMasterAsync()
     {
@@ -5602,6 +6507,24 @@ public class MainViewModel : BaseViewModel
 
     private Task OpenTransferToLocationLookupAsync() =>
         OpenDetailLocationLookupAsync(TransferDetailsForm.ToLegalEntity, x => TransferDetailsForm.ToLocation = x, "to location");
+
+    private Task OpenGeneralWeighingCustomerLookupAsync()
+    {
+        var lookupWindow = new WeightBridgeApp.PartyLookupWindow(_databaseService, CurrentUserCompany, "Customer")
+        {
+            Owner = System.Windows.Application.Current.MainWindow
+        };
+        if (lookupWindow.ShowDialog() == true && lookupWindow.SelectedParty != null)
+        {
+            GeneralWeighingServiceDetailsForm.CustomerAccount = lookupWindow.SelectedParty.PartyAccount;
+            GeneralWeighingServiceDetailsForm.CustomerName = lookupWindow.SelectedParty.PartyName;
+            if (string.IsNullOrWhiteSpace(GeneralWeighingServiceDetailsForm.ExternalPartyName))
+                GeneralWeighingServiceDetailsForm.ExternalPartyName = lookupWindow.SelectedParty.PartyName;
+            RaiseGeneralWeighingDependentProperties();
+            StatusMessage = $"Selected general weighing customer: {GeneralWeighingServiceDetailsForm.CustomerAccount} - {GeneralWeighingServiceDetailsForm.CustomerName}";
+        }
+        return Task.CompletedTask;
+    }
 
     private Task OpenSalesCustomerLookupAsync()
     {
@@ -5986,6 +6909,8 @@ public class MainViewModel : BaseViewModel
         OnPropertyChanged(nameof(IsPurchaseRateAmountEditable));
         OnPropertyChanged(nameof(IsContractCollectionDetailsEditable));
         OnPropertyChanged(nameof(IsContractCollectionDetailsReadOnly));
+        RaiseGeneralWeighingDependentProperties();
+        OnPropertyChanged(nameof(ShowMaterialLines));
         System.Windows.Input.CommandManager.InvalidateRequerySuggested();
     }
 
@@ -6001,6 +6926,8 @@ public class MainViewModel : BaseViewModel
         OnPropertyChanged(nameof(IsPurchaseRateAmountEditable));
         OnPropertyChanged(nameof(IsContractCollectionDetailsEditable));
         OnPropertyChanged(nameof(IsContractCollectionDetailsReadOnly));
+        RaiseGeneralWeighingDependentProperties();
+        OnPropertyChanged(nameof(ShowMaterialLines));
     }
 
     private static void ReplaceCollection<T>(ObservableCollection<T> target, IEnumerable<T> source)
