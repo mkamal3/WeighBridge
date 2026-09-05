@@ -75,7 +75,7 @@ public static class SlipService
             sb.AppendLine($"Correction    : {w.LastCorrectionNumber}");
             sb.AppendLine($"Version       : {w.CorrectionVersion}");
         }
-        sb.AppendLine($"Company       : {w.CompanyName}");
+        sb.AppendLine($"Legal Entity  : {w.DataAreaId}");
         sb.AppendLine($"Vehicle No    : {w.VehicleNo}");
         sb.AppendLine($"Driver Name   : {w.DriverName}");
         sb.AppendLine($"Item          : {FormatItem(w)}");
@@ -234,7 +234,7 @@ public static class SlipService
         }
         rows.AddRange(new[]
         {
-        ("Company", w.CompanyName),
+        ("Legal Entity", w.DataAreaId),
         ("Vehicle No", w.VehicleNo),
         ("Driver Name", w.DriverName),
         ("Item", FormatItem(w)),

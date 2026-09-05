@@ -25,6 +25,7 @@ public class OperatorMaster
     public bool CanAccessMasters { get; set; }
     public bool CanAccessReports { get; set; } = true;
     public bool CanAccessTransactions { get; set; }
+    public bool CanAccessOpenTransactionsInquiry { get; set; }
     public bool CanAccessGatePass { get; set; }
     public bool CanAccessCancellationVoid { get; set; }
     public bool CanAccessCorrection { get; set; }
@@ -33,6 +34,8 @@ public class OperatorMaster
 
     public bool CanCaptureFirstWeight { get; set; } = true;
     public bool CanCaptureSecondWeight { get; set; } = true;
+    public bool CanResumeOpenTransactions { get; set; }
+    public bool CanExportOpenTransactions { get; set; }
     public bool CanSubmitCorrection { get; set; }
     public bool CanApproveRejectCorrection { get; set; }
     public bool CanCorrectWeight { get; set; }
