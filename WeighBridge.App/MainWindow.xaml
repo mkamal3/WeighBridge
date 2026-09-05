@@ -1850,7 +1850,7 @@
                                             </StackPanel>
                                             <StackPanel Width="160" Margin="0,0,8,6">
                                                 <TextBlock Text="Identification No" />
-                                                <TextBox Text="{Binding DriverIdentificationFilter, UpdateSourceTrigger=PropertyChanged}" />
+                                            <TextBox Text="{Binding DriverIdentificationFilter, UpdateSourceTrigger=PropertyChanged}" />
                                             </StackPanel>
                                             <StackPanel Width="160" Margin="0,0,8,6">
                                                 <TextBlock Text="Licence No" />
@@ -2172,6 +2172,7 @@
                                                         <CheckBox Content="Can Access Gate Pass" IsChecked="{Binding OperatorMasterForm.CanAccessGatePass}" Margin="205,4,0,0" />
                                                         <CheckBox Content="Can Access Cancellation / Void" IsChecked="{Binding OperatorMasterForm.CanAccessCancellationVoid}" Margin="205,4,0,0" />
                                                         <CheckBox Content="Can Access Correction" IsChecked="{Binding OperatorMasterForm.CanAccessCorrection}" Margin="205,4,0,0" />
+                                                        <CheckBox Content="Can Access Quality Inspection" IsChecked="{Binding OperatorMasterForm.CanAccessQualityInspection}" Margin="205,4,0,0" />
                                                         <CheckBox Content="Can Access Settings" IsChecked="{Binding OperatorMasterForm.CanAccessSettings}" Margin="205,4,0,0" />
                                                         <TextBlock Text="Transaction Permissions" FontWeight="SemiBold" Margin="205,10,0,4" />
                                                         <CheckBox Content="Can Capture First Weight" IsChecked="{Binding OperatorMasterForm.CanCaptureFirstWeight}" Margin="205,4,0,0" />
@@ -2181,6 +2182,7 @@
                                                         <CheckBox Content="Can Submit Correction" IsChecked="{Binding OperatorMasterForm.CanSubmitCorrection}" Margin="205,4,0,0" />
                                                         <CheckBox Content="Can Approve / Reject Correction" IsChecked="{Binding OperatorMasterForm.CanApproveRejectCorrection}" Margin="205,4,0,0" />
                                                         <CheckBox Content="Can Correct Weight" IsChecked="{Binding OperatorMasterForm.CanCorrectWeight}" Margin="205,4,0,0" />
+                                                        <CheckBox Content="Can Process Quality Inspection" IsChecked="{Binding OperatorMasterForm.CanProcessQualityInspection}" Margin="205,4,0,0" />
                                                         <CheckBox Content="Can Submit Cancellation / Void" IsChecked="{Binding OperatorMasterForm.CanSubmitCancellationVoid}" Margin="205,4,0,0" />
                                                         <CheckBox Content="Can Approve / Reject Cancellation / Void" IsChecked="{Binding OperatorMasterForm.CanApproveRejectCancellationVoid}" Margin="205,4,0,0" />
                                                     </StackPanel>
@@ -2496,6 +2498,7 @@
                                     <DockPanel Margin="0,0,0,10">
                                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                                             <Button Content="Correction" Command="{Binding CorrectTransactionCommand}" Visibility="{Binding CanAccessCorrection, Converter={StaticResource BoolToVisibilityConverter}}" IsEnabled="{Binding CanCorrectSelectedTransaction}" MinWidth="105" Height="32" Margin="0,0,8,0" />
+                                            <Button Content="QC Inspection" Command="{Binding StartQualityInspectionCommand}" Visibility="{Binding CanAccessQualityInspection, Converter={StaticResource BoolToVisibilityConverter}}" IsEnabled="{Binding CanStartQualityInspection}" MinWidth="110" Height="32" Margin="0,0,8,0" />
                                             <Button Content="Cancellation / Void" Command="{Binding StartCancellationFromTransactionCommand}" Visibility="{Binding CanCreateCancellationVoidRequest, Converter={StaticResource BoolToVisibilityConverter}}" IsEnabled="{Binding CanInitiateCancellationFromTransaction}" MinWidth="135" Height="32" />
                                         </StackPanel>
                                         <StackPanel>
@@ -3108,6 +3111,209 @@
                                     </DataGrid.Columns>
                                 </DataGrid>
                             </Grid>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Quality Inspection" DataContext="{Binding QualityInspectionWorkspace}"
+                     Visibility="{Binding DataContext.CanAccessQualityInspection, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibilityConverter}}">
+                <Grid Margin="12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="White" CornerRadius="8" Padding="14" Margin="4,4,4,8" BorderBrush="#E2E7F0" BorderThickness="1">
+                        <DockPanel LastChildFill="True">
+                            <Button DockPanel.Dock="Right" Content="+ New QC" Command="{Binding NewInspectionCommand}"
+                                    Visibility="{Binding CanProcessQualityInspection, Converter={StaticResource BoolToVisibilityConverter}}"
+                                    MinWidth="120" Height="34" Background="#202A44" Foreground="White" BorderBrush="#202A44" FontWeight="SemiBold" />
+                            <StackPanel>
+                                <TextBlock Text="Quality Inspection &amp; Rejection" FontSize="21" FontWeight="SemiBold" Foreground="#202A44" />
+                                <TextBlock Text="Inspect QC-enabled completed slips. Original transaction data remains read-only; rejected quantity is calculated from Original Qty − Accepted Qty."
+                                           Foreground="#667085" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0" Background="White" CornerRadius="8" Padding="12" Margin="4" BorderBrush="#E2E7F0" BorderThickness="1">
+                            <Grid>
+                                <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+                                <DockPanel Grid.Row="0" Margin="0,0,0,10">
+                                    <StackPanel DockPanel.Dock="Left">
+                                        <TextBlock Text="QC Inspections" FontSize="18" FontWeight="SemiBold" Foreground="#202A44" />
+                                        <TextBlock Text="Select a saved inspection to review, print, or reopen it." Foreground="#667085" Margin="0,3,0,0" />
+                                    </StackPanel>
+                                    <Button DockPanel.Dock="Right" Content="Refresh" Command="{Binding RefreshCommand}" Width="90" Height="32" />
+                                </DockPanel>
+                                <DataGrid Grid.Row="1" ItemsSource="{Binding Inspections}" SelectedItem="{Binding SelectedInspection, Mode=TwoWay}"
+                                          IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="QC Number" Binding="{Binding QcNumber}" Width="180" />
+                                        <DataGridTextColumn Header="Slip Number" Binding="{Binding SlipNumber}" Width="150" />
+                                        <DataGridTextColumn Header="Mode" Binding="{Binding InspectionMode}" Width="130" />
+                                        <DataGridTextColumn Header="Net Weight" Binding="{Binding NetWeight, StringFormat={}{0:N3}}" Width="95" />
+                                        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="90" />
+                                        <DataGridTextColumn Header="QC User" Binding="{Binding QcUser}" Width="110" />
+                                        <DataGridTextColumn Header="Inspection Date/Time" Binding="{Binding InspectionDateTime, StringFormat={}{0:dd/MM/yyyy HH:mm}}" Width="150" />
+                                        <DataGridTextColumn Header="Completed By" Binding="{Binding CompletedBy}" Width="115" />
+                                        <DataGridTextColumn Header="Reopened" Binding="{Binding ReopenCount}" Width="75" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Grid>
+                        </Border>
+
+                        <Border Grid.Column="1" Background="White" CornerRadius="8" Padding="14" Margin="4" BorderBrush="#E2E7F0" BorderThickness="1">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,10">
+                                        <TextBlock Text="QC Inspection Details" FontSize="18" FontWeight="SemiBold" Foreground="#202A44" VerticalAlignment="Center" />
+                                        <Border DockPanel.Dock="Right" Background="#EEF3FF" CornerRadius="12" Padding="12,4">
+                                            <TextBlock Text="{Binding InspectionForm.Status}" Foreground="#314A7D" FontWeight="SemiBold" />
+                                        </Border>
+                                    </DockPanel>
+
+                                    <GroupBox Header="Original Completed Slip" Margin="0,0,0,10" Padding="10">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="145" /><ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="125" /><ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                                            <Label Grid.Row="0" Grid.Column="0" Content="Slip Number *" VerticalAlignment="Center" />
+                                            <Grid Grid.Row="0" Grid.Column="1" Margin="0,3,14,3">
+                                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                                <TextBox Grid.Column="0" Text="{Binding InspectionForm.SlipNumber}" IsReadOnly="True" Height="30" Background="#F7F8FA" />
+                                                <Button Grid.Column="1" Content="🔍" Command="{Binding LoadSlipCommand}" Style="{StaticResource LookupIconButtonStyle}"
+                                                        IsEnabled="{Binding IsEditable}" ToolTip="Load QC-enabled Completed slip" />
+                                            </Grid>
+                                            <Label Grid.Row="0" Grid.Column="2" Content="Transaction Type" VerticalAlignment="Center" />
+                                            <TextBox Grid.Row="0" Grid.Column="3" Text="{Binding OriginalWeighment.TransactionType}" IsReadOnly="True" Margin="0,3" Height="30" Background="#F7F8FA" />
+                                            <Label Grid.Row="1" Grid.Column="0" Content="Scenario" VerticalAlignment="Center" />
+                                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding OriginalWeighment.Scenario}" IsReadOnly="True" Margin="0,3,14,3" Height="30" Background="#F7F8FA" />
+                                            <Label Grid.Row="1" Grid.Column="2" Content="Vehicle" VerticalAlignment="Center" />
+                                            <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding OriginalWeighment.VehicleNo}" IsReadOnly="True" Margin="0,3" Height="30" Background="#F7F8FA" />
+                                        </Grid>
+                                    </GroupBox>
+
+                                    <GroupBox Header="QC Header" Margin="0,0,0,10" Padding="10">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="145" /><ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="145" /><ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                                            <Label Grid.Row="0" Grid.Column="0" Content="QC Number" VerticalAlignment="Center" />
+                                            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding InspectionForm.QcNumber}" IsReadOnly="True" Margin="0,3,14,3" Height="30" Background="#F7F8FA" ToolTip="Generated on first save" />
+                                            <Label Grid.Row="0" Grid.Column="2" Content="QC User" VerticalAlignment="Center" />
+                                            <TextBox Grid.Row="0" Grid.Column="3" Text="{Binding InspectionForm.QcUser}" IsReadOnly="True" Margin="0,3" Height="30" Background="#F7F8FA" />
+
+                                            <Label Grid.Row="1" Grid.Column="0" Content="Inspection Date/Time" VerticalAlignment="Center" />
+                                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding InspectionForm.InspectionDateTime, StringFormat={}{0:dd/MM/yyyy HH:mm:ss}}" IsReadOnly="True" Margin="0,3,14,3" Height="30" Background="#F7F8FA" />
+                                            <Label Grid.Row="1" Grid.Column="2" Content="Inspection Mode" VerticalAlignment="Center" />
+                                            <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding InspectionMode, Mode=OneWay}" IsReadOnly="True" Margin="0,3" Height="30" Background="#F7F8FA" />
+
+                                            <Label Grid.Row="2" Grid.Column="0" Content="Net Weight" VerticalAlignment="Center" />
+                                            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding InspectionForm.NetWeight, StringFormat={}{0:N3}}" IsReadOnly="True" Margin="0,3,14,3" Height="30" Background="#F7F8FA" />
+                                            <Label Grid.Row="2" Grid.Column="2" Content="Status" VerticalAlignment="Center" />
+                                            <TextBox Grid.Row="2" Grid.Column="3" Text="{Binding InspectionForm.Status}" IsReadOnly="True" Margin="0,3" Height="30" Background="#F7F8FA" />
+                                        </Grid>
+                                    </GroupBox>
+
+                                    <GroupBox Header="Material Line Inspection" Margin="0,0,0,10" Padding="8">
+                                        <Grid>
+                                            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="260" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                                            <TextBlock Grid.Row="0" Text="Enter Accepted Qty only. Rejected Qty = Original Qty − Accepted Qty. Original item and quantity are read-only."
+                                                       Foreground="#667085" Margin="3,0,3,8" />
+                                            <DataGrid Grid.Row="1" ItemsSource="{Binding Lines}" AutoGenerateColumns="False" IsReadOnly="{Binding IsReadOnly}"
+                                                      CanUserAddRows="False" CanUserDeleteRows="False" FrozenColumnCount="5">
+                                                <DataGrid.Columns>
+                                                    <DataGridTextColumn Header="Line" Binding="{Binding LineNo}" Width="50" IsReadOnly="True" />
+                                                    <DataGridTextColumn Header="Item" Binding="{Binding ItemNumber}" Width="105" IsReadOnly="True" />
+                                                    <DataGridTextColumn Header="Item Name" Binding="{Binding ItemName}" Width="150" IsReadOnly="True" />
+                                                    <DataGridTextColumn Header="UOM" Binding="{Binding Uom}" Width="70" IsReadOnly="True" />
+                                                    <DataGridTextColumn Header="Original Qty" Binding="{Binding OriginalQty, StringFormat={}{0:N3}}" Width="95" IsReadOnly="True" />
+                                                    <DataGridTextColumn Header="Accepted Qty" Binding="{Binding AcceptedQty, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:N3}}" Width="100" />
+                                                    <DataGridTextColumn Header="Rejected Qty" Binding="{Binding RejectedQty, StringFormat={}{0:N3}}" Width="100" IsReadOnly="True" />
+                                                    <DataGridTextColumn Header="Moisture %" Binding="{Binding MoisturePercent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}" Width="90" />
+                                                    <DataGridTextColumn Header="Contamination %" Binding="{Binding ContaminationPercent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}" Width="115" />
+                                                    <DataGridTemplateColumn Header="Rejection Reason" Width="145">
+                                                        <DataGridTemplateColumn.CellTemplate>
+                                                            <DataTemplate>
+                                                                <TextBlock Text="{Binding RejectionReason}" Padding="3" />
+                                                            </DataTemplate>
+                                                        </DataGridTemplateColumn.CellTemplate>
+                                                        <DataGridTemplateColumn.CellEditingTemplate>
+                                                            <DataTemplate>
+                                                                <ComboBox ItemsSource="{Binding DataContext.RejectionReasons, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                                          DisplayMemberPath="DisplayText" SelectedValuePath="Code"
+                                                                          SelectedValue="{Binding RejectionReason, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                            </DataTemplate>
+                                                        </DataGridTemplateColumn.CellEditingTemplate>
+                                                    </DataGridTemplateColumn>
+                                                    <DataGridTextColumn Header="Line Remarks" Binding="{Binding Remarks, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="170" />
+                                                </DataGrid.Columns>
+                                            </DataGrid>
+                                            <DockPanel Grid.Row="2" Margin="3,8,3,0">
+                                                <TextBlock DockPanel.Dock="Left" Text="{Binding InspectionMode, StringFormat=Mode: {0}}" FontWeight="SemiBold" Foreground="#314A7D" />
+                                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                    <TextBlock Text="Accepted Total: " FontWeight="SemiBold" />
+                                                    <TextBlock Text="{Binding AcceptedQtyTotal, StringFormat={}{0:N3}}" Margin="0,0,18,0" />
+                                                    <TextBlock Text="Rejected Total: " FontWeight="SemiBold" />
+                                                    <TextBlock Text="{Binding RejectedQtyTotal, StringFormat={}{0:N3}}" />
+                                                </StackPanel>
+                                            </DockPanel>
+                                        </Grid>
+                                    </GroupBox>
+
+                                    <GroupBox Header="QC Remarks" Margin="0,0,0,10" Padding="10">
+                                        <TextBox Text="{Binding InspectionForm.QcRemarks, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                 IsReadOnly="{Binding IsReadOnly}" Height="68" MaxLength="500" AcceptsReturn="True" TextWrapping="Wrap"
+                                                 VerticalScrollBarVisibility="Auto" ToolTip="Required for Full Rejection and reopened/override completion" />
+                                    </GroupBox>
+
+                                    <GroupBox Header="Completion / Reopen Audit" Margin="0,0,0,10" Padding="10">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="145" /><ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="155" /><ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                                            <Label Grid.Row="0" Grid.Column="0" Content="Completed By" VerticalAlignment="Center" />
+                                            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding InspectionForm.CompletedBy}" IsReadOnly="True" Margin="0,3,14,3" Background="#F7F8FA" />
+                                            <Label Grid.Row="0" Grid.Column="2" Content="Completed Date/Time" VerticalAlignment="Center" />
+                                            <TextBox Grid.Row="0" Grid.Column="3" Text="{Binding InspectionForm.CompletedDateTime, StringFormat={}{0:dd/MM/yyyy HH:mm:ss}}" IsReadOnly="True" Margin="0,3" Background="#F7F8FA" />
+                                            <Label Grid.Row="1" Grid.Column="0" Content="Last Reopened By" VerticalAlignment="Center" />
+                                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding InspectionForm.LastReopenedBy}" IsReadOnly="True" Margin="0,3,14,3" Background="#F7F8FA" />
+                                            <Label Grid.Row="1" Grid.Column="2" Content="Reopen Count / Date" VerticalAlignment="Center" />
+                                            <StackPanel Grid.Row="1" Grid.Column="3" Orientation="Horizontal">
+                                                <TextBox Text="{Binding InspectionForm.ReopenCount}" IsReadOnly="True" Width="50" Margin="0,3,6,3" Background="#F7F8FA" />
+                                                <TextBox Text="{Binding InspectionForm.LastReopenedDateTime, StringFormat={}{0:dd/MM/yyyy HH:mm:ss}}" IsReadOnly="True" Margin="0,3" Background="#F7F8FA" Width="170" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </GroupBox>
+
+                                    <DockPanel LastChildFill="False">
+                                        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                                            <Button Content="Save QC" Command="{Binding SaveCommand}" IsEnabled="{Binding CanSave}" MinWidth="100" Height="36" />
+                                            <Button Content="Complete QC" Command="{Binding CompleteCommand}" IsEnabled="{Binding CanComplete}" MinWidth="110" Height="36" Style="{StaticResource PrimaryActionButtonStyle}" />
+                                        </StackPanel>
+                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                            <Button Content="Print QC Slip" Command="{Binding PrintCommand}" IsEnabled="{Binding CanPrint}" MinWidth="110" Height="36" />
+                                            <Button Content="Reopen" Command="{Binding ReopenCommand}" IsEnabled="{Binding CanReopen}" MinWidth="95" Height="36" Style="{StaticResource ApproveActionButtonStyle}" />
+                                            <Button Content="Cancel" Command="{Binding CancelCommand}" MinWidth="90" Height="36" />
+                                        </StackPanel>
+                                    </DockPanel>
+                                    <TextBlock Text="{Binding StatusMessage}" Foreground="#314A7D" Margin="0,10,0,0" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </ScrollViewer>
                         </Border>
                     </Grid>
                 </Grid>
