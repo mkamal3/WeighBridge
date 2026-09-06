@@ -4726,7 +4726,7 @@ public class MainViewModel : BaseViewModel
                 return;
             }
 
-            SelectedMainTabIndex = 7;
+            SelectedMainTabIndex = 8;
             await QualityInspectionWorkspace.StartForTransactionAsync(SelectedTransactionWeighment);
         }
         catch (Exception ex)

@@ -510,7 +510,6 @@ public sealed class QualityInspectionWorkspaceViewModel : BaseViewModel
         TransactionType = source.TransactionType,
         Scenario = source.Scenario,
         GatePassNumber = source.GatePassNumber,
-        CompanyName = source.CompanyName,
         VehicleNo = source.VehicleNo,
         DriverName = source.DriverName,
         ItemNumber = source.ItemNumber,

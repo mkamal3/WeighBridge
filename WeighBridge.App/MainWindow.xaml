@@ -3263,7 +3263,7 @@
                                             </DataGrid>
                                             <DockPanel Grid.Row="2" Margin="3,8,3,0">
                                                 <TextBlock DockPanel.Dock="Left" Text="{Binding InspectionMode, StringFormat=Mode: {0}}" FontWeight="SemiBold" Foreground="#314A7D" />
-                                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="20,0,0,0">
                                                     <TextBlock Text="Accepted Total: " FontWeight="SemiBold" />
                                                     <TextBlock Text="{Binding AcceptedQtyTotal, StringFormat={}{0:N3}}" Margin="0,0,18,0" />
                                                     <TextBlock Text="Rejected Total: " FontWeight="SemiBold" />
