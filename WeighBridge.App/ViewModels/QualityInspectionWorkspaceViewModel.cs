@@ -31,11 +31,11 @@ public sealed class QualityInspectionWorkspaceViewModel : BaseViewModel
 
         NewInspectionCommand = new RelayCommand(NewInspectionAsync, () => CanProcessQualityInspection);
         LoadSlipCommand = new RelayCommand(OpenSlipLookupAsync, () => IsEditable);
-        SaveCommand = new RelayCommand(() => SaveAsync(false), () => CanSave);
-        CompleteCommand = new RelayCommand(() => SaveAsync(true), () => CanComplete);
+        SubmitCommand = new RelayCommand(() => SaveAsync(true), () => CanSubmit);
+        ApproveCommand = new RelayCommand(ApproveAsync, () => CanApprove);
+        RejectCommand = new RelayCommand(RejectAsync, () => CanReject);
         PrintCommand = new RelayCommand(PrintAsync, () => CanPrint);
         ReopenCommand = new RelayCommand(ReopenAsync, () => CanReopen);
-        CancelCommand = new RelayCommand(CancelAsync, () => CanProcessQualityInspection);
         RefreshCommand = new RelayCommand(RefreshAsync);
     }
 
@@ -45,11 +45,11 @@ public sealed class QualityInspectionWorkspaceViewModel : BaseViewModel
 
     public RelayCommand NewInspectionCommand { get; }
     public RelayCommand LoadSlipCommand { get; }
-    public RelayCommand SaveCommand { get; }
-    public RelayCommand CompleteCommand { get; }
+    public RelayCommand SubmitCommand { get; }
+    public RelayCommand ApproveCommand { get; }
+    public RelayCommand RejectCommand { get; }
     public RelayCommand PrintCommand { get; }
     public RelayCommand ReopenCommand { get; }
-    public RelayCommand CancelCommand { get; }
     public RelayCommand RefreshCommand { get; }
 
     public QualityInspection InspectionForm
@@ -98,12 +98,19 @@ public sealed class QualityInspectionWorkspaceViewModel : BaseViewModel
     public bool IsEditable => CanProcessQualityInspection && string.Equals(InspectionForm.Status, "Draft", StringComparison.OrdinalIgnoreCase);
     public bool IsReadOnly => !IsEditable;
     public bool CanSave => IsEditable && InspectionForm.WeighmentId > 0 && Lines.Count > 0;
-    public bool CanComplete => CanSave;
+    public bool CanSubmit => CanSave;
+    public bool CanApprove => _currentUser.CanAccessQualityInspection
+                              && _currentUser.CanApproveRejectQualityInspection
+                              && InspectionForm.QualityInspectionId > 0
+                              && string.Equals(InspectionForm.Status, "Submitted", StringComparison.OrdinalIgnoreCase);
+    public bool CanReject => CanApprove;
     public bool CanPrint => InspectionForm.QualityInspectionId > 0;
     public bool CanReopen => IsSupervisor
                              && CanProcessQualityInspection
                              && InspectionForm.QualityInspectionId > 0
-                             && string.Equals(InspectionForm.Status, "Completed", StringComparison.OrdinalIgnoreCase);
+                             && (string.Equals(InspectionForm.Status, "Approved", StringComparison.OrdinalIgnoreCase)
+                                 || string.Equals(InspectionForm.Status, "Rejected", StringComparison.OrdinalIgnoreCase)
+                                 || string.Equals(InspectionForm.Status, "Completed", StringComparison.OrdinalIgnoreCase));
 
     private bool IsSupervisor => ContainsRole(_currentUser.Role, "supervisor")
                                  || ContainsRole(_currentUser.Role, "administrator")
@@ -204,7 +211,7 @@ public sealed class QualityInspectionWorkspaceViewModel : BaseViewModel
             CreatedAt = DateTime.Now,
             UpdatedAt = DateTime.Now
         };
-        StatusMessage = "New QC inspection. Load a QC-enabled completed slip.";
+        StatusMessage = "New QC inspection. Load a completed slip whose Transaction Type requires QC.";
         return Task.CompletedTask;
     }
 
@@ -229,7 +236,7 @@ public sealed class QualityInspectionWorkspaceViewModel : BaseViewModel
         try
         {
             if (!await _databaseService.IsWeighmentQcEligibleAsync(transaction.WeighmentId, CurrentCompany))
-                throw new InvalidOperationException("Only a QC-enabled Completed slip without an existing QC record can be loaded.");
+                throw new InvalidOperationException("Only a Completed slip whose Transaction Type has QC Required set to Yes, and which has no existing QC record, can be loaded.");
 
             var materialLines = await _databaseService.GetWeighmentMaterialLinesAsync(transaction.WeighmentId);
             if (materialLines.Count == 0)
@@ -290,7 +297,7 @@ public sealed class QualityInspectionWorkspaceViewModel : BaseViewModel
         }
     }
 
-    private async Task SaveAsync(bool complete)
+    private async Task SaveAsync(bool submit)
     {
         try
         {
@@ -298,7 +305,7 @@ public sealed class QualityInspectionWorkspaceViewModel : BaseViewModel
             InspectionForm.DataAreaId = CurrentCompany;
             InspectionForm.InspectionMode = InspectionMode;
             InspectionForm.QualityInspectionId = await _databaseService.SaveQualityInspectionAsync(
-                InspectionForm, Lines, complete, _currentUser.Username);
+                InspectionForm, Lines, submit, _currentUser.Username);
 
             await LoadInspectionsAsync();
             var saved = Inspections.FirstOrDefault(x => x.QualityInspectionId == InspectionForm.QualityInspectionId);
@@ -310,8 +317,8 @@ public sealed class QualityInspectionWorkspaceViewModel : BaseViewModel
                 await LoadInspectionAsync(saved);
             }
             if (_afterChange != null) await _afterChange();
-            StatusMessage = complete
-                ? $"QC {InspectionForm.QcNumber} completed as {InspectionForm.InspectionMode}."
+            StatusMessage = submit
+                ? $"QC {InspectionForm.QcNumber} submitted for approval as {InspectionForm.InspectionMode}."
                 : $"QC {InspectionForm.QcNumber} saved as Draft.";
         }
         catch (Exception ex)
@@ -320,11 +327,66 @@ public sealed class QualityInspectionWorkspaceViewModel : BaseViewModel
         }
     }
 
+    private async Task ApproveAsync()
+    {
+        try
+        {
+            if (!CanApprove) throw new InvalidOperationException("Select a Submitted QC inspection that you are allowed to approve.");
+            var result = MessageBox.Show($"Approve QC {InspectionForm.QcNumber}?", "Approve Quality Inspection",
+                MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (result != MessageBoxResult.Yes) return;
+
+            var id = InspectionForm.QualityInspectionId;
+            await _databaseService.ApproveQualityInspectionAsync(id, _currentUser.Username);
+            await ReloadInspectionAsync(id);
+            if (_afterChange != null) await _afterChange();
+            StatusMessage = $"QC {InspectionForm.QcNumber} approved.";
+        }
+        catch (Exception ex)
+        {
+            ShowError("Approve Quality Inspection", ex);
+        }
+    }
+
+    private async Task RejectAsync()
+    {
+        try
+        {
+            if (!CanReject) throw new InvalidOperationException("Select a Submitted QC inspection that you are allowed to reject.");
+            var result = MessageBox.Show($"Reject QC {InspectionForm.QcNumber}?", "Reject Quality Inspection",
+                MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (result != MessageBoxResult.Yes) return;
+
+            var id = InspectionForm.QualityInspectionId;
+            await _databaseService.RejectQualityInspectionAsync(id, _currentUser.Username);
+            await ReloadInspectionAsync(id);
+            if (_afterChange != null) await _afterChange();
+            StatusMessage = $"QC {InspectionForm.QcNumber} rejected.";
+        }
+        catch (Exception ex)
+        {
+            ShowError("Reject Quality Inspection", ex);
+        }
+    }
+
+    private async Task ReloadInspectionAsync(int qualityInspectionId)
+    {
+        await LoadInspectionsAsync();
+        var row = Inspections.FirstOrDefault(x => x.QualityInspectionId == qualityInspectionId);
+        if (row != null)
+        {
+            _isLoadingSelection = true;
+            SelectedInspection = row;
+            _isLoadingSelection = false;
+            await LoadInspectionAsync(row);
+        }
+    }
+
     private async Task ReopenAsync()
     {
         try
         {
-            if (!CanReopen) throw new InvalidOperationException("Only a Supervisor or Administrator can reopen a Completed QC inspection.");
+            if (!CanReopen) throw new InvalidOperationException("Only a Supervisor or Administrator can reopen an Approved or Rejected QC inspection.");
             var result = MessageBox.Show(
                 $"Reopen QC {InspectionForm.QcNumber}?\n\nThis supervisor action is written to the QC audit trail.",
                 "Reopen Quality Inspection", MessageBoxButton.YesNo, MessageBoxImage.Warning);
@@ -335,7 +397,7 @@ public sealed class QualityInspectionWorkspaceViewModel : BaseViewModel
             await LoadInspectionsAsync();
             var reopened = Inspections.FirstOrDefault(x => x.QualityInspectionId == id);
             if (reopened != null) await LoadInspectionAsync(reopened);
-            StatusMessage = $"QC {InspectionForm.QcNumber} reopened by supervisor. Remarks are required when completing the override.";
+            StatusMessage = $"QC {InspectionForm.QcNumber} reopened by supervisor. Remarks are required when resubmitting the inspection.";
         }
         catch (Exception ex)
         {
@@ -409,17 +471,6 @@ public sealed class QualityInspectionWorkspaceViewModel : BaseViewModel
         return row;
     }
 
-    private async Task CancelAsync()
-    {
-        if (InspectionForm.WeighmentId > 0 && IsEditable)
-        {
-            var result = MessageBox.Show("Clear the current QC form? Unsaved changes will be discarded.",
-                "Cancel Quality Inspection", MessageBoxButton.YesNo, MessageBoxImage.Question);
-            if (result != MessageBoxResult.Yes) return;
-        }
-        await NewInspectionAsync();
-    }
-
     private async Task RefreshAsync()
     {
         await RefreshListAsync();
@@ -467,7 +518,9 @@ public sealed class QualityInspectionWorkspaceViewModel : BaseViewModel
         OnPropertyChanged(nameof(IsReadOnly));
         OnPropertyChanged(nameof(CanProcessQualityInspection));
         OnPropertyChanged(nameof(CanSave));
-        OnPropertyChanged(nameof(CanComplete));
+        OnPropertyChanged(nameof(CanSubmit));
+        OnPropertyChanged(nameof(CanApprove));
+        OnPropertyChanged(nameof(CanReject));
         OnPropertyChanged(nameof(CanPrint));
         OnPropertyChanged(nameof(CanReopen));
         NotifyLineTotals();
@@ -492,6 +545,10 @@ public sealed class QualityInspectionWorkspaceViewModel : BaseViewModel
         NetWeight = source.NetWeight,
         QcRemarks = source.QcRemarks,
         Status = source.Status,
+        SubmittedBy = source.SubmittedBy,
+        SubmittedDateTime = source.SubmittedDateTime,
+        ApprovedRejectedBy = source.ApprovedRejectedBy,
+        ApprovalRejectedDateTime = source.ApprovalRejectedDateTime,
         CompletedBy = source.CompletedBy,
         CompletedDateTime = source.CompletedDateTime,
         ReopenCount = source.ReopenCount,

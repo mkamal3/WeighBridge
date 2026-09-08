@@ -244,6 +244,7 @@ public class MainViewModel : BaseViewModel
         PartyTypes = new ObservableCollection<string> { "Customer", "Vendor" };
         GatePassTypes = new ObservableCollection<string> { "Inbound", "Outbound" };
         GatePassStatuses = new ObservableCollection<string> { "Open", "Linked", "Closed", "Cancelled" };
+        QcRequiredValues = new ObservableCollection<string> { "No", "Yes" };
         TransactionFormValues = new ObservableCollection<string>
         {
             "Purchase / Receipt / Collection",
@@ -473,6 +474,7 @@ public class MainViewModel : BaseViewModel
     public ObservableCollection<string> CancellationReasons { get; } = new();
     public ObservableCollection<string> GatePassTypes { get; }
     public ObservableCollection<string> GatePassStatuses { get; }
+    public ObservableCollection<string> QcRequiredValues { get; }
     public ObservableCollection<string> TransactionFormValues { get; }
     public ObservableCollection<string> LocationTypeValues { get; }
     public ObservableCollection<string> BillingBasisValues { get; }
@@ -728,7 +730,7 @@ public class MainViewModel : BaseViewModel
     public ToleranceMaster ToleranceMasterForm { get => _toleranceMasterForm; set => SetProperty(ref _toleranceMasterForm, value); }
     public ServiceChargeMaster? SelectedServiceChargeMaster { get => _selectedServiceChargeMaster; set { if (SetProperty(ref _selectedServiceChargeMaster, value) && value != null) ServiceChargeMasterForm = new ServiceChargeMaster { ServiceChargeMasterId = value.ServiceChargeMasterId, DataAreaId = value.DataAreaId, ServiceMode = value.ServiceMode, Amount = value.Amount, Currency = value.Currency, Validity = value.Validity }; } }
     public ServiceChargeMaster ServiceChargeMasterForm { get => _serviceChargeMasterForm; set => SetProperty(ref _serviceChargeMasterForm, value); }
-    public TransactionTypeMaster? SelectedTransactionTypeConfig { get => _selectedTransactionTypeConfig; set { if (SetProperty(ref _selectedTransactionTypeConfig, value) && value != null) TransactionTypeMasterForm = new TransactionTypeMaster { TransactionTypeMasterId = value.TransactionTypeMasterId, Type = value.Type, Description = value.Description, Form = value.Form }; } }
+    public TransactionTypeMaster? SelectedTransactionTypeConfig { get => _selectedTransactionTypeConfig; set { if (SetProperty(ref _selectedTransactionTypeConfig, value) && value != null) TransactionTypeMasterForm = new TransactionTypeMaster { TransactionTypeMasterId = value.TransactionTypeMasterId, Type = value.Type, Description = value.Description, Form = value.Form, QcRequired = value.QcRequired }; } }
     public TransactionTypeMaster TransactionTypeMasterForm { get => _transactionTypeMasterForm; set => SetProperty(ref _transactionTypeMasterForm, value); }
 
     public LocationMaster? SelectedLocationMaster { get => _selectedLocationMaster; set { if (SetProperty(ref _selectedLocationMaster, value) && value != null) LocationMasterForm = new LocationMaster { LocationMasterId = value.LocationMasterId, DataAreaId = value.DataAreaId, LocationCode = value.LocationCode, LocationName = value.LocationName, LocationType = value.LocationType, Warehouse = value.Warehouse, Site = value.Site, Status = value.Status }; } }
@@ -5786,7 +5788,7 @@ public class MainViewModel : BaseViewModel
                 OperatorMasterForm.CanAccessCancellationVoid = true;
             if (OperatorMasterForm.CanSubmitCorrection || OperatorMasterForm.CanApproveRejectCorrection || OperatorMasterForm.CanCorrectWeight)
                 OperatorMasterForm.CanAccessCorrection = true;
-            if (OperatorMasterForm.CanProcessQualityInspection)
+            if (OperatorMasterForm.CanProcessQualityInspection || OperatorMasterForm.CanApproveRejectQualityInspection)
                 OperatorMasterForm.CanAccessQualityInspection = true;
 
             await _databaseService.SaveOperatorMasterAsync(OperatorMasterForm);
@@ -5877,6 +5879,7 @@ public class MainViewModel : BaseViewModel
             CanApproveRejectCorrection = SelectedOperatorMaster.CanApproveRejectCorrection,
             CanCorrectWeight = SelectedOperatorMaster.CanCorrectWeight,
             CanProcessQualityInspection = SelectedOperatorMaster.CanProcessQualityInspection,
+            CanApproveRejectQualityInspection = SelectedOperatorMaster.CanApproveRejectQualityInspection,
             CanSubmitCancellationVoid = SelectedOperatorMaster.CanSubmitCancellationVoid,
             CanApproveRejectCancellationVoid = SelectedOperatorMaster.CanApproveRejectCancellationVoid,
             LastLogin = SelectedOperatorMaster.LastLogin,
@@ -6203,7 +6206,7 @@ public class MainViewModel : BaseViewModel
             LocationMasterForm = new LocationMaster { DataAreaId = CurrentUserCompany, Status = string.IsNullOrWhiteSpace(LocationMasterForm.Status) ? "Active" : LocationMasterForm.Status };
 
         if (masterHeader.Contains("Transaction Type", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(TransactionTypeMasterForm.Form))
-            TransactionTypeMasterForm = new TransactionTypeMaster { Type = TransactionTypeMasterForm.Type, Description = TransactionTypeMasterForm.Description, Form = TransactionFormValues.FirstOrDefault() ?? string.Empty };
+            TransactionTypeMasterForm = new TransactionTypeMaster { Type = TransactionTypeMasterForm.Type, Description = TransactionTypeMasterForm.Description, Form = TransactionFormValues.FirstOrDefault() ?? string.Empty, QcRequired = string.IsNullOrWhiteSpace(TransactionTypeMasterForm.QcRequired) ? "No" : TransactionTypeMasterForm.QcRequired };
 
         OnPropertyChanged(nameof(ScenarioMasterForm));
         OnPropertyChanged(nameof(ServiceChargeMasterForm));
@@ -6323,6 +6326,7 @@ public class MainViewModel : BaseViewModel
 
             if (string.IsNullOrWhiteSpace(TransactionTypeMasterForm.Form))
                 TransactionTypeMasterForm.Form = TransactionFormValues.FirstOrDefault() ?? string.Empty;
+            TransactionTypeMasterForm.QcRequired = string.Equals(TransactionTypeMasterForm.QcRequired, "Yes", StringComparison.OrdinalIgnoreCase) ? "Yes" : "No";
 
             await _databaseService.SaveTransactionTypeMasterAsync(TransactionTypeMasterForm);
             ClearTransactionTypeMasterForm();
@@ -6338,7 +6342,7 @@ public class MainViewModel : BaseViewModel
     private void ClearTransactionTypeMasterForm()
     {
         SelectedTransactionTypeConfig = null;
-        TransactionTypeMasterForm = new TransactionTypeMaster { Form = TransactionFormValues.FirstOrDefault() ?? string.Empty };
+        TransactionTypeMasterForm = new TransactionTypeMaster { Form = TransactionFormValues.FirstOrDefault() ?? string.Empty, QcRequired = "No" };
     }
 
     private async Task SaveLocationMasterAsync()

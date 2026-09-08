@@ -57,7 +57,7 @@ public partial class QualityInspectionSlipLookupWindow : Window
 
             LookupRows.Clear();
             foreach (var row in rows) LookupRows.Add(row);
-            StatusTextBlock.Text = $"Loaded {LookupRows.Count:N0} QC-enabled completed slip(s).";
+            StatusTextBlock.Text = $"Loaded {LookupRows.Count:N0} completed slip(s) with QC Required = Yes.";
         }
         catch (Exception ex)
         {
@@ -72,7 +72,7 @@ public partial class QualityInspectionSlipLookupWindow : Window
     {
         if (LookupDataGrid.SelectedItem is not Weighment row)
         {
-            StatusTextBlock.Text = "Please select a QC-enabled completed slip.";
+            StatusTextBlock.Text = "Please select a completed slip with QC Required = Yes.";
             return;
         }
 
