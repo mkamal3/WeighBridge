@@ -42,6 +42,7 @@ public class OperatorMaster
     public bool CanSubmitCancellationVoid { get; set; }
     public bool CanApproveRejectCancellationVoid { get; set; }
     public bool CanProcessQualityInspection { get; set; }
+    public bool CanApproveRejectQualityInspection { get; set; }
 
     public DateTime? LastLogin { get; set; }
     public string Status { get; set; } = "Active";

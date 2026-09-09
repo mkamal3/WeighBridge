@@ -25,7 +25,7 @@
 
         <StackPanel Grid.Row="0" Margin="0,0,0,10">
             <TextBlock Text="QC-enabled Completed Slip Lookup" FontSize="18" FontWeight="SemiBold" Foreground="#202A44" />
-            <TextBlock Text="Only completed slips whose Scenario Master enables QC and which do not already have a QC record are shown."
+            <TextBlock Text="Only completed slips whose Transaction Type has QC Required set to Yes and which do not already have a QC record are shown."
                        Foreground="#667085" Margin="0,3,0,0" />
         </StackPanel>
 

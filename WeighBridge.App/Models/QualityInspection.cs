@@ -27,6 +27,10 @@ public class QualityInspection : INotifyPropertyChanged
         }
     }
     public string Status { get; set; } = "Draft";
+    public string SubmittedBy { get; set; } = string.Empty;
+    public DateTime? SubmittedDateTime { get; set; }
+    public string ApprovedRejectedBy { get; set; } = string.Empty;
+    public DateTime? ApprovalRejectedDateTime { get; set; }
     public string CompletedBy { get; set; } = string.Empty;
     public DateTime? CompletedDateTime { get; set; }
     public int ReopenCount { get; set; }

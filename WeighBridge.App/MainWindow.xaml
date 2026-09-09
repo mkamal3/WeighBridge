@@ -2183,6 +2183,7 @@
                                                         <CheckBox Content="Can Approve / Reject Correction" IsChecked="{Binding OperatorMasterForm.CanApproveRejectCorrection}" Margin="205,4,0,0" />
                                                         <CheckBox Content="Can Correct Weight" IsChecked="{Binding OperatorMasterForm.CanCorrectWeight}" Margin="205,4,0,0" />
                                                         <CheckBox Content="Can Process Quality Inspection" IsChecked="{Binding OperatorMasterForm.CanProcessQualityInspection}" Margin="205,4,0,0" />
+                                                        <CheckBox Content="Can Approve / Reject Quality Inspection" IsChecked="{Binding OperatorMasterForm.CanApproveRejectQualityInspection}" Margin="205,4,0,0" />
                                                         <CheckBox Content="Can Submit Cancellation / Void" IsChecked="{Binding OperatorMasterForm.CanSubmitCancellationVoid}" Margin="205,4,0,0" />
                                                         <CheckBox Content="Can Approve / Reject Cancellation / Void" IsChecked="{Binding OperatorMasterForm.CanApproveRejectCancellationVoid}" Margin="205,4,0,0" />
                                                     </StackPanel>
@@ -2285,12 +2286,12 @@
                             <Grid Margin="8">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="430" /></Grid.ColumnDefinitions>
                                 <DataGrid Grid.Column="0" ItemsSource="{Binding TransactionTypeMasters}" SelectedItem="{Binding SelectedTransactionTypeConfig}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
-                                    <DataGrid.Columns><DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="140" /><DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="180" /><DataGridTextColumn Header="Form" Binding="{Binding Form}" Width="240" /></DataGrid.Columns>
+                                    <DataGrid.Columns><DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="140" /><DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="180" /><DataGridTextColumn Header="Form" Binding="{Binding Form}" Width="240" /><DataGridTextColumn Header="QC Required" Binding="{Binding QcRequired}" Width="105" /></DataGrid.Columns>
                                 </DataGrid>
                                 <StackPanel Grid.Column="1" Margin="10,0,0,0">
                                     <TextBlock Text="Open / Edit Transaction Type Master" FontSize="18" FontWeight="SemiBold" />
                                     <WrapPanel><Button Content="Save" Command="{Binding SaveTransactionTypeMasterCommand}" /><Button Content="New / Clear" Command="{Binding ClearTransactionTypeMasterFormCommand}" /></WrapPanel>
-                                    <DockPanel Margin="0,4"><Label Content="Type" Width="170" /><TextBox Text="{Binding TransactionTypeMasterForm.Type, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Description" Width="170" /><TextBox Text="{Binding TransactionTypeMasterForm.Description, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Form" Width="170" /><ComboBox ItemsSource="{Binding TransactionFormValues}" SelectedItem="{Binding TransactionTypeMasterForm.Form, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
+                                    <DockPanel Margin="0,4"><Label Content="Type" Width="170" /><TextBox Text="{Binding TransactionTypeMasterForm.Type, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Description" Width="170" /><TextBox Text="{Binding TransactionTypeMasterForm.Description, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="Form" Width="170" /><ComboBox ItemsSource="{Binding TransactionFormValues}" SelectedItem="{Binding TransactionTypeMasterForm.Form, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" /></DockPanel><DockPanel Margin="0,4"><Label Content="QC Required" Width="170" /><ComboBox ItemsSource="{Binding QcRequiredValues}" SelectedItem="{Binding TransactionTypeMasterForm.QcRequired, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" /></DockPanel>
                                 </StackPanel>
                             </Grid>
                         </TabItem>
@@ -3126,12 +3127,18 @@
 
                     <Border Grid.Row="0" Background="White" CornerRadius="8" Padding="14" Margin="4,4,4,8" BorderBrush="#E2E7F0" BorderThickness="1">
                         <DockPanel LastChildFill="True">
-                            <Button DockPanel.Dock="Right" Content="+ New QC" Command="{Binding NewInspectionCommand}"
-                                    Visibility="{Binding CanProcessQualityInspection, Converter={StaticResource BoolToVisibilityConverter}}"
-                                    MinWidth="120" Height="34" Background="#202A44" Foreground="White" BorderBrush="#202A44" FontWeight="SemiBold" />
+                            <StackPanel DockPanel.Dock="Right">
+                                <Button Content="+ New QC" Command="{Binding NewInspectionCommand}"
+                                        Visibility="{Binding CanProcessQualityInspection, Converter={StaticResource BoolToVisibilityConverter}}"
+                                        MinWidth="210" Height="34" Background="#202A44" Foreground="White" BorderBrush="#202A44" FontWeight="SemiBold" />
+                                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                    <Button Content="Print QC Slip" Command="{Binding PrintCommand}" IsEnabled="{Binding CanPrint}" MinWidth="110" Height="32" />
+                                    <Button Content="Reopen" Command="{Binding ReopenCommand}" IsEnabled="{Binding CanReopen}" MinWidth="95" Height="32" Style="{StaticResource ApproveActionButtonStyle}" />
+                                </StackPanel>
+                            </StackPanel>
                             <StackPanel>
                                 <TextBlock Text="Quality Inspection &amp; Rejection" FontSize="21" FontWeight="SemiBold" Foreground="#202A44" />
-                                <TextBlock Text="Inspect QC-enabled completed slips. Original transaction data remains read-only; rejected quantity is calculated from Original Qty − Accepted Qty."
+                                <TextBlock Text="Inspect completed slips whose Transaction Type requires QC. Original transaction data remains read-only; rejected quantity is calculated from Original Qty − Accepted Qty."
                                            Foreground="#667085" Margin="0,4,0,0" />
                             </StackPanel>
                         </DockPanel>
@@ -3163,7 +3170,8 @@
                                         <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="90" />
                                         <DataGridTextColumn Header="QC User" Binding="{Binding QcUser}" Width="110" />
                                         <DataGridTextColumn Header="Inspection Date/Time" Binding="{Binding InspectionDateTime, StringFormat={}{0:dd/MM/yyyy HH:mm}}" Width="150" />
-                                        <DataGridTextColumn Header="Completed By" Binding="{Binding CompletedBy}" Width="115" />
+                                        <DataGridTextColumn Header="Submitted By" Binding="{Binding SubmittedBy}" Width="115" />
+                                        <DataGridTextColumn Header="Approved/Rejected By" Binding="{Binding ApprovedRejectedBy}" Width="145" />
                                         <DataGridTextColumn Header="Reopened" Binding="{Binding ReopenCount}" Width="75" />
                                     </DataGrid.Columns>
                                 </DataGrid>
@@ -3276,41 +3284,45 @@
                                     <GroupBox Header="QC Remarks" Margin="0,0,0,10" Padding="10">
                                         <TextBox Text="{Binding InspectionForm.QcRemarks, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                  IsReadOnly="{Binding IsReadOnly}" Height="68" MaxLength="500" AcceptsReturn="True" TextWrapping="Wrap"
-                                                 VerticalScrollBarVisibility="Auto" ToolTip="Required for Full Rejection and reopened/override completion" />
+                                                 VerticalScrollBarVisibility="Auto" ToolTip="Required for Full Rejection and a reopened inspection" />
                                     </GroupBox>
 
-                                    <GroupBox Header="Completion / Reopen Audit" Margin="0,0,0,10" Padding="10">
+                                    <GroupBox Header="Workflow / Reopen Audit" Margin="0,0,0,10" Padding="10">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="145" /><ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="155" /><ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
-                                            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                                            <Label Grid.Row="0" Grid.Column="0" Content="Completed By" VerticalAlignment="Center" />
-                                            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding InspectionForm.CompletedBy}" IsReadOnly="True" Margin="0,3,14,3" Background="#F7F8FA" />
-                                            <Label Grid.Row="0" Grid.Column="2" Content="Completed Date/Time" VerticalAlignment="Center" />
-                                            <TextBox Grid.Row="0" Grid.Column="3" Text="{Binding InspectionForm.CompletedDateTime, StringFormat={}{0:dd/MM/yyyy HH:mm:ss}}" IsReadOnly="True" Margin="0,3" Background="#F7F8FA" />
-                                            <Label Grid.Row="1" Grid.Column="0" Content="Last Reopened By" VerticalAlignment="Center" />
-                                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding InspectionForm.LastReopenedBy}" IsReadOnly="True" Margin="0,3,14,3" Background="#F7F8FA" />
-                                            <Label Grid.Row="1" Grid.Column="2" Content="Reopen Count / Date" VerticalAlignment="Center" />
-                                            <StackPanel Grid.Row="1" Grid.Column="3" Orientation="Horizontal">
+                                            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                                            <Label Grid.Row="0" Grid.Column="0" Content="Submitted By" VerticalAlignment="Center" />
+                                            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding InspectionForm.SubmittedBy}" IsReadOnly="True" Margin="0,3,14,3" Background="#F7F8FA" />
+                                            <Label Grid.Row="0" Grid.Column="2" Content="Submitted Date/Time" VerticalAlignment="Center" />
+                                            <TextBox Grid.Row="0" Grid.Column="3" Text="{Binding InspectionForm.SubmittedDateTime, StringFormat={}{0:dd/MM/yyyy HH:mm:ss}}" IsReadOnly="True" Margin="0,3" Background="#F7F8FA" />
+                                            <Label Grid.Row="1" Grid.Column="0" Content="Approved/Rejected By" VerticalAlignment="Center" />
+                                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding InspectionForm.ApprovedRejectedBy}" IsReadOnly="True" Margin="0,3,14,3" Background="#F7F8FA" />
+                                            <Label Grid.Row="1" Grid.Column="2" Content="Decision Date/Time" VerticalAlignment="Center" />
+                                            <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding InspectionForm.ApprovalRejectedDateTime, StringFormat={}{0:dd/MM/yyyy HH:mm:ss}}" IsReadOnly="True" Margin="0,3" Background="#F7F8FA" />
+                                            <Label Grid.Row="2" Grid.Column="0" Content="Last Reopened By" VerticalAlignment="Center" />
+                                            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding InspectionForm.LastReopenedBy}" IsReadOnly="True" Margin="0,3,14,3" Background="#F7F8FA" />
+                                            <Label Grid.Row="2" Grid.Column="2" Content="Reopen Count / Date" VerticalAlignment="Center" />
+                                            <StackPanel Grid.Row="2" Grid.Column="3" Orientation="Horizontal">
                                                 <TextBox Text="{Binding InspectionForm.ReopenCount}" IsReadOnly="True" Width="50" Margin="0,3,6,3" Background="#F7F8FA" />
                                                 <TextBox Text="{Binding InspectionForm.LastReopenedDateTime, StringFormat={}{0:dd/MM/yyyy HH:mm:ss}}" IsReadOnly="True" Margin="0,3" Background="#F7F8FA" Width="170" />
                                             </StackPanel>
                                         </Grid>
                                     </GroupBox>
 
-                                    <DockPanel LastChildFill="False">
-                                        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
-                                            <Button Content="Save QC" Command="{Binding SaveCommand}" IsEnabled="{Binding CanSave}" MinWidth="100" Height="36" />
-                                            <Button Content="Complete QC" Command="{Binding CompleteCommand}" IsEnabled="{Binding CanComplete}" MinWidth="110" Height="36" Style="{StaticResource PrimaryActionButtonStyle}" />
-                                        </StackPanel>
-                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                                            <Button Content="Print QC Slip" Command="{Binding PrintCommand}" IsEnabled="{Binding CanPrint}" MinWidth="110" Height="36" />
-                                            <Button Content="Reopen" Command="{Binding ReopenCommand}" IsEnabled="{Binding CanReopen}" MinWidth="95" Height="36" Style="{StaticResource ApproveActionButtonStyle}" />
-                                            <Button Content="Cancel" Command="{Binding CancelCommand}" MinWidth="90" Height="36" />
-                                        </StackPanel>
-                                    </DockPanel>
+                                    <StackPanel>
+                                        <DockPanel LastChildFill="False">
+                                            <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                                                <Button Content="Submit QC" Command="{Binding SubmitCommand}" IsEnabled="{Binding CanSubmit}" MinWidth="110" Height="36" Style="{StaticResource PrimaryActionButtonStyle}" />
+                                            </StackPanel>
+                                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                <Button Content="Approve" Command="{Binding ApproveCommand}" IsEnabled="{Binding CanApprove}" MinWidth="100" Height="36" Style="{StaticResource ApproveActionButtonStyle}" />
+                                                <Button Content="Reject" Command="{Binding RejectCommand}" IsEnabled="{Binding CanReject}" MinWidth="100" Height="36" Style="{StaticResource RejectActionButtonStyle}" />
+                                            </StackPanel>
+                                        </DockPanel>
+                                    </StackPanel>
                                     <TextBlock Text="{Binding StatusMessage}" Foreground="#314A7D" Margin="0,10,0,0" TextWrapping="Wrap" />
                                 </StackPanel>
                             </ScrollViewer>
