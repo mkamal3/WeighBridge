@@ -7,4 +7,5 @@ public class TransactionTypeMaster
     public string Description { get; set; } = string.Empty;
     public string Form { get; set; } = string.Empty;
     public string QcRequired { get; set; } = "No";
+    public string IntegrationRequired { get; set; } = "Yes";
 }

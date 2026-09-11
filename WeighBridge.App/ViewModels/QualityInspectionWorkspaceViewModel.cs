@@ -236,7 +236,7 @@ public sealed class QualityInspectionWorkspaceViewModel : BaseViewModel
         try
         {
             if (!await _databaseService.IsWeighmentQcEligibleAsync(transaction.WeighmentId, CurrentCompany))
-                throw new InvalidOperationException("Only a Completed slip whose Transaction Type has QC Required set to Yes, and which has no existing QC record, can be loaded.");
+                throw new InvalidOperationException("Only a transaction in Awaiting QC status whose Transaction Type requires QC, and which has no existing QC record, can be loaded.");
 
             var materialLines = await _databaseService.GetWeighmentMaterialLinesAsync(transaction.WeighmentId);
             if (materialLines.Count == 0)

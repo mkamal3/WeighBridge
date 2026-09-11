@@ -30,7 +30,8 @@ public class Weighment
     public string SecondWeightBy { get; set; } = string.Empty;
     public string SecondWeightByDisplay { get; set; } = string.Empty;
     public decimal? NetWeight { get; set; }
-    public string Status { get; set; } = "Open";
+    public string Status { get; set; } = "Draft";
+    public string IntegrationStatus { get; set; } = "Not Ready";
     public string CancellationVoidNumber { get; set; } = string.Empty;
     public string CancellationVoidStatus { get; set; } = string.Empty;
     public bool IsCorrected { get; set; }
@@ -51,8 +52,6 @@ public class Weighment
         {
             if (string.Equals(Status, "Cancelled", StringComparison.OrdinalIgnoreCase)) return "Cancelled";
             if (string.Equals(Status, "Completed", StringComparison.OrdinalIgnoreCase)) return IsCorrected ? "Completed / Corrected" : "Completed";
-            if (!SecondWeight.HasValue && FirstWeight > 0) return "W1 Captured / W2 Pending";
-            if (FirstWeight <= 0) return "Waiting for First Weight";
             return Status;
         }
     }
@@ -73,7 +72,8 @@ public class Weighment
     {
         get
         {
-            if (!string.Equals(Status, "Open", StringComparison.OrdinalIgnoreCase)) return false;
+            if (string.Equals(Status, "Completed", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(Status, "Cancelled", StringComparison.OrdinalIgnoreCase)) return false;
             var start = TransactionDateTime ?? (FirstWeightTime == default ? CreatedAt : FirstWeightTime);
             return DateTime.Now - start >= TimeSpan.FromHours(24);
         }
