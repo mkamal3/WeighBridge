@@ -725,7 +725,7 @@ CREATE TABLE IF NOT EXISTS UnitOfMeasureMasters (
 
 CREATE TABLE IF NOT EXISTS productsunitofmeasureconversion (
     ProductsUnitOfMeasureConversionId INTEGER PRIMARY KEY AUTOINCREMENT,
-    Id TEXT,
+    Id TEXT UNIQUE,
     SinkCreatedOn TEXT NOT NULL DEFAULT '',
     SinkModifiedOn TEXT NOT NULL DEFAULT '',
     mserp_rounding REAL,
