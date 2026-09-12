@@ -6,7 +6,7 @@
 public static class UnitOfMeasureSchema
 {
 
-    public const string DefaultDeltaPath = "unitofmeasure_partitioned";
+    public const string DefaultDeltaPath = "deltalake/unitofmeasure_partitioned";
 
     public const string DefaultTableName = "UnitOfMeasureMasters";
     public const string PartitionColumn = "PartitionId";

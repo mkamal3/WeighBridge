@@ -7,10 +7,10 @@ namespace DeltaToSqlitePoc.Models;
 public static class UnitConversionSchema
 {
 
-    public const string DefaultDeltaPath = "mserp_mk_wb_ecoresproductspecificunitofmeasureconversionentity_partitioned";
+    public const string DefaultDeltaPath = "deltalake/mserp_mk_wb_ecoresproductspecificunitofmeasureconversionentity_partitioned";
     //public const string DefaultDeltaPath = "mserp_mk_wb_ecoresproductspecificunitofmeasureconversionentity";
 
-    public const string DefaultTableName = "UnitConversion";
+    public const string DefaultTableName = "productsunitofmeasureconversion";
     public const string PartitionColumn = "PartitionId";
 
     /// <summary>Core identity / sync columns first, then business fields.</summary>
