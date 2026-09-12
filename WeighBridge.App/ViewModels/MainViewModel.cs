@@ -318,6 +318,7 @@ public class MainViewModel : BaseViewModel
         LoadOpenTransactionsInquiryCommand = new RelayCommand(LoadOpenTransactionsInquiryAsync);
         ClearOpenTransactionsInquiryFiltersCommand = new RelayCommand(ClearOpenTransactionsInquiryFilters);
         ResumeOpenTransactionCommand = new RelayCommand(ResumeSelectedOpenTransactionAsync, () => CanResumeSelectedOpenTransaction);
+        ConfirmTransactionCommand = new RelayCommand(ConfirmSelectedTransactionAsync, () => CanConfirmSelectedTransaction);
         ExportOpenTransactionsCommand = new RelayCommand(ExportOpenTransactionsAsync, () => CanExportOpenTransactions);
         CorrectTransactionCommand = new RelayCommand(CorrectTransactionAsync);
         StartQualityInspectionCommand = new RelayCommand(StartQualityInspectionAsync, () => CanStartQualityInspection);
@@ -519,6 +520,7 @@ public class MainViewModel : BaseViewModel
     public RelayCommand LoadOpenTransactionsInquiryCommand { get; }
     public RelayCommand ClearOpenTransactionsInquiryFiltersCommand { get; }
     public RelayCommand ResumeOpenTransactionCommand { get; }
+    public RelayCommand ConfirmTransactionCommand { get; }
     public RelayCommand ExportOpenTransactionsCommand { get; }
     public RelayCommand CorrectTransactionCommand { get; }
     public RelayCommand StartQualityInspectionCommand { get; }
@@ -730,7 +732,7 @@ public class MainViewModel : BaseViewModel
     public ToleranceMaster ToleranceMasterForm { get => _toleranceMasterForm; set => SetProperty(ref _toleranceMasterForm, value); }
     public ServiceChargeMaster? SelectedServiceChargeMaster { get => _selectedServiceChargeMaster; set { if (SetProperty(ref _selectedServiceChargeMaster, value) && value != null) ServiceChargeMasterForm = new ServiceChargeMaster { ServiceChargeMasterId = value.ServiceChargeMasterId, DataAreaId = value.DataAreaId, ServiceMode = value.ServiceMode, Amount = value.Amount, Currency = value.Currency, Validity = value.Validity }; } }
     public ServiceChargeMaster ServiceChargeMasterForm { get => _serviceChargeMasterForm; set => SetProperty(ref _serviceChargeMasterForm, value); }
-    public TransactionTypeMaster? SelectedTransactionTypeConfig { get => _selectedTransactionTypeConfig; set { if (SetProperty(ref _selectedTransactionTypeConfig, value) && value != null) TransactionTypeMasterForm = new TransactionTypeMaster { TransactionTypeMasterId = value.TransactionTypeMasterId, Type = value.Type, Description = value.Description, Form = value.Form, QcRequired = value.QcRequired }; } }
+    public TransactionTypeMaster? SelectedTransactionTypeConfig { get => _selectedTransactionTypeConfig; set { if (SetProperty(ref _selectedTransactionTypeConfig, value) && value != null) TransactionTypeMasterForm = new TransactionTypeMaster { TransactionTypeMasterId = value.TransactionTypeMasterId, Type = value.Type, Description = value.Description, Form = value.Form, QcRequired = value.QcRequired, IntegrationRequired = value.IntegrationRequired }; } }
     public TransactionTypeMaster TransactionTypeMasterForm { get => _transactionTypeMasterForm; set => SetProperty(ref _transactionTypeMasterForm, value); }
 
     public LocationMaster? SelectedLocationMaster { get => _selectedLocationMaster; set { if (SetProperty(ref _selectedLocationMaster, value) && value != null) LocationMasterForm = new LocationMaster { LocationMasterId = value.LocationMasterId, DataAreaId = value.DataAreaId, LocationCode = value.LocationCode, LocationName = value.LocationName, LocationType = value.LocationType, Warehouse = value.Warehouse, Site = value.Site, Status = value.Status }; } }
@@ -1013,7 +1015,8 @@ public class MainViewModel : BaseViewModel
     public bool CanAccessOpenTransactionsInquiry => _currentUser.CanAccessOpenTransactionsInquiry;
     public bool CanResumeOpenTransactions => _currentUser.CanResumeOpenTransactions;
     public bool CanExportOpenTransactions => _currentUser.CanExportOpenTransactions;
-    public bool CanResumeSelectedOpenTransaction => CanAccessOpenTransactionsInquiry && CanResumeOpenTransactions && CanAccessWeighment && SelectedOpenInquiryWeighment != null && string.Equals(SelectedOpenInquiryWeighment.Status, "Open", StringComparison.OrdinalIgnoreCase);
+    public bool CanResumeSelectedOpenTransaction => CanAccessOpenTransactionsInquiry && CanResumeOpenTransactions && CanAccessWeighment && SelectedOpenInquiryWeighment != null && string.Equals(SelectedOpenInquiryWeighment.Status, "Pending Second Weight", StringComparison.OrdinalIgnoreCase);
+    public bool CanConfirmSelectedTransaction => (CanAccessTransactions || CanAccessOpenTransactionsInquiry) && SelectedTransactionWeighment != null && string.Equals(SelectedTransactionWeighment.Status, "Awaiting Confirmation", StringComparison.OrdinalIgnoreCase);
     public int OpenTransactionCount => FilteredOpenInquiryRows.Count;
     public bool CanAccessGatePass => _currentUser.CanAccessGatePass;
     public bool CanAccessCancellationVoid => _currentUser.CanAccessCancellationVoid;
@@ -1025,7 +1028,7 @@ public class MainViewModel : BaseViewModel
     public bool CanCorrectSelectedTransaction => CanAccessCorrection && (_currentUser.CanSubmitCorrection || _currentUser.CanApproveRejectCorrection) && SelectedTransactionWeighment != null && string.Equals(SelectedTransactionWeighment.Status, "Completed", StringComparison.OrdinalIgnoreCase);
     public bool CanStartQualityInspection => CanProcessQualityInspection
                                              && SelectedTransactionWeighment != null
-                                             && string.Equals(SelectedTransactionWeighment.Status, "Completed", StringComparison.OrdinalIgnoreCase);
+                                             && string.Equals(SelectedTransactionWeighment.Status, "Awaiting QC", StringComparison.OrdinalIgnoreCase);
     public bool CanCancelSelectedTransaction => false;
     public bool CanCreateCorrectionRequest => CanAccessCorrection && _currentUser.CanSubmitCorrection;
     public bool CanOpenSelectedCorrection => CanAccessCorrection && SelectedCorrectionRequest != null;
@@ -1041,8 +1044,7 @@ public class MainViewModel : BaseViewModel
     public bool CanRejectCancellationVoid => CanApproveCancellationVoid;
     public bool CanInitiateCancellationFromTransaction => CanCreateCancellationVoidRequest
                                                          && SelectedTransactionWeighment != null
-                                                         && (string.Equals(SelectedTransactionWeighment.Status, "Open", StringComparison.OrdinalIgnoreCase)
-                                                             || string.Equals(SelectedTransactionWeighment.Status, "Completed", StringComparison.OrdinalIgnoreCase))
+                                                         && !string.Equals(SelectedTransactionWeighment.Status, "Cancelled", StringComparison.OrdinalIgnoreCase)
                                                          && !string.Equals(SelectedTransactionWeighment.CancellationVoidStatus, "Draft", StringComparison.OrdinalIgnoreCase)
                                                          && !string.Equals(SelectedTransactionWeighment.CancellationVoidStatus, "Approved", StringComparison.OrdinalIgnoreCase);
     public bool IsCompletedGridReadOnly => true;
@@ -1285,6 +1287,7 @@ public class MainViewModel : BaseViewModel
                 if (value != null)
                     SelectedTransactionWeighment = value;
                 OnPropertyChanged(nameof(CanResumeSelectedOpenTransaction));
+                OnPropertyChanged(nameof(CanConfirmSelectedTransaction));
                 System.Windows.Input.CommandManager.InvalidateRequerySuggested();
             }
         }
@@ -1301,6 +1304,7 @@ public class MainViewModel : BaseViewModel
                 OnPropertyChanged(nameof(CanCancelSelectedTransaction));
                 OnPropertyChanged(nameof(CanInitiateCancellationFromTransaction));
                 OnPropertyChanged(nameof(CanStartQualityInspection));
+                OnPropertyChanged(nameof(CanConfirmSelectedTransaction));
                 OnPropertyChanged(nameof(HasSelectedTransactionReview));
                 System.Windows.Input.CommandManager.InvalidateRequerySuggested();
                 if (value != null)
@@ -2569,7 +2573,8 @@ public class MainViewModel : BaseViewModel
                 FirstWeight = LiveWeight,
                 FirstWeightTime = DateTime.Now,
                 FirstWeightBy = CurrentUsername,
-                Status = "Open",
+                Status = "Pending Second Weight",
+                IntegrationStatus = "Not Ready",
                 Remarks = Remarks.Trim(),
                 CreatedAt = DateTime.Now
             };
@@ -2737,7 +2742,7 @@ public class MainViewModel : BaseViewModel
             ClearEntry();
 
             StatusMessage = completedAsSingleWeight
-                ? $"Single weight completed. Slip: {savedSlipNumber}. Second Weight = 0 and Net Weight = First Weight."
+                ? $"Single weight captured. Slip {savedSlipNumber} is awaiting confirmation. Second Weight = 0 and Net Weight = First Weight."
                 : $"First weight saved. Slip: {savedSlipNumber}. Select the slip from Open Slips before saving Second Weight.";
         }
         catch (Exception ex)
@@ -2807,7 +2812,7 @@ public class MainViewModel : BaseViewModel
             await _databaseService.CompleteSecondWeightAsync(_loadedOpenWeighmentId.Value, LiveWeight, DateTime.Now, CurrentUsername);
 
             await RefreshAllAsync();
-            StatusMessage = $"Second weight saved. Slip completed: {SlipNumber}";
+            StatusMessage = $"Second weight saved. Slip is awaiting confirmation: {SlipNumber}";
             ClearEntry();
         }
         catch (Exception ex)
@@ -3275,7 +3280,9 @@ public class MainViewModel : BaseViewModel
 
     private async Task RefreshWeighmentsAsync()
     {
-        var openRows = (await _databaseService.GetOpenWeighmentsAsync()).Where(x => IsSameDataArea(x.DataAreaId, CurrentUserCompany));
+        var openRows = (await _databaseService.GetOpenWeighmentsAsync())
+            .Where(x => IsSameDataArea(x.DataAreaId, CurrentUserCompany)
+                        && string.Equals(x.Status, "Pending Second Weight", StringComparison.OrdinalIgnoreCase));
         var completedRows = (await _databaseService.GetCompletedTodayAsync()).Where(x => IsSameDataArea(x.DataAreaId, CurrentUserCompany));
         ReplaceCollection(OpenWeighments, openRows);
         ReplaceCollection(CompletedToday, completedRows);
@@ -3855,6 +3862,7 @@ public class MainViewModel : BaseViewModel
             {
                 ReviewField("Slip Number", transaction.SlipNumber),
                 ReviewField("Status", transaction.Status),
+                ReviewField("Integration Status", transaction.IntegrationStatus),
                 ReviewField("Current Stage", transaction.CurrentStage),
                 ReviewField("Open Age", string.Equals(transaction.Status, "Open", StringComparison.OrdinalIgnoreCase) ? transaction.OpenAgeText : string.Empty),
                 ReviewField("Transaction Type", transaction.TransactionType),
@@ -4144,9 +4152,9 @@ public class MainViewModel : BaseViewModel
                 StatusMessage = "Please select an open transaction first.";
                 return;
             }
-            if (!string.Equals(SelectedOpenInquiryWeighment.Status, "Open", StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(SelectedOpenInquiryWeighment.Status, "Pending Second Weight", StringComparison.OrdinalIgnoreCase))
             {
-                StatusMessage = "Only Open transactions can be resumed.";
+                StatusMessage = "Only transactions pending second weight can be resumed.";
                 return;
             }
 
@@ -4263,7 +4271,7 @@ public class MainViewModel : BaseViewModel
                     new[]
                     {
                         "Slip Number", "Legal Entity", "Transaction Type", "Mapped Form", "Scenario", "Status",
-                        "Current Stage", "Open Age", "Stale", "Transaction Date/Time", "Gate Pass", "Weighbridge",
+                        "Current Stage", "Integration Status", "Open Age", "Stale", "Transaction Date/Time", "Gate Pass", "Weighbridge",
                         "Shift", "Vehicle", "Driver", "First Weight", "First Weight Date/Time", "First Weight By",
                         "Second Weight", "Second Weight Date/Time", "Second Weight By", "Net Weight",
                         "External Reference", "Operator Remarks", "In Use By", "Last Updated By", "Last Updated Date/Time"
@@ -4299,6 +4307,29 @@ public class MainViewModel : BaseViewModel
         }
     }
 
+    private async Task ConfirmSelectedTransactionAsync()
+    {
+        try
+        {
+            var selected = SelectedTransactionWeighment;
+            if (selected == null || !string.Equals(selected.Status, "Awaiting Confirmation", StringComparison.OrdinalIgnoreCase))
+            {
+                StatusMessage = "Confirm is available only for a transaction awaiting confirmation.";
+                return;
+            }
+
+            var nextStatus = await _databaseService.ConfirmTransactionAsync(selected.WeighmentId, CurrentUsername);
+            await RefreshAllAsync();
+            StatusMessage = nextStatus == "Awaiting QC"
+                ? $"Transaction {selected.SlipNumber} confirmed and sent to QC."
+                : $"Transaction {selected.SlipNumber} confirmed and completed.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Confirm transaction error: " + ex.Message;
+        }
+    }
+
     private string GetMappedFormForTransactionType(string transactionType)
     {
         var transactionConfig = TransactionTypeMasters.FirstOrDefault(x =>
@@ -4326,6 +4357,7 @@ public class MainViewModel : BaseViewModel
             ["Scenario"] = w.Scenario,
             ["Status"] = w.Status,
             ["Current Stage"] = w.CurrentStage,
+            ["Integration Status"] = w.IntegrationStatus,
             ["Open Age"] = w.OpenAgeText,
             ["Stale"] = w.IsStaleOpenTransaction ? "Yes" : "No",
             ["Transaction Date/Time"] = F(w.TransactionDateTime),
@@ -4597,7 +4629,7 @@ public class MainViewModel : BaseViewModel
                     new[]
                     {
                         "Slip Number", "Legal Entity", "Transaction Type", "Mapped Form", "Scenario", "Status",
-                        "Current Stage", "Transaction Date/Time", "Gate Pass", "Weighbridge", "Shift", "Vehicle", "Driver",
+                        "Current Stage", "Integration Status", "Transaction Date/Time", "Gate Pass", "Weighbridge", "Shift", "Vehicle", "Driver",
                         "First Weight", "First Weight Date/Time", "First Weight By",
                         "Second Weight", "Second Weight Date/Time", "Second Weight By", "Net Weight",
                         "External Reference", "Operator Remarks", "Last Updated By", "Last Updated Date/Time"
@@ -4722,9 +4754,9 @@ public class MainViewModel : BaseViewModel
                 return;
             }
 
-            if (!string.Equals(SelectedTransactionWeighment.Status, "Completed", StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(SelectedTransactionWeighment.Status, "Awaiting QC", StringComparison.OrdinalIgnoreCase))
             {
-                StatusMessage = "Quality Inspection is available only for Completed transactions.";
+                StatusMessage = "Quality Inspection is available only for transactions awaiting QC.";
                 return;
             }
 
@@ -5416,11 +5448,7 @@ public class MainViewModel : BaseViewModel
             if (MaterialLines.Count == 0)
             {
                 var selectedItem = lookupWindow.SelectedItemMaster;
-                var uom = !string.IsNullOrWhiteSpace(selectedItem.PurchaseUnit)
-                    ? selectedItem.PurchaseUnit
-                    : !string.IsNullOrWhiteSpace(selectedItem.SellUnit)
-                        ? selectedItem.SellUnit
-                        : selectedItem.CostUnit;
+                var uom = ResolveMaterialLineUom(selectedItem);
                 MaterialLines.Add(new WeighmentMaterialLine
                 {
                     DataAreaId = CurrentUserCompany,
@@ -5458,11 +5486,7 @@ public class MainViewModel : BaseViewModel
         if (lookupWindow.ShowDialog() == true && lookupWindow.SelectedItemMaster != null)
         {
             var selectedItem = lookupWindow.SelectedItemMaster;
-            var uom = !string.IsNullOrWhiteSpace(selectedItem.PurchaseUnit)
-                ? selectedItem.PurchaseUnit
-                : !string.IsNullOrWhiteSpace(selectedItem.SellUnit)
-                    ? selectedItem.SellUnit
-                    : selectedItem.CostUnit;
+            var uom = ResolveMaterialLineUom(selectedItem);
 
             MaterialLines.Add(new WeighmentMaterialLine
             {
@@ -5483,6 +5507,28 @@ public class MainViewModel : BaseViewModel
         }
 
         return Task.CompletedTask;
+    }
+
+    private string ResolveMaterialLineUom(ItemMaster item)
+    {
+        var candidates = IsSalesDispatchForm
+            ? new[] { item.SellUnit, item.PurchaseUnit, item.BOMUnit, item.CostUnit, item.CWUnit }
+            : IsProductionWeighingForm
+                ? new[] { item.BOMUnit, item.PurchaseUnit, item.SellUnit, item.CostUnit, item.CWUnit }
+                : new[] { item.PurchaseUnit, item.SellUnit, item.BOMUnit, item.CostUnit, item.CWUnit };
+
+        var configured = candidates.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x))?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(configured))
+            return string.Empty;
+
+        var canonical = MaterialLineUomSymbols.FirstOrDefault(x =>
+            string.Equals(x?.Trim(), configured, StringComparison.OrdinalIgnoreCase));
+        if (!string.IsNullOrWhiteSpace(canonical))
+            return canonical;
+
+        // Keep a valid item UOM visible even when the synchronized UOM master has not arrived yet.
+        MaterialLineUomSymbols.Add(configured);
+        return configured;
     }
 
     private void DeleteMaterialLine()
@@ -6206,7 +6252,7 @@ public class MainViewModel : BaseViewModel
             LocationMasterForm = new LocationMaster { DataAreaId = CurrentUserCompany, Status = string.IsNullOrWhiteSpace(LocationMasterForm.Status) ? "Active" : LocationMasterForm.Status };
 
         if (masterHeader.Contains("Transaction Type", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(TransactionTypeMasterForm.Form))
-            TransactionTypeMasterForm = new TransactionTypeMaster { Type = TransactionTypeMasterForm.Type, Description = TransactionTypeMasterForm.Description, Form = TransactionFormValues.FirstOrDefault() ?? string.Empty, QcRequired = string.IsNullOrWhiteSpace(TransactionTypeMasterForm.QcRequired) ? "No" : TransactionTypeMasterForm.QcRequired };
+            TransactionTypeMasterForm = new TransactionTypeMaster { Type = TransactionTypeMasterForm.Type, Description = TransactionTypeMasterForm.Description, Form = TransactionFormValues.FirstOrDefault() ?? string.Empty, QcRequired = string.IsNullOrWhiteSpace(TransactionTypeMasterForm.QcRequired) ? "No" : TransactionTypeMasterForm.QcRequired, IntegrationRequired = string.IsNullOrWhiteSpace(TransactionTypeMasterForm.IntegrationRequired) ? "Yes" : TransactionTypeMasterForm.IntegrationRequired };
 
         OnPropertyChanged(nameof(ScenarioMasterForm));
         OnPropertyChanged(nameof(ServiceChargeMasterForm));
@@ -6327,6 +6373,7 @@ public class MainViewModel : BaseViewModel
             if (string.IsNullOrWhiteSpace(TransactionTypeMasterForm.Form))
                 TransactionTypeMasterForm.Form = TransactionFormValues.FirstOrDefault() ?? string.Empty;
             TransactionTypeMasterForm.QcRequired = string.Equals(TransactionTypeMasterForm.QcRequired, "Yes", StringComparison.OrdinalIgnoreCase) ? "Yes" : "No";
+            TransactionTypeMasterForm.IntegrationRequired = string.Equals(TransactionTypeMasterForm.IntegrationRequired, "No", StringComparison.OrdinalIgnoreCase) ? "No" : "Yes";
 
             await _databaseService.SaveTransactionTypeMasterAsync(TransactionTypeMasterForm);
             ClearTransactionTypeMasterForm();
@@ -6342,7 +6389,7 @@ public class MainViewModel : BaseViewModel
     private void ClearTransactionTypeMasterForm()
     {
         SelectedTransactionTypeConfig = null;
-        TransactionTypeMasterForm = new TransactionTypeMaster { Form = TransactionFormValues.FirstOrDefault() ?? string.Empty, QcRequired = "No" };
+        TransactionTypeMasterForm = new TransactionTypeMaster { Form = TransactionFormValues.FirstOrDefault() ?? string.Empty, QcRequired = "No", IntegrationRequired = "Yes" };
     }
 
     private async Task SaveLocationMasterAsync()

@@ -152,7 +152,8 @@ CREATE TABLE IF NOT EXISTS TransactionTypeMasters (
     Type TEXT NOT NULL UNIQUE,
     Description TEXT NOT NULL DEFAULT '',
     Form TEXT NOT NULL DEFAULT '',
-    QcRequired TEXT NOT NULL DEFAULT 'No'
+    QcRequired TEXT NOT NULL DEFAULT 'No',
+    IntegrationRequired TEXT NOT NULL DEFAULT 'Yes'
 );
 
 CREATE TABLE IF NOT EXISTS LocationMasters (
@@ -246,6 +247,7 @@ CREATE TABLE IF NOT EXISTS Weighments (
     SecondWeightBy TEXT NOT NULL DEFAULT '',
     NetWeight REAL,
     Status TEXT NOT NULL,
+    IntegrationStatus TEXT NOT NULL DEFAULT 'Not Ready',
     IsCorrected INTEGER NOT NULL DEFAULT 0,
     CorrectionVersion INTEGER NOT NULL DEFAULT 0,
     LastCorrectionNumber TEXT NOT NULL DEFAULT '',
@@ -2419,8 +2421,8 @@ WHERE lower(DataAreaId)=lower($DataAreaId) AND lower(ServiceMode)=lower($Service
         command.ExecuteNonQuery();
     });
 
-    public Task<List<TransactionTypeMaster>> GetTransactionTypeMastersAsync() => Task.Run(() => { using var connection = CreateConnection(); connection.Open(); using var command = connection.CreateCommand(); command.CommandText = "SELECT * FROM TransactionTypeMasters ORDER BY Type"; var list = new List<TransactionTypeMaster>(); using var reader = command.ExecuteReader(); while (reader.Read()) list.Add(new TransactionTypeMaster { TransactionTypeMasterId = ReadInt(reader, "TransactionTypeMasterId") ?? 0, Type = ReadText(reader, "Type"), Description = ReadText(reader, "Description"), Form = ReadText(reader, "Form"), QcRequired = NormalizeYesNo(ReadText(reader, "QcRequired")) }); return list; });
-    public Task SaveTransactionTypeMasterAsync(TransactionTypeMaster item) => Task.Run(() => { using var connection = CreateConnection(); connection.Open(); using var command = connection.CreateCommand(); command.CommandText = item.TransactionTypeMasterId == 0 ? "INSERT INTO TransactionTypeMasters (Type, Description, Form, QcRequired) VALUES ($Type, $Description, $Form, $QcRequired)" : "UPDATE TransactionTypeMasters SET Type=$Type, Description=$Description, Form=$Form, QcRequired=$QcRequired WHERE TransactionTypeMasterId=$Id"; command.Parameters.AddWithValue("$Id", item.TransactionTypeMasterId); command.Parameters.AddWithValue("$Type", item.Type.Trim()); command.Parameters.AddWithValue("$Description", item.Description ?? string.Empty); command.Parameters.AddWithValue("$Form", item.Form ?? string.Empty); command.Parameters.AddWithValue("$QcRequired", NormalizeYesNo(item.QcRequired)); command.ExecuteNonQuery(); });
+    public Task<List<TransactionTypeMaster>> GetTransactionTypeMastersAsync() => Task.Run(() => { using var connection = CreateConnection(); connection.Open(); using var command = connection.CreateCommand(); command.CommandText = "SELECT * FROM TransactionTypeMasters ORDER BY Type"; var list = new List<TransactionTypeMaster>(); using var reader = command.ExecuteReader(); while (reader.Read()) list.Add(new TransactionTypeMaster { TransactionTypeMasterId = ReadInt(reader, "TransactionTypeMasterId") ?? 0, Type = ReadText(reader, "Type"), Description = ReadText(reader, "Description"), Form = ReadText(reader, "Form"), QcRequired = NormalizeYesNo(ReadText(reader, "QcRequired")), IntegrationRequired = NormalizeYesNo(ReadText(reader, "IntegrationRequired")) }); return list; });
+    public Task SaveTransactionTypeMasterAsync(TransactionTypeMaster item) => Task.Run(() => { using var connection = CreateConnection(); connection.Open(); using var command = connection.CreateCommand(); command.CommandText = item.TransactionTypeMasterId == 0 ? "INSERT INTO TransactionTypeMasters (Type, Description, Form, QcRequired, IntegrationRequired) VALUES ($Type, $Description, $Form, $QcRequired, $IntegrationRequired)" : "UPDATE TransactionTypeMasters SET Type=$Type, Description=$Description, Form=$Form, QcRequired=$QcRequired, IntegrationRequired=$IntegrationRequired WHERE TransactionTypeMasterId=$Id"; command.Parameters.AddWithValue("$Id", item.TransactionTypeMasterId); command.Parameters.AddWithValue("$Type", item.Type.Trim()); command.Parameters.AddWithValue("$Description", item.Description ?? string.Empty); command.Parameters.AddWithValue("$Form", item.Form ?? string.Empty); command.Parameters.AddWithValue("$QcRequired", NormalizeYesNo(item.QcRequired)); command.Parameters.AddWithValue("$IntegrationRequired", NormalizeYesNo(item.IntegrationRequired)); command.ExecuteNonQuery(); });
 
     public Task<List<LocationMaster>> GetLocationMastersAsync(string? dataAreaId = null) => Task.Run(() =>
     {
@@ -3116,7 +3118,7 @@ ORDER BY LineNo, QualityInspectionLineId";
         using var command = connection.CreateCommand();
         command.CommandText = WeighmentSelectSql + @"
  WHERE lower(trim(w.DataAreaId)) = lower(trim($DataAreaId))
-   AND w.Status = 'Completed'
+   AND w.Status = 'Awaiting QC'
    AND EXISTS (
        SELECT 1
        FROM TransactionTypeMasters t
@@ -3148,7 +3150,7 @@ ORDER BY LineNo, QualityInspectionLineId";
 FROM Weighments w
 WHERE w.WeighmentId = $WeighmentId
   AND lower(trim(w.DataAreaId)) = lower(trim($DataAreaId))
-  AND w.Status = 'Completed'
+  AND w.Status = 'Awaiting QC'
   AND EXISTS (
       SELECT 1 FROM TransactionTypeMasters t
       WHERE lower(trim(t.Type)) = lower(trim(w.TransactionType))
@@ -3165,7 +3167,7 @@ WHERE w.WeighmentId = $WeighmentId
     public Task<int> SaveQualityInspectionAsync(QualityInspection inspection, IEnumerable<QualityInspectionLine> lines, bool submit, string currentUser) => Task.Run(() =>
     {
         if (inspection.WeighmentId <= 0)
-            throw new InvalidOperationException("Please load a QC-enabled completed slip.");
+            throw new InvalidOperationException("Please load a QC-enabled transaction awaiting QC.");
         if (string.IsNullOrWhiteSpace(currentUser))
             throw new InvalidOperationException("QC User is required.");
         if ((inspection.QcRemarks?.Length ?? 0) > 500)
@@ -3189,7 +3191,7 @@ WHERE w.WeighmentId = $WeighmentId
 FROM Weighments w
 WHERE w.WeighmentId = $WeighmentId
   AND lower(trim(w.DataAreaId)) = lower(trim($DataAreaId))
-  AND w.Status = 'Completed'
+  AND w.Status = 'Awaiting QC'
   AND EXISTS (
       SELECT 1 FROM TransactionTypeMasters t
       WHERE lower(trim(t.Type)) = lower(trim(w.TransactionType))
@@ -3199,7 +3201,7 @@ WHERE w.WeighmentId = $WeighmentId
             getWeighment.Parameters.AddWithValue("$DataAreaId", string.IsNullOrWhiteSpace(inspection.DataAreaId) ? "DAT" : inspection.DataAreaId.Trim());
             var value = getWeighment.ExecuteScalar();
             if (value == null || value == DBNull.Value)
-                throw new InvalidOperationException("QC can only be performed on a Completed slip whose Transaction Type has QC Required set to Yes.");
+                throw new InvalidOperationException("QC can only be performed on a transaction in Awaiting QC status whose Transaction Type requires QC.");
             netWeight = Convert.ToDecimal(value);
         }
 
@@ -3420,6 +3422,26 @@ WHERE QualityInspectionId=$QualityInspectionId AND Status='Submitted';";
         if (update.ExecuteNonQuery() == 0)
             throw new InvalidOperationException("The QC inspection status changed before it could be finalized.");
 
+        if (approve)
+        {
+            using var completeWeighment = connection.CreateCommand();
+            completeWeighment.Transaction = transaction;
+            completeWeighment.CommandText = @"UPDATE Weighments
+SET Status='Completed',
+    IntegrationStatus=CASE WHEN EXISTS (
+        SELECT 1 FROM TransactionTypeMasters t
+        WHERE lower(trim(t.Type))=lower(trim(Weighments.TransactionType))
+          AND lower(trim(ifnull(t.IntegrationRequired,'Yes')))='yes'
+    ) THEN 'Pending' ELSE 'Not Required' END,
+    LastUpdatedBy=$User, LastUpdatedAt=$When
+WHERE WeighmentId=$WeighmentId AND Status='Awaiting QC';";
+            completeWeighment.Parameters.AddWithValue("$User", actionBy ?? string.Empty);
+            completeWeighment.Parameters.AddWithValue("$When", now.ToString("O"));
+            completeWeighment.Parameters.AddWithValue("$WeighmentId", inspection.WeighmentId);
+            if (completeWeighment.ExecuteNonQuery() == 0)
+                throw new InvalidOperationException("The linked transaction is no longer awaiting QC.");
+        }
+
         InsertQualityInspectionAudit(connection, transaction, qualityInspectionId, status,
             actionBy, now, inspection.InspectionMode, acceptedTotal, rejectedTotal, inspection.QcRemarks);
         transaction.Commit();
@@ -3520,7 +3542,7 @@ ORDER BY CancellationVoidId DESC";
         using var command = connection.CreateCommand();
         command.CommandText = WeighmentSelectSql + @"
  WHERE lower(trim(w.DataAreaId)) = lower(trim($DataAreaId))
-   AND w.Status IN ('Open', 'Completed')
+   AND w.Status IN ('Draft', 'Pending Second Weight', 'Awaiting Confirmation', 'Awaiting QC', 'Completed')
    AND NOT EXISTS (
        SELECT 1
        FROM CancellationVoidRequests c
@@ -3569,11 +3591,11 @@ ORDER BY CancellationVoidId DESC";
 FROM Weighments w
 WHERE w.WeighmentId = $WeighmentId
   AND lower(trim(w.DataAreaId)) = lower(trim($DataAreaId))
-  AND w.Status IN ('Open', 'Completed');";
+  AND w.Status IN ('Draft', 'Pending Second Weight', 'Awaiting Confirmation', 'Awaiting QC', 'Completed');";
             check.Parameters.AddWithValue("$WeighmentId", request.WeighmentId);
             check.Parameters.AddWithValue("$DataAreaId", string.IsNullOrWhiteSpace(request.DataAreaId) ? "DAT" : request.DataAreaId.Trim());
             if (Convert.ToInt32(check.ExecuteScalar()) == 0)
-                throw new InvalidOperationException("The selected transaction was not found, belongs to another Legal Entity, or is not in Open/Completed status.");
+                throw new InvalidOperationException("The selected transaction was not found, belongs to another Legal Entity, or is already cancelled.");
         }
 
         using (var duplicate = connection.CreateCommand())
@@ -3637,13 +3659,14 @@ SELECT last_insert_rowid();";
             updateWeighment.CommandText = @"
 UPDATE Weighments
 SET Status = 'Cancelled',
+    IntegrationStatus = CASE WHEN IntegrationStatus='Integrated' THEN 'Reversal Pending' ELSE 'Not Required' END,
     Remarks = trim(ifnull(Remarks, '') || ' ' || $ActionText)
 WHERE WeighmentId = $WeighmentId
-  AND Status IN ('Open', 'Completed');";
+  AND Status IN ('Draft', 'Pending Second Weight', 'Awaiting Confirmation', 'Awaiting QC', 'Completed');";
             updateWeighment.Parameters.AddWithValue("$WeighmentId", request.WeighmentId);
             updateWeighment.Parameters.AddWithValue("$ActionText", $"{request.Type} approved under {request.CancellationVoidNumber} by {approvedBy} on {now:yyyy-MM-dd HH:mm}");
             if (updateWeighment.ExecuteNonQuery() == 0)
-                throw new InvalidOperationException("The original transaction is already cancelled or is no longer in Open/Completed status.");
+                throw new InvalidOperationException("The original transaction is already cancelled.");
         }
 
         if (!string.IsNullOrWhiteSpace(request.GatePassNumber))
@@ -3779,7 +3802,7 @@ SELECT last_insert_rowid();";
         command.Parameters.AddWithValue("$FirstWeight", weighment.FirstWeight);
         command.Parameters.AddWithValue("$FirstWeightTime", weighment.FirstWeightTime.ToString("O"));
         command.Parameters.AddWithValue("$FirstWeightBy", weighment.FirstWeightBy ?? string.Empty);
-        command.Parameters.AddWithValue("$Status", "Open");
+        command.Parameters.AddWithValue("$Status", "Pending Second Weight");
         command.Parameters.AddWithValue("$Remarks", weighment.Remarks ?? string.Empty);
         command.Parameters.AddWithValue("$LastUpdatedBy", weighment.FirstWeightBy ?? string.Empty);
         command.Parameters.AddWithValue("$LastUpdatedAt", weighment.FirstWeightTime.ToString("O"));
@@ -4201,6 +4224,85 @@ ON CONFLICT(WeighmentId) DO UPDATE SET
         return reader.Read() ? MapWeighmentGeneralWeighingServiceDetails(reader) : null;
     });
 
+    public Task<string> ConfirmTransactionAsync(int weighmentId, string confirmedBy) => Task.Run(() =>
+    {
+        using var connection = CreateConnection();
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
+
+        string slipNumber;
+        string transactionType;
+        string mappedForm;
+        bool qcRequired;
+        bool integrationRequired;
+        using (var validate = connection.CreateCommand())
+        {
+            validate.Transaction = transaction;
+            validate.CommandText = @"SELECT w.SlipNumber, w.TransactionType, ifnull(t.Form,''),
+       lower(trim(ifnull(t.QcRequired,'No')))='yes',
+       lower(trim(ifnull(t.IntegrationRequired,'Yes')))='yes'
+FROM Weighments w
+LEFT JOIN TransactionTypeMasters t ON lower(trim(t.Type))=lower(trim(w.TransactionType))
+WHERE w.WeighmentId=$WeighmentId
+  AND w.Status='Awaiting Confirmation'
+  AND trim(w.TransactionType)<>'' AND trim(w.DataAreaId)<>''
+  AND trim(w.VehicleNo)<>'' AND trim(ifnull(w.DriverName,''))<>''
+  AND w.FirstWeight>0 AND w.SecondWeight IS NOT NULL AND w.NetWeight IS NOT NULL;";
+            validate.Parameters.AddWithValue("$WeighmentId", weighmentId);
+            using var reader = validate.ExecuteReader();
+            if (!reader.Read())
+                throw new InvalidOperationException("Transaction is not awaiting confirmation or mandatory header/weight information is missing.");
+            slipNumber = reader.GetString(0);
+            transactionType = reader.GetString(1);
+            mappedForm = reader.GetString(2);
+            qcRequired = Convert.ToInt32(reader.GetValue(3)) == 1;
+            integrationRequired = Convert.ToInt32(reader.GetValue(4)) == 1;
+        }
+
+        if (!string.Equals(mappedForm, "General Weighing Service", StringComparison.OrdinalIgnoreCase))
+        {
+            using var lines = connection.CreateCommand();
+            lines.Transaction = transaction;
+            lines.CommandText = "SELECT COUNT(1) FROM WeighmentMaterialLines WHERE WeighmentId=$WeighmentId AND ifnull(IsActive,1)=1 AND trim(ItemNumber)<>''";
+            lines.Parameters.AddWithValue("$WeighmentId", weighmentId);
+            if (Convert.ToInt32(lines.ExecuteScalar()) == 0)
+                throw new InvalidOperationException("At least one valid material line is required before confirmation.");
+        }
+
+        var nextStatus = qcRequired ? "Awaiting QC" : "Completed";
+        var integrationStatus = qcRequired ? "Not Ready" : integrationRequired ? "Pending" : "Not Required";
+        var now = DateTime.Now;
+        using (var update = connection.CreateCommand())
+        {
+            update.Transaction = transaction;
+            update.CommandText = @"UPDATE Weighments SET Status=$Status, IntegrationStatus=$IntegrationStatus,
+ResumeLockedBy='', ResumeLockedAt=NULL, LastUpdatedBy=$User, LastUpdatedAt=$When
+WHERE WeighmentId=$WeighmentId AND Status='Awaiting Confirmation';";
+            update.Parameters.AddWithValue("$Status", nextStatus);
+            update.Parameters.AddWithValue("$IntegrationStatus", integrationStatus);
+            update.Parameters.AddWithValue("$User", confirmedBy ?? string.Empty);
+            update.Parameters.AddWithValue("$When", now.ToString("O"));
+            update.Parameters.AddWithValue("$WeighmentId", weighmentId);
+            update.ExecuteNonQuery();
+        }
+        using (var history = connection.CreateCommand())
+        {
+            history.Transaction = transaction;
+            history.CommandText = @"INSERT INTO WeighmentTransactionHistory
+(WeighmentId, SlipNumber, EventType, OldStatus, NewStatus, PerformedBy, PerformedDateTime, Remarks)
+VALUES ($WeighmentId,$SlipNumber,'Confirm','Awaiting Confirmation',$NewStatus,$User,$When,$Remarks);";
+            history.Parameters.AddWithValue("$WeighmentId", weighmentId);
+            history.Parameters.AddWithValue("$SlipNumber", slipNumber);
+            history.Parameters.AddWithValue("$NewStatus", nextStatus);
+            history.Parameters.AddWithValue("$User", confirmedBy ?? string.Empty);
+            history.Parameters.AddWithValue("$When", now.ToString("O"));
+            history.Parameters.AddWithValue("$Remarks", qcRequired ? "Confirmed and handed over to QC." : $"Confirmed. Integration: {integrationStatus}.");
+            history.ExecuteNonQuery();
+        }
+        transaction.Commit();
+        return nextStatus;
+    });
+
     public Task CompleteSingleWeightAsync(int weighmentId, DateTime completedTime, string completedBy) => Task.Run(() =>
     {
         using var connection = CreateConnection();
@@ -4212,17 +4314,18 @@ SET SecondWeight = 0,
     SecondWeightTime = $CompletedTime,
     SecondWeightBy = $CompletedBy,
     NetWeight = FirstWeight,
-    Status = 'Completed',
+    Status = 'Awaiting Confirmation',
+    IntegrationStatus = 'Not Ready',
     ResumeLockedBy = '',
     ResumeLockedAt = NULL,
     LastUpdatedBy = $CompletedBy,
     LastUpdatedAt = $CompletedTime
-WHERE WeighmentId = $WeighmentId AND Status = 'Open';";
+WHERE WeighmentId = $WeighmentId AND Status = 'Pending Second Weight';";
         command.Parameters.AddWithValue("$CompletedTime", completedTime.ToString("O"));
         command.Parameters.AddWithValue("$CompletedBy", completedBy ?? string.Empty);
         command.Parameters.AddWithValue("$WeighmentId", weighmentId);
         if (command.ExecuteNonQuery() == 0)
-            throw new InvalidOperationException("Open slip not found for single-weight completion.");
+            throw new InvalidOperationException("Pending slip not found for single-weight capture.");
     });
 
     public Task CompleteSecondWeightAsync(int weighmentId, decimal secondWeight, DateTime secondWeightTime, string secondWeightBy) => Task.Run(() =>
@@ -4250,12 +4353,13 @@ SET SecondWeight = $SecondWeight,
     SecondWeightTime = $SecondWeightTime,
     SecondWeightBy = $SecondWeightBy,
     NetWeight = $NetWeight,
-    Status = 'Completed',
+    Status = 'Awaiting Confirmation',
+    IntegrationStatus = 'Not Ready',
     ResumeLockedBy = '',
     ResumeLockedAt = NULL,
     LastUpdatedBy = $SecondWeightBy,
     LastUpdatedAt = $SecondWeightTime
-WHERE WeighmentId = $WeighmentId;";
+WHERE WeighmentId = $WeighmentId AND Status = 'Pending Second Weight';";
         command.Parameters.AddWithValue("$SecondWeight", secondWeight);
         command.Parameters.AddWithValue("$SecondWeightTime", secondWeightTime.ToString("O"));
         command.Parameters.AddWithValue("$SecondWeightBy", secondWeightBy ?? string.Empty);
@@ -4422,7 +4526,7 @@ WHERE WeighmentId = $WeighmentId
         using var connection = CreateConnection();
         connection.Open();
         using var command = connection.CreateCommand();
-        command.CommandText = WeighmentSelectSql + " WHERE w.Status = 'Open' ORDER BY w.FirstWeightTime DESC";
+        command.CommandText = WeighmentSelectSql + " WHERE w.Status IN ('Draft','Pending Second Weight','Awaiting Confirmation','Awaiting QC') ORDER BY w.FirstWeightTime DESC";
         return ReadWeighments(command);
     });
 
@@ -4442,7 +4546,7 @@ WHERE WeighmentId = $WeighmentId
         using (var read = connection.CreateCommand())
         {
             read.Transaction = transaction;
-            read.CommandText = "SELECT SlipNumber, ResumeLockedBy FROM Weighments WHERE WeighmentId=$WeighmentId AND Status='Open' LIMIT 1";
+            read.CommandText = "SELECT SlipNumber, ResumeLockedBy FROM Weighments WHERE WeighmentId=$WeighmentId AND Status='Pending Second Weight' LIMIT 1";
             read.Parameters.AddWithValue("$WeighmentId", weighmentId);
             using var reader = read.ExecuteReader();
             if (!reader.Read())
@@ -4464,7 +4568,7 @@ SET ResumeLockedBy=$Username,
     LastUpdatedBy=$Username,
     LastUpdatedAt=$Now
 WHERE WeighmentId=$WeighmentId
-  AND Status='Open'
+  AND Status='Pending Second Weight'
   AND (
         trim(ifnull(ResumeLockedBy,''))=''
         OR lower(trim(ResumeLockedBy))=lower(trim($Username))
@@ -5062,6 +5166,7 @@ WHERE ServiceChargeMasterId NOT IN (
         EnsureColumn(connection, "TransactionTypeMasters", "Description", "TEXT NOT NULL DEFAULT ''");
         EnsureColumn(connection, "TransactionTypeMasters", "Form", "TEXT NOT NULL DEFAULT ''");
         EnsureColumn(connection, "TransactionTypeMasters", "QcRequired", "TEXT NOT NULL DEFAULT 'No'");
+        EnsureColumn(connection, "TransactionTypeMasters", "IntegrationRequired", "TEXT NOT NULL DEFAULT 'Yes'");
         ExecuteNonQuery(connection, "UPDATE TransactionTypeMasters SET QcRequired = CASE WHEN lower(trim(ifnull(QcRequired,''))) = 'yes' THEN 'Yes' ELSE 'No' END;");
 
         EnsureColumn(connection, "LocationMasters", "Warehouse", "TEXT NOT NULL DEFAULT ''");
@@ -5317,6 +5422,13 @@ WHERE ServiceChargeMasterId NOT IN (
         EnsureColumn(connection, "Weighments", "ResumeLockedAt", "TEXT");
         EnsureColumn(connection, "Weighments", "LastUpdatedBy", "TEXT NOT NULL DEFAULT ''");
         EnsureColumn(connection, "Weighments", "LastUpdatedAt", "TEXT");
+        EnsureColumn(connection, "Weighments", "IntegrationStatus", "TEXT NOT NULL DEFAULT 'Not Ready'");
+        ExecuteNonQuery(connection, "UPDATE Weighments SET Status='Pending Second Weight' WHERE Status='Open' AND SecondWeight IS NULL;");
+        ExecuteNonQuery(connection, @"UPDATE Weighments SET IntegrationStatus = CASE
+            WHEN Status='Completed' THEN 'Pending'
+            WHEN Status='Cancelled' THEN 'Not Required'
+            ELSE 'Not Ready' END
+            WHERE trim(ifnull(IntegrationStatus,''))='' OR (Status='Completed' AND IntegrationStatus='Not Ready');");
         ExecuteNonQuery(connection, "CREATE TABLE IF NOT EXISTS WeighmentTransactionHistory (HistoryId INTEGER PRIMARY KEY AUTOINCREMENT, WeighmentId INTEGER NOT NULL, SlipNumber TEXT NOT NULL DEFAULT '', EventType TEXT NOT NULL DEFAULT '', OldStatus TEXT NOT NULL DEFAULT '', NewStatus TEXT NOT NULL DEFAULT '', ReferenceNumber TEXT NOT NULL DEFAULT '', PerformedBy TEXT NOT NULL DEFAULT '', PerformedDateTime TEXT NOT NULL, Remarks TEXT NOT NULL DEFAULT '', FOREIGN KEY(WeighmentId) REFERENCES Weighments(WeighmentId));");
         EnsureColumn(connection, "OperatorMasters", "CanSubmitCorrection", "INTEGER NOT NULL DEFAULT 0");
         EnsureColumn(connection, "OperatorMasters", "CanApproveRejectCorrection", "INTEGER NOT NULL DEFAULT 0");
@@ -7186,6 +7298,7 @@ VALUES
             SecondWeightByDisplay = ReadWeighmentText(reader, "SecondWeightByDisplay"),
             NetWeight = reader["NetWeight"] == DBNull.Value ? null : Convert.ToDecimal(reader["NetWeight"]),
             Status = Convert.ToString(reader["Status"]) ?? string.Empty,
+            IntegrationStatus = ReadWeighmentText(reader, "IntegrationStatus"),
             CancellationVoidNumber = ReadWeighmentText(reader, "CancellationVoidNumber"),
             CancellationVoidStatus = ReadWeighmentText(reader, "CancellationVoidStatus"),
             IsCorrected = !string.IsNullOrWhiteSpace(ReadWeighmentText(reader, "IsCorrected")) && ReadWeighmentText(reader, "IsCorrected") != "0",
