@@ -727,7 +727,7 @@ CREATE TABLE IF NOT EXISTS UnitOfMeasureMasters (
 
 CREATE TABLE IF NOT EXISTS productsunitofmeasureconversion (
     ProductsUnitOfMeasureConversionId INTEGER PRIMARY KEY AUTOINCREMENT,
-    Id TEXT UNIQUE,
+    Id TEXT,
     SinkCreatedOn TEXT NOT NULL DEFAULT '',
     SinkModifiedOn TEXT NOT NULL DEFAULT '',
     mserp_rounding REAL,
@@ -934,8 +934,7 @@ TcpPort = excluded.TcpPort;";
         using var connection = CreateConnection();
         connection.Open();
         using var command = connection.CreateCommand();
-        var where = new List<string> { "DataAreaId = $DataAreaId" };
-        command.Parameters.AddWithValue("$DataAreaId", DbValue(dataAreaId));
+        var where = new List<string>();
 
         if (!string.IsNullOrWhiteSpace(vehicleFilter))
         {
@@ -1027,8 +1026,7 @@ TcpPort = excluded.TcpPort;";
         using var connection = CreateConnection();
         connection.Open();
         using var command = connection.CreateCommand();
-        var where = new List<string> { "DataAreaId = $DataAreaId" };
-        command.Parameters.AddWithValue("$DataAreaId", DbValue(dataAreaId));
+        var where = new List<string>();
         AddLikeFilter(command, where, "DriverName", "$DriverName", driverNameFilter);
 
         if (!string.IsNullOrWhiteSpace(mobileFilter))
@@ -1091,7 +1089,7 @@ TcpPort = excluded.TcpPort;";
         using var connection = CreateConnection();
         connection.Open();
         using var command = connection.CreateCommand();
-        command.CommandText = "INSERT OR IGNORE INTO Vehicles (VehicleNo, PlateNumber, Status) VALUES ($VehicleNo, $PlateNumber, 'Active')";
+        command.CommandText = "INSERT OR IGNORE INTO Vehicles (DataAreaId, VehicleNo, PlateNumber, Status) VALUES ('GLOBAL', $VehicleNo, $PlateNumber, 'Active')";
         var plateNumber = vehicleNo.Trim().ToUpperInvariant();
         command.Parameters.AddWithValue("$VehicleNo", plateNumber);
         command.Parameters.AddWithValue("$PlateNumber", plateNumber);
@@ -1100,8 +1098,6 @@ TcpPort = excluded.TcpPort;";
 
     public Task SaveVehicleAsync(Vehicle vehicle) => Task.Run(() =>
     {
-        if (string.IsNullOrWhiteSpace(vehicle.DataAreaId))
-            throw new InvalidOperationException("Legal Entity is mandatory.");
         if (string.IsNullOrWhiteSpace(vehicle.PlateNumber))
             throw new InvalidOperationException("Plate Number is mandatory.");
         if (string.IsNullOrWhiteSpace(vehicle.PlateEmirate))
@@ -1111,7 +1107,8 @@ TcpPort = excluded.TcpPort;";
 
         using var connection = CreateConnection();
         connection.Open();
-        EnsureCompanyWiseValueIsUnique(connection, "Vehicles", "PlateNumber", vehicle.PlateNumber, vehicle.DataAreaId, "VehicleId", vehicle.VehicleId > 0 ? vehicle.VehicleId : null, "Plate Number");
+        vehicle.DataAreaId = "GLOBAL";
+        EnsureGlobalValueIsUnique(connection, "Vehicles", "PlateNumber", vehicle.PlateNumber, "VehicleId", vehicle.VehicleId > 0 ? vehicle.VehicleId : null, "Plate Number");
         using var command = connection.CreateCommand();
 
         if (vehicle.VehicleId > 0)
@@ -1155,7 +1152,7 @@ VALUES
         using var connection = CreateConnection();
         connection.Open();
         using var command = connection.CreateCommand();
-        command.CommandText = "INSERT OR IGNORE INTO Drivers (DriverName, Status, EffectiveFrom) VALUES ($DriverName, 'Active', $EffectiveFrom)";
+        command.CommandText = "INSERT OR IGNORE INTO Drivers (DataAreaId, DriverName, Status, EffectiveFrom) VALUES ('GLOBAL', $DriverName, 'Active', $EffectiveFrom)";
         command.Parameters.AddWithValue("$DriverName", driverName.Trim());
         command.Parameters.AddWithValue("$EffectiveFrom", DateTime.Today.ToString("yyyy-MM-dd"));
         command.ExecuteNonQuery();
@@ -1163,8 +1160,6 @@ VALUES
 
     public Task SaveDriverAsync(Driver driver) => Task.Run(() =>
     {
-        if (string.IsNullOrWhiteSpace(driver.DataAreaId))
-            throw new InvalidOperationException("Legal Entity is mandatory.");
         if (string.IsNullOrWhiteSpace(driver.DriverName))
             throw new InvalidOperationException("Driver Name is mandatory.");
         if (string.IsNullOrWhiteSpace(driver.MobileNumber))
@@ -1190,7 +1185,8 @@ VALUES
 
         using var connection = CreateConnection();
         connection.Open();
-        EnsureCompanyWiseValueIsUnique(connection, "Drivers", "DriverName", driver.DriverName, driver.DataAreaId, "DriverId", driver.DriverId > 0 ? driver.DriverId : null, "Driver Name");
+        driver.DataAreaId = "GLOBAL";
+        EnsureGlobalValueIsUnique(connection, "Drivers", "DriverName", driver.DriverName, "DriverId", driver.DriverId > 0 ? driver.DriverId : null, "Driver Name");
         using var command = connection.CreateCommand();
 
         if (driver.DriverId > 0)
@@ -5533,8 +5529,14 @@ WHERE trim(ifnull(DataAreaId, '')) <> ''; ");
         ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_Vendors_DataArea_VendorAccount ON Vendors (DataAreaId, VendorAccount);");
         ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_ItemMasters_DataArea_ItemNumber ON ItemMasters (DataAreaId, ItemNumber);");
         ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_WarehouseMasters_DataArea_Warehouse ON WarehouseMasters (DataAreaId, Warehouse);");
-        ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_Vehicles_DataArea_PlateNumber ON Vehicles (DataAreaId, PlateNumber);");
-        ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_Drivers_DataArea_DriverName ON Drivers (DataAreaId, DriverName);");
+        ExecuteNonQuery(connection, "DROP INDEX IF EXISTS UX_Vehicles_DataArea_PlateNumber;");
+        ExecuteNonQuery(connection, "DROP INDEX IF EXISTS UX_Drivers_DataArea_DriverName;");
+        ExecuteNonQuery(connection, "UPDATE Vehicles SET DataAreaId='GLOBAL';");
+        ExecuteNonQuery(connection, "UPDATE Drivers SET DataAreaId='GLOBAL';");
+        ExecuteNonQuery(connection, "DELETE FROM Vehicles WHERE trim(ifnull(PlateNumber,''))<>'' AND VehicleId NOT IN (SELECT MIN(VehicleId) FROM Vehicles WHERE trim(ifnull(PlateNumber,''))<>'' GROUP BY lower(trim(PlateNumber)));");
+        ExecuteNonQuery(connection, "DELETE FROM Drivers WHERE trim(ifnull(DriverName,''))<>'' AND DriverId NOT IN (SELECT MIN(DriverId) FROM Drivers WHERE trim(ifnull(DriverName,''))<>'' GROUP BY lower(trim(DriverName)));");
+        ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_Vehicles_Global_PlateNumber ON Vehicles (lower(trim(PlateNumber))) WHERE trim(ifnull(PlateNumber,''))<>'';");
+        ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_Drivers_Global_DriverName ON Drivers (lower(trim(DriverName))) WHERE trim(ifnull(DriverName,''))<>'';");
         ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_WeighbridgeMasters_DataArea_WeighbridgeCode ON WeighbridgeMasters (DataAreaId, WeighbridgeCode);");
         ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_OperatorMasters_DataArea_EmployeeId ON OperatorMasters (DataAreaId, EmployeeId);");
         ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS UX_OperatorMasters_Username ON OperatorMasters (Username);");
@@ -5614,6 +5616,20 @@ WHERE trim(ifnull(DataAreaId, '')) <> ''; ");
         var duplicateCount = Convert.ToInt32(command.ExecuteScalar());
         if (duplicateCount > 0)
             throw new InvalidOperationException($"{displayName} already exists for this Legal Entity. Please enter a unique value for the selected Legal Entity.");
+    }
+
+    private static void EnsureGlobalValueIsUnique(SqliteConnection connection, string tableName, string keyColumnName, string keyValue, string primaryKeyColumnName, int? excludePrimaryKey, string displayName)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = excludePrimaryKey.HasValue
+            ? $"SELECT COUNT(1) FROM {QuoteIdentifier(tableName)} WHERE lower(trim({QuoteIdentifier(keyColumnName)})) = lower(trim($KeyValue)) AND {QuoteIdentifier(primaryKeyColumnName)} <> $PrimaryKey"
+            : $"SELECT COUNT(1) FROM {QuoteIdentifier(tableName)} WHERE lower(trim({QuoteIdentifier(keyColumnName)})) = lower(trim($KeyValue))";
+        command.Parameters.AddWithValue("$KeyValue", keyValue.Trim());
+        if (excludePrimaryKey.HasValue)
+            command.Parameters.AddWithValue("$PrimaryKey", excludePrimaryKey.Value);
+
+        if (Convert.ToInt32(command.ExecuteScalar()) > 0)
+            throw new InvalidOperationException($"{displayName} already exists. Vehicle and Driver masters are shared across all Legal Entities.");
     }
 
     private static void NormalizeReasonMasterSchema(SqliteConnection connection)

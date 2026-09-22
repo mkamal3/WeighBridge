@@ -1798,8 +1798,8 @@
                                                             <DatePicker SelectedDate="{Binding VehicleMasterForm.RegistrationExpiryDate, UpdateSourceTrigger=PropertyChanged}" />
                                                         </DockPanel>
                                                         <DockPanel Margin="0,2">
-                                                            <Label Content="Legal Entity" Width="180" />
-                                                            <TextBox Text="{Binding VehicleMasterForm.DataAreaId, Mode=OneWay}" IsReadOnly="True" Background="#F5F5F5" />
+                                                            <Label Content="Scope" Width="180" />
+                                                            <TextBox Text="All Legal Entities" IsReadOnly="True" Background="#F5F5F5" />
                                                         </DockPanel>
                                                         <DockPanel Margin="0,2">
                                                             <Label Content="Status" Width="180" />
@@ -1872,7 +1872,6 @@
                                                 <DataGridTextColumn Header="Driving Licence Number" Binding="{Binding DrivingLicenceNumber}" Width="170" />
                                                 <DataGridTextColumn Header="Driving Licence Expiry Date" Binding="{Binding DrivingLicenceExpiryDate, StringFormat=d}" Width="180" />
                                                 <DataGridTextColumn Header="Default Vehicle" Binding="{Binding DefaultVehicle}" Width="140" />
-                                                <DataGridTextColumn Header="Legal Entity" Binding="{Binding DataAreaId}" Width="140" />
                                                 <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="120" />
                                                 <DataGridCheckBoxColumn Header="Blacklisted" Binding="{Binding Blacklisted}" Width="110" />
                                             </DataGrid.Columns>
@@ -1935,7 +1934,7 @@
 
                                                 <GroupBox Header="Status" Margin="4" Padding="8">
                                                     <StackPanel>
-                                                        <DockPanel Margin="0,2"><Label Content="Legal Entity *" Width="200" /><TextBox Text="{Binding DriverMasterForm.DataAreaId, Mode=OneWay}" IsReadOnly="True" Background="#F5F5F5" /></DockPanel>
+                                                        <DockPanel Margin="0,2"><Label Content="Scope" Width="200" /><TextBox Text="All Legal Entities" IsReadOnly="True" Background="#F5F5F5" /></DockPanel>
                                                         <DockPanel Margin="0,2"><Label Content="Status *" Width="200" /><ComboBox IsEditable="True" Text="{Binding DriverMasterForm.Status, UpdateSourceTrigger=PropertyChanged}"><ComboBoxItem Content="Active" /><ComboBoxItem Content="Inactive" /><ComboBoxItem Content="Blocked" /><ComboBoxItem Content="Suspended" /></ComboBox></DockPanel>
                                                         <CheckBox Content="Blacklisted" IsChecked="{Binding DriverMasterForm.Blacklisted}" Margin="200,6,0,0" />
                                                         <DockPanel Margin="0,2"><Label Content="Blacklist Reason" Width="200" /><TextBox Text="{Binding DriverMasterForm.BlacklistReason, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="60" TextWrapping="Wrap" /></DockPanel>
