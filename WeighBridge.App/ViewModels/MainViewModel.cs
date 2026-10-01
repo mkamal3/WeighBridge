@@ -3042,12 +3042,12 @@ public class MainViewModel : BaseViewModel
     private void ClearCompanyScopedFormsForCurrentLegalEntity()
     {
         SelectedVehicleMaster = null;
-        VehicleMasterForm = new Vehicle { DataAreaId = CurrentUserCompany, Status = "Active" };
+        VehicleMasterForm = new Vehicle { DataAreaId = "GLOBAL", Status = "Active" };
 
         SelectedDriverMaster = null;
         DriverMasterForm = new Driver
         {
-            DataAreaId = CurrentUserCompany,
+            DataAreaId = "GLOBAL",
             Status = "Active",
             EffectiveFrom = DateTime.Today
         };
@@ -3119,16 +3119,14 @@ public class MainViewModel : BaseViewModel
         ReplaceCollection(GatePasses, gatePasses);
         ReplaceCollection(OpenGatePasses, gatePasses.Where(x => string.Equals(x.Status, "Open", StringComparison.OrdinalIgnoreCase)));
 
-        var dataAreaVehicles = vehicles.Where(x => IsSameDataArea(x.DataAreaId, currentDataAreaId)).ToList();
-        var dataAreaDrivers = drivers.Where(x => IsSameDataArea(x.DataAreaId, currentDataAreaId)).ToList();
         var dataAreaWeighbridges = weighbridgeMasters.Where(x => IsSameDataArea(x.DataAreaId, currentDataAreaId)).ToList();
         // Operator Master is global for login/security, so it is not filtered by Legal Entity.
         var globalOperators = operatorMasters.ToList();
 
-        ReplaceCollection(Vehicles, dataAreaVehicles);
-        ReplaceCollection(ActiveVehicles, dataAreaVehicles.Where(x => IsStatusActive(x.Status)));
-        ReplaceCollection(Drivers, dataAreaDrivers);
-        ReplaceCollection(ActiveDrivers, dataAreaDrivers.Where(x => IsStatusActive(x.Status)));
+        ReplaceCollection(Vehicles, vehicles);
+        ReplaceCollection(ActiveVehicles, vehicles.Where(x => IsStatusActive(x.Status)));
+        ReplaceCollection(Drivers, drivers);
+        ReplaceCollection(ActiveDrivers, drivers.Where(x => IsStatusActive(x.Status)));
         ReplaceCollection(WeighbridgeMasters, dataAreaWeighbridges);
         ReplaceCollection(ActiveWeighbridgeMasters, dataAreaWeighbridges.Where(x => IsStatusActive(x.OperatingStatus)));
         ReplaceCollection(OperatorMasters, globalOperators);
@@ -5579,7 +5577,7 @@ public class MainViewModel : BaseViewModel
                 return;
             }
 
-            VehicleMasterForm.DataAreaId = CurrentUserCompany;
+            VehicleMasterForm.DataAreaId = "GLOBAL";
             await _databaseService.SaveVehicleAsync(VehicleMasterForm);
             await LoadMastersAsync();
             StatusMessage = "Vehicle master saved.";
@@ -5593,7 +5591,7 @@ public class MainViewModel : BaseViewModel
     private void ClearVehicleMasterForm()
     {
         SelectedVehicleMaster = null;
-        VehicleMasterForm = new Vehicle { DataAreaId = CurrentUserCompany, Status = "Active" };
+        VehicleMasterForm = new Vehicle { DataAreaId = "GLOBAL", Status = "Active" };
     }
 
     private void LoadSelectedVehicleMasterToForm()
@@ -5629,7 +5627,7 @@ public class MainViewModel : BaseViewModel
                 return;
             }
 
-            DriverMasterForm.DataAreaId = CurrentUserCompany;
+            DriverMasterForm.DataAreaId = "GLOBAL";
             await _databaseService.SaveDriverAsync(DriverMasterForm);
             await LoadMastersAsync();
             StatusMessage = "Driver master saved.";
@@ -5643,7 +5641,7 @@ public class MainViewModel : BaseViewModel
     private void ClearDriverMasterForm()
     {
         SelectedDriverMaster = null;
-        DriverMasterForm = new Driver { DataAreaId = CurrentUserCompany, Status = "Active", EffectiveFrom = DateTime.Today };
+        DriverMasterForm = new Driver { DataAreaId = "GLOBAL", Status = "Active", EffectiveFrom = DateTime.Today };
     }
 
     private void LoadSelectedDriverMasterToForm()
